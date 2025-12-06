@@ -57,6 +57,7 @@ android {
 
     defaultConfig {
         minSdk = libs.versions.android.minSdk.get().toInt()
+        consumerProguardFiles("consumer-rules.pro")
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -82,7 +83,7 @@ publishing {
                 developers {
                     developer {
                         id.set("dk")
-                        name.set("DK")
+                        name.set("Denis Koljada")
                     }
                 }
 
