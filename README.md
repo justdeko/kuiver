@@ -8,6 +8,9 @@
 
 <img src="docs/images/demo-interaction.gif" alt="Interactive graph visualization" width="600">
 
+<br/>
+<br/>
+
 | **Android** | **iOS** | **Web** |
 |:---:|:---:|:---:|
 | <img src="docs/images/demo-android.png" alt="Android" height="400"/> | <img src="docs/images/demo-ios.png" alt="iOS" height="400"/> | <img src="docs/images/demo-web.png" alt="Web" height="400"/> |
