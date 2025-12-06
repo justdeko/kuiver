@@ -19,6 +19,9 @@ kotlin {
             jvmTarget.set(JvmTarget.JVM_11)
         }
         publishLibraryVariants("release")
+        mavenPublication {
+            artifactId = "kuiver-android"
+        }
     }
 
     listOf(
@@ -99,10 +102,16 @@ publishing {
     repositories {
         mavenLocal()
 
-        // Maven Central (Central Portal via OSSRH Staging API)
         maven {
             name = "centralPortal"
-            url = uri("https://central.sonatype.com/api/v1/publisher/upload?publishingType=USER_MANAGED")
+            val isSnapshot = version.toString().endsWith("-SNAPSHOT")
+            url = if (isSnapshot) {
+                // Snapshots go to the snapshots repository
+                uri("https://central.sonatype.com/repository/maven-snapshots/")
+            } else {
+                // Releases go to the publisher upload API
+                uri("https://central.sonatype.com/api/v1/publisher/upload?publishingType=USER_MANAGED")
+            }
             credentials {
                 username = System.getenv("CENTRAL_PORTAL_USERNAME") ?: project.findProperty("centralPortalUsername") as String? ?: ""
                 password = System.getenv("CENTRAL_PORTAL_PASSWORD") ?: project.findProperty("centralPortalPassword") as String? ?: ""
@@ -119,5 +128,16 @@ signing {
     if (signingKey != null && signingPassword != null) {
         useInMemoryPgpKeys(signingKey, signingPassword)
         sign(publishing.publications)
+    }
+}
+
+// Configure artifact IDs after publications are created
+afterEvaluate {
+    publishing.publications.withType<MavenPublication> {
+        artifactId = when (name) {
+            "kotlinMultiplatform" -> "kuiver"
+            "androidRelease" -> "kuiver-android"
+            else -> "kuiver-${name.lowercase()}"
+        }
     }
 }
