@@ -41,7 +41,9 @@ kotlin {
             implementation(libs.androidx.activity.compose)
         }
         commonMain.dependencies {
-            implementation(project(":kuiver"))
+            implementation(project(":core"))
+            // uncomment this and comment the import above to test the published library
+            // implementation("com.dk:kuiver:0.1.0-SNAPSHOT")
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(libs.material3)

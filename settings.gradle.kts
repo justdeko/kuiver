@@ -32,8 +32,7 @@ plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }
 
-include(":kuiver")
-project(":kuiver").projectDir = file("core")
+include(":core")
 
 include(":sample")
 include(":sample:composeApp")
