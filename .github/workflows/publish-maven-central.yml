@@ -1,0 +1,136 @@
+name: Publish to Maven Central
+
+on:
+  workflow_dispatch:
+    inputs:
+      release-type:
+        description: 'Release type (release or snapshot)'
+        required: true
+        default: 'snapshot'
+        type: choice
+        options:
+          - snapshot
+          - release
+
+jobs:
+  publish:
+    runs-on: macos-latest  # macOS required for iOS targets
+    environment: maven-central-publishing  # Requires approval in Settings → Environments
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Extract version from gradle.properties
+        id: version
+        run: |
+          VERSION=$(grep "publish.version=" gradle.properties | cut -d'=' -f2)
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
+
+      - name: Validate version format
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          RELEASE_TYPE="${{ github.event.inputs.release-type }}"
+
+          if [[ "$RELEASE_TYPE" == "release" ]]; then
+            if [[ "$VERSION" == *"SNAPSHOT"* ]]; then
+              echo "Error: Cannot publish release with SNAPSHOT version: $VERSION"
+              echo "Please update gradle.properties to a release version (e.g., 0.1.0)"
+              exit 1
+            fi
+          else
+            if [[ "$VERSION" != *"SNAPSHOT"* ]]; then
+              echo "Error: Cannot publish snapshot without SNAPSHOT in version: $VERSION"
+              echo "Please update gradle.properties to a snapshot version (e.g., 0.1.0-SNAPSHOT)"
+              exit 1
+            fi
+          fi
+          echo "Version validated: $VERSION"
+
+      - name: Check if release tag exists
+        if: github.event.inputs.release-type == 'release'
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          if git rev-parse "$VERSION" >/dev/null 2>&1; then
+            echo "Error: Tag $VERSION already exists"
+            echo "Please bump the version in gradle.properties"
+            exit 1
+          fi
+          echo "Tag $VERSION does not exist, proceeding..."
+
+      - name: Run all tests
+        run: ./gradlew :kuiver:allTests --no-daemon
+
+      - name: Build library
+        run: ./gradlew :kuiver:build --no-daemon
+
+      - name: Publish to Maven Central
+        env:
+          CENTRAL_PORTAL_USERNAME: ${{ secrets.CENTRAL_PORTAL_USERNAME }}
+          CENTRAL_PORTAL_PASSWORD: ${{ secrets.CENTRAL_PORTAL_PASSWORD }}
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+        run: ./gradlew :kuiver:publishAllPublicationsToCentralPortalRepository --no-daemon
+
+      - name: Create and push release tag
+        if: github.event.inputs.release-type == 'release'
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$VERSION" -m "Release $VERSION"
+          git push origin "$VERSION"
+
+      - name: Summary
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          RELEASE_TYPE="${{ github.event.inputs.release-type }}"
+
+          if [[ "$RELEASE_TYPE" == "release" ]]; then
+            echo "### Release Published to Maven Central 🚀" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### Snapshot Published to Maven Central 📦" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** $VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "**Type:** $RELEASE_TYPE" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### What was done" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ All tests passed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Library built successfully" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Published to Maven Central" >> $GITHUB_STEP_SUMMARY
+
+          if [[ "$RELEASE_TYPE" == "release" ]]; then
+            echo "✅ Tag $VERSION created and pushed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "1. Go to [Maven Central Portal](https://central.sonatype.com/publishing/deployments)" >> $GITHUB_STEP_SUMMARY
+            echo "2. Log in with your credentials" >> $GITHUB_STEP_SUMMARY
+            echo "3. Find your deployment (it will be in PENDING or VALIDATING state)" >> $GITHUB_STEP_SUMMARY
+            echo "4. Review and click 'Publish' to release to Maven Central" >> $GITHUB_STEP_SUMMARY
+            echo "5. Wait ~10-30 minutes for sync to Maven Central" >> $GITHUB_STEP_SUMMARY
+            echo "6. Update \`gradle.properties\` to next SNAPSHOT version" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Snapshot Published" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Snapshot will be available on Maven Central shortly." >> $GITHUB_STEP_SUMMARY
+            echo "Check: https://central.sonatype.com/artifact/io.github.justdeko/kuiver" >> $GITHUB_STEP_SUMMARY
+          fi
