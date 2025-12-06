@@ -1,28 +1,17 @@
 <div align="center">
-  <img src="docs/kuiver-logo.svg" alt="Kuiver Logo" width="200" height="200">
+
+<img src="docs/kuiver-logo.svg" alt="Kuiver Logo" height="150">
 
 # Kuiver
 
 **A Kotlin Multiplatform graph visualization library**
 
-  <img src="docs/images/demo-interaction.gif" alt="Interactive graph visualization" width="600">
+<img src="docs/images/demo-interaction.gif" alt="Interactive graph visualization" width="600">
 
-  <table>
-    <tr>
-      <td width="33%" align="center">
-        <img src="docs/images/demo-android.png" alt="Android" width="200"/><br/>
-        <strong>Android</strong>
-      </td>
-      <td width="33%" align="center">
-        <img src="docs/images/demo-ios.png" alt="iOS" width="200"/><br/>
-        <strong>iOS</strong>
-      </td>
-      <td width="33%" align="center">
-        <img src="docs/images/demo-web.png" alt="Web" width="200"/><br/>
-        <strong>Web</strong>
-      </td>
-    </tr>
-  </table>
+| **Android** | **iOS** | **Web** |
+|:---:|:---:|:---:|
+| <img src="docs/images/demo-android.png" alt="Android" height="400"/> | <img src="docs/images/demo-ios.png" alt="iOS" height="400"/> | <img src="docs/images/demo-web.png" alt="Web" height="400"/> |
+
 </div>
 
 > **ALPHA RELEASE** - This library is in early development. The API is subject to change and may
@@ -38,21 +27,6 @@
 - Zooming and panning
 - Resizable canvas
 - Layout animations
-
-## Table of Contents
-
-- [Installation](#installation)
-- [Basic Usage](#basic-usage)
-- [Customization](#customization)
-- [Layout Algorithms](#layout-algorithms)
-- [Viewer Configuration](#viewer-configuration)
-- [Interaction & State Management](#interaction--state-management)
-- [Advanced Features](#advanced-features)
-- [Sample Application](#sample-application)
-- [Known Issues & Limitations](#known-issues--limitations)
-- [Reporting Issues](#reporting-issues)
-- [Why "Kuiver"?](#why-kuiver)
-- [License](#license)
 
 ## Installation
 
