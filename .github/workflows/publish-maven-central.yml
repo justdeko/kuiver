@@ -73,10 +73,10 @@ jobs:
           echo "Tag $VERSION does not exist, proceeding..."
 
       - name: Run all tests
-        run: ./gradlew :kuiver:allTests --no-daemon
+        run: ./gradlew :core:allTests --no-daemon
 
       - name: Build library
-        run: ./gradlew :kuiver:build --no-daemon
+        run: ./gradlew :core:build --no-daemon
 
       - name: Publish to Maven Central
         env:
@@ -84,7 +84,7 @@ jobs:
           CENTRAL_PORTAL_PASSWORD: ${{ secrets.CENTRAL_PORTAL_PASSWORD }}
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
-        run: ./gradlew :kuiver:publishAllPublicationsToCentralPortalRepository --no-daemon
+        run: ./gradlew :core:publishAllPublicationsToCentralPortalRepository --no-daemon
 
       - name: Create and push release tag
         if: github.event.inputs.release-type == 'release'

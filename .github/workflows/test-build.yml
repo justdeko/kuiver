@@ -24,13 +24,13 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
 
       - name: Run tests
-        run: ./gradlew :kuiver:allTests --no-daemon
+        run: ./gradlew :core:allTests --no-daemon
 
       - name: Build library
-        run: ./gradlew :kuiver:build --no-daemon
+        run: ./gradlew :core:build --no-daemon
 
       - name: Test local publishing
-        run: ./gradlew :kuiver:publishToMavenLocal --no-daemon
+        run: ./gradlew :core:publishToMavenLocal --no-daemon
 
       - name: Summary
         if: success()
