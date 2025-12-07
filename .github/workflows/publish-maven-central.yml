@@ -84,7 +84,7 @@ jobs:
           CENTRAL_PORTAL_PASSWORD: ${{ secrets.CENTRAL_PORTAL_PASSWORD }}
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
-        run: ./gradlew :core:publishAllPublicationsToCentralPortalRepository --no-daemon
+        run: ./gradlew publishToMavenCentral --no-daemon
 
       - name: Create and push release tag
         if: github.event.inputs.release-type == 'release'
@@ -123,8 +123,8 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "1. Go to [Maven Central Portal](https://central.sonatype.com/publishing/deployments)" >> $GITHUB_STEP_SUMMARY
             echo "2. Log in with your credentials" >> $GITHUB_STEP_SUMMARY
-            echo "3. Find your deployment (it will be in PENDING or VALIDATING state)" >> $GITHUB_STEP_SUMMARY
-            echo "4. Review and click 'Publish' to release to Maven Central" >> $GITHUB_STEP_SUMMARY
+            echo "3. Find your deployment" >> $GITHUB_STEP_SUMMARY
+            echo "4. If needed, review and click 'Publish' to release to Maven Central" >> $GITHUB_STEP_SUMMARY
             echo "5. Wait ~10-30 minutes for sync to Maven Central" >> $GITHUB_STEP_SUMMARY
             echo "6. Update \`gradle.properties\` to next SNAPSHOT version" >> $GITHUB_STEP_SUMMARY
           else
@@ -132,5 +132,4 @@ jobs:
             echo "### Snapshot Published" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "Snapshot will be available on Maven Central shortly." >> $GITHUB_STEP_SUMMARY
-            echo "Check: https://central.sonatype.com/artifact/io.github.justdeko/kuiver" >> $GITHUB_STEP_SUMMARY
           fi
