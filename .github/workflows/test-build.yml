@@ -24,12 +24,11 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      # Temporarily commented out for debugging
-      # - name: Run tests
-      #   run: ./gradlew :core:allTests --no-daemon
+      - name: Run tests
+        run: ./gradlew :core:allTests --no-daemon
 
-      # - name: Build library
-      #   run: ./gradlew :core:build --no-daemon
+      - name: Build library
+        run: ./gradlew :core:build --no-daemon
 
       - name: Test local publishing
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -39,17 +38,8 @@ jobs:
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
         run: |
-          # Debug: Check if key is set
-          echo "Base64 key length: ${#ORG_GRADLE_PROJECT_signingInMemoryKey}"
-          echo "First 50 chars of base64 key: ${ORG_GRADLE_PROJECT_signingInMemoryKey:0:50}"
-
           # Decode the base64-encoded signing key
           export ORG_GRADLE_PROJECT_signingInMemoryKey=$(echo "$ORG_GRADLE_PROJECT_signingInMemoryKey" | base64 -d)
-
-          # Debug: Check decoded key
-          echo "Decoded key length: ${#ORG_GRADLE_PROJECT_signingInMemoryKey}"
-          echo "Decoded key starts with: ${ORG_GRADLE_PROJECT_signingInMemoryKey:0:35}"
-
           ./gradlew :core:publishToMavenLocal --no-daemon
 
       - name: Summary
