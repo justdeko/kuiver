@@ -9,6 +9,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    environment: maven-central-publishing
 
     steps:
       - name: Checkout code
@@ -31,6 +32,7 @@ jobs:
       #   run: ./gradlew :core:build --no-daemon
 
       - name: Test local publishing
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.CENTRAL_PORTAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.CENTRAL_PORTAL_PASSWORD }}
