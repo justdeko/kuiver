@@ -6,6 +6,9 @@
 
 **A Kotlin Multiplatform graph visualization library**
 
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.justdeko/kuiver?label=Maven%20Central)](https://central.sonatype.com/artifact/io.github.justdeko/kuiver)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
 <img src="docs/images/demo-interaction.gif" alt="Interactive graph visualization" width="600">
 
 <br/>
@@ -439,7 +442,3 @@ From Wikipedia:
 
 Technically this library is not quite a "true" quiver, as it doesn't support multiple edges between
 the same two nodes.
-
-## License
-
-Apache License 2.0
