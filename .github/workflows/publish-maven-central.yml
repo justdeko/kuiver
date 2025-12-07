@@ -84,7 +84,10 @@ jobs:
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.CENTRAL_PORTAL_PASSWORD }}
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
-        run: ./gradlew publishToMavenCentral --no-daemon
+        run: |
+          # Decode the base64-encoded signing key
+          export ORG_GRADLE_PROJECT_signingInMemoryKey=$(echo "$ORG_GRADLE_PROJECT_signingInMemoryKey" | base64 -d)
+          ./gradlew publishToMavenCentral --no-daemon
 
       - name: Create and push release tag
         if: github.event.inputs.release-type == 'release'

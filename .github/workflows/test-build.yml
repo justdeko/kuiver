@@ -35,7 +35,10 @@ jobs:
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.CENTRAL_PORTAL_PASSWORD }}
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
-        run: ./gradlew :core:publishToMavenLocal --no-daemon
+        run: |
+          # Decode the base64-encoded signing key
+          export ORG_GRADLE_PROJECT_signingInMemoryKey=$(echo "$ORG_GRADLE_PROJECT_signingInMemoryKey" | base64 -d)
+          ./gradlew :core:publishToMavenLocal --no-daemon
 
       - name: Summary
         if: success()
