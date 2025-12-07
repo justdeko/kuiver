@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
+import com.dk.kuiver.model.buildKuiver
 import com.dk.kuiver.model.layout.LayoutAlgorithm
 import com.dk.kuiver.model.layout.LayoutConfig
 import com.dk.kuiver.model.layout.LayoutDirection
@@ -114,7 +115,7 @@ private fun GraphBuilderScreen(
     }
 
     val initialKuiver = remember {
-        Kuiver().apply {
+        buildKuiver {
             addNode(KuiverNode("1"))
             addNode(KuiverNode("2"))
             addNode(KuiverNode("3"))
@@ -188,7 +189,7 @@ private fun GraphBuilderScreen(
 
                 // Add node to the graph (structure only)
                 val newNode = KuiverNode(id = generatedId)
-                val newKuiver = Kuiver().apply {
+                val newKuiver = buildKuiver {
                     currentKuiver.nodes.values.forEach { addNode(it) }
                     currentKuiver.edges.forEach { addEdge(it) }
                     addNode(newNode)
@@ -215,7 +216,7 @@ private fun GraphBuilderScreen(
 
                         if (!edgeExists) {
                             val newEdge = KuiverEdge(fromNode.id, toNode.id)
-                            val newKuiver = Kuiver().apply {
+                            val newKuiver = buildKuiver {
                                 currentKuiver.nodes.values.forEach { addNode(it) }
                                 currentKuiver.edges.forEach { addEdge(it) }
                             }
@@ -274,7 +275,7 @@ private fun GraphBuilderScreen(
                                     val fromNode = connectionState.sourceNode
                                     if (fromNode != null) {
                                         val newEdge = KuiverEdge(fromNode.id, node.id)
-                                        val newKuiver = Kuiver().apply {
+                                        val newKuiver = buildKuiver {
                                             kuiverViewerState.kuiver.nodes.values.forEach {
                                                 addNode(
                                                     it
@@ -456,7 +457,7 @@ private fun GraphBuilderScreen(
 
                             // Add node to the graph (structure only)
                             val newNode = KuiverNode(id = generatedId)
-                            val newKuiver = Kuiver().apply {
+                            val newKuiver = buildKuiver {
                                 kuiverViewerState.kuiver.nodes.values.forEach { addNode(it) }
                                 kuiverViewerState.kuiver.edges.forEach { addEdge(it) }
                                 addNode(newNode)
@@ -485,7 +486,7 @@ private fun GraphBuilderScreen(
 
                                 if (fromNodeEntry != null && toNodeEntry != null) {
                                     val newEdge = KuiverEdge(fromNodeEntry.key, toNodeEntry.key)
-                                    val newKuiver = Kuiver().apply {
+                                    val newKuiver = buildKuiver {
                                         kuiverViewerState.kuiver.nodes.values.forEach { addNode(it) }
                                         kuiverViewerState.kuiver.edges.forEach { addEdge(it) }
                                         addEdge(newEdge)

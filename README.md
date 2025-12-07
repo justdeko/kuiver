@@ -57,7 +57,7 @@ dependencies {
 fun MyGraphViewer() {
     // Create graph structure
     val kuiver = remember {
-        Kuiver().apply {
+        buildKuiver {
             // Add nodes
             addNode(KuiverNode(id = "A"))
             addNode(KuiverNode(id = "B"))
@@ -318,19 +318,19 @@ Update the graph structure by passing an updated or new `Kuiver` instance with
 ### Cycle Detection
 
 ```kotlin
-val kuiver = Kuiver().apply {
+val kuiver = buildKuiver {
     addNode(KuiverNode("A"))
     addNode(KuiverNode("B"))
     addNode(KuiverNode("C"))
     addEdge(KuiverEdge("A", "B"))
     addEdge(KuiverEdge("B", "C"))
-}
 
-// Check before adding edge
-if (!kuiver.wouldCreateCycle(from = "C", to = "A")) {
-    kuiver.addEdge(KuiverEdge("C", "A"))
-} else {
-    println("This edge would create a cycle")
+    // Check before adding edge that would create a cycle
+    if (!wouldCreateCycle(from = "C", to = "A")) {
+        addEdge(KuiverEdge("C", "A"))
+    } else {
+        println("Skipping edge C -> A: would create a cycle")
+    }
 }
 
 // Check existing graph
@@ -343,7 +343,7 @@ if (kuiver.hasCycles()) {
 ### Edge Classification
 
 ```kotlin
-val kuiver = Kuiver().apply {
+val kuiver = buildKuiver {
     // Build graph
     addNode(KuiverNode("A"))
     addNode(KuiverNode("B"))

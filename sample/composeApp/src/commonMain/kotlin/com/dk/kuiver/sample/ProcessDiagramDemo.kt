@@ -44,9 +44,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
+import com.dk.kuiver.model.buildKuiver
 import com.dk.kuiver.model.layout.LayoutAlgorithm
 import com.dk.kuiver.model.layout.LayoutConfig
 import com.dk.kuiver.rememberSaveableKuiverViewerState
@@ -177,7 +177,7 @@ fun ProcessDiagramDemo(
 
     // Graph structure (library manages this)
     val processKuiver = remember {
-        Kuiver().apply {
+        buildKuiver {
             // Add nodes with just IDs
             processNodeData.keys.forEach { id ->
                 addNode(KuiverNode(id))

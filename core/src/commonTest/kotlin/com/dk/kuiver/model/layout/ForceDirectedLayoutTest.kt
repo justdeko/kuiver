@@ -1,8 +1,8 @@
 package com.dk.kuiver.model.layout
 
-import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
+import com.dk.kuiver.model.buildKuiver
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -11,7 +11,7 @@ class ForceDirectedLayoutTest {
 
     @Test
     fun `places nodes within bounds`() {
-        val kuiver = Kuiver().apply {
+        val kuiver = buildKuiver {
             addNode(KuiverNode(id = "A"))
             addNode(KuiverNode(id = "B"))
             addNode(KuiverNode(id = "C"))
@@ -38,7 +38,7 @@ class ForceDirectedLayoutTest {
 
     @Test
     fun `single node centers in canvas`() {
-        val kuiver = Kuiver().apply {
+        val kuiver = buildKuiver {
             addNode(KuiverNode(id = "A"))
         }
 
@@ -61,7 +61,7 @@ class ForceDirectedLayoutTest {
 
     @Test
     fun `layout completes with cycles`() {
-        val kuiver = Kuiver().apply {
+        val kuiver = buildKuiver {
             addNode(KuiverNode(id = "A"))
             addNode(KuiverNode(id = "B"))
             addNode(KuiverNode(id = "C"))

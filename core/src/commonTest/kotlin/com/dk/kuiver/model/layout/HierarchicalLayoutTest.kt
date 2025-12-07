@@ -1,8 +1,8 @@
 package com.dk.kuiver.model.layout
 
-import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
+import com.dk.kuiver.model.buildKuiver
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -12,7 +12,7 @@ class HierarchicalLayoutTest {
     @Test
     fun `simple DAG layout places nodes at correct levels`() {
         // A -> B -> C (linear chain)
-        val kuiver = Kuiver().apply {
+        val kuiver = buildKuiver {
             addNode(KuiverNode(id = "A"))
             addNode(KuiverNode(id = "B"))
             addNode(KuiverNode(id = "C"))
@@ -42,7 +42,7 @@ class HierarchicalLayoutTest {
     fun `diamond DAG layout handles multiple paths`() {
         // A -> B -> D
         // A -> C -> D
-        val kuiver = Kuiver().apply {
+        val kuiver = buildKuiver {
             addNode(KuiverNode(id = "A"))
             addNode(KuiverNode(id = "B"))
             addNode(KuiverNode(id = "C"))
@@ -80,7 +80,7 @@ class HierarchicalLayoutTest {
 
     @Test
     fun `vertical direction swaps positioning`() {
-        val kuiver = Kuiver().apply {
+        val kuiver = buildKuiver {
             addNode(KuiverNode(id = "A"))
             addNode(KuiverNode(id = "B"))
             addEdge(KuiverEdge(fromId = "A", toId = "B"))
@@ -105,7 +105,7 @@ class HierarchicalLayoutTest {
     @Test
     fun `layout handles cycles correctly`() {
         // A -> B -> C -> A (cycle)
-        val kuiver = Kuiver().apply {
+        val kuiver = buildKuiver {
             addNode(KuiverNode(id = "A"))
             addNode(KuiverNode(id = "B"))
             addNode(KuiverNode(id = "C"))

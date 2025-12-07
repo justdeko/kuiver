@@ -4,6 +4,7 @@ import androidx.compose.ui.geometry.Offset
 import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
+import com.dk.kuiver.model.buildKuiver
 import com.dk.kuiver.model.buildKuiverWithClassifiedEdges
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -15,7 +16,7 @@ class CustomLayoutTest {
 
     @Test
     fun `custom layout is invoked when algorithm is CUSTOM`() {
-        val kuiver = Kuiver().apply {
+        val kuiver = buildKuiver {
             addNode(KuiverNode(id = "A"))
             addNode(KuiverNode(id = "B"))
         }
@@ -37,7 +38,7 @@ class CustomLayoutTest {
 
     @Test
     fun `custom layout receives correct parameters`() {
-        val kuiver = Kuiver().apply {
+        val kuiver = buildKuiver {
             addNode(KuiverNode(id = "A"))
             addNode(KuiverNode(id = "B"))
         }
@@ -67,7 +68,7 @@ class CustomLayoutTest {
 
     @Test
     fun `custom layout can modify node positions`() {
-        val kuiver = Kuiver().apply {
+        val kuiver = buildKuiver {
             addNode(KuiverNode(id = "A"))
             addNode(KuiverNode(id = "B"))
         }
@@ -93,7 +94,7 @@ class CustomLayoutTest {
 
     @Test
     fun `throws error when CUSTOM algorithm without provider`() {
-        val kuiver = Kuiver().apply {
+        val kuiver = buildKuiver {
             addNode(KuiverNode(id = "A"))
         }
 
@@ -109,7 +110,7 @@ class CustomLayoutTest {
 
     @Test
     fun `custom layout provider ignored when algorithm is not CUSTOM`() {
-        val kuiver = Kuiver().apply {
+        val kuiver = buildKuiver {
             addNode(KuiverNode(id = "A"))
         }
 
@@ -134,7 +135,7 @@ class CustomLayoutTest {
 
     @Test
     fun `custom layout can use LayoutConfig parameters`() {
-        val kuiver = Kuiver().apply {
+        val kuiver = buildKuiver {
             addNode(KuiverNode(id = "A"))
             addNode(KuiverNode(id = "B"))
         }
@@ -168,7 +169,7 @@ class CustomLayoutTest {
 
     @Test
     fun `custom circular layout positions nodes correctly`() {
-        val kuiver = Kuiver().apply {
+        val kuiver = buildKuiver {
             addNode(KuiverNode(id = "A"))
             addNode(KuiverNode(id = "B"))
             addNode(KuiverNode(id = "C"))
@@ -212,7 +213,7 @@ class CustomLayoutTest {
 
     @Test
     fun `custom layout preserves edges`() {
-        val kuiver = Kuiver().apply {
+        val kuiver = buildKuiver {
             addNode(KuiverNode(id = "A"))
             addNode(KuiverNode(id = "B"))
             addNode(KuiverNode(id = "C"))
@@ -257,7 +258,7 @@ class CustomLayoutTest {
 
     @Test
     fun `custom layout with grid arrangement`() {
-        val kuiver = Kuiver().apply {
+        val kuiver = buildKuiver {
             repeat(9) { i ->
                 addNode(KuiverNode(id = "N$i"))
             }

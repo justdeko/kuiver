@@ -14,10 +14,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.AddLink
 import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LightMode
@@ -264,7 +264,7 @@ fun GraphControlMenu(
                             ) {
                                 Icon(
                                     imageVector = when (direction) {
-                                        LayoutDirection.HORIZONTAL -> Icons.Filled.ArrowForward
+                                        LayoutDirection.HORIZONTAL -> Icons.AutoMirrored.Filled.ArrowForward
                                         LayoutDirection.VERTICAL -> Icons.Filled.ArrowDownward
                                     },
                                     contentDescription = when (direction) {
