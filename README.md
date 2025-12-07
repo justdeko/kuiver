@@ -24,7 +24,7 @@
 
 ## What it does
 
-- 2 basic Layout algorithms for arranging the graphs (hierarchical and force-directed)
+- 2 built-in layout algorithms (hierarchical and force-directed) plus support for custom layouts
 - Handles both acyclic and cyclic graphs
 - Customizable nodes and edges
 - Zooming and panning
@@ -198,6 +198,48 @@ val layoutConfig = LayoutConfig(
     damping = 0.85f                // Velocity damping (stability vs convergence speed)
 )
 ```
+
+### Custom Layouts
+
+You can provide your own layout algorithm using the `CUSTOM` layout option. This gives you full
+control over node positioning.
+
+```kotlin
+// Define a custom circular layout
+val circularLayout: LayoutProvider = { kuiver, config ->
+    val nodesList = kuiver.nodes.values.toList()
+    val radius = minOf(config.width, config.height) * 0.4f
+    val centerX = config.width / 2f
+    val centerY = config.height / 2f
+
+    val updatedNodes = nodesList.mapIndexed { index, node ->
+        val angle = (index.toFloat() / nodesList.size) * 2f * PI.toFloat()
+        node.copy(
+            position = Offset(
+                x = centerX + radius * cos(angle),
+                y = centerY + radius * sin(angle)
+            )
+        )
+    }
+
+    buildKuiverWithClassifiedEdges(updatedNodes, kuiver.edges)
+}
+
+// Use the custom layout
+val layoutConfig = LayoutConfig(
+    algorithm = LayoutAlgorithm.CUSTOM,
+    customLayoutProvider = circularLayout
+)
+```
+
+**Custom Layout Tips:**
+
+- Your layout function receives the `Kuiver` graph and `LayoutConfig`
+- Access canvas dimensions via `config.width` and `config.height`
+- Use `config.nodeSpacing`, `config.levelSpacing`, and other fields as hints for your algorithm
+- Always use `buildKuiverWithClassifiedEdges(updatedNodes, kuiver.edges)` to construct the result
+- Handle zero dimensions gracefully (canvas might not be measured yet on first layout)
+- Use `remember` to stabilize your layout function in Compose to avoid unnecessary recompositions
 
 ## Viewer Configuration
 

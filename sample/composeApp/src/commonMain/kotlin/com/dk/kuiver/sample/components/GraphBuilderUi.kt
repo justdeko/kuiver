@@ -225,7 +225,7 @@ fun GraphControlMenu(
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
                 ) {
-                    LayoutAlgorithm.entries.forEachIndexed { index, algorithm ->
+                    LayoutAlgorithm.entries.dropLast(1).forEachIndexed { index, algorithm ->
                         ToggleButton(
                             checked = selectedLayoutAlgorithm == algorithm,
                             onCheckedChange = { onLayoutAlgorithmChange(algorithm) },
@@ -240,6 +240,7 @@ fun GraphControlMenu(
                                 when (algorithm) {
                                     LayoutAlgorithm.HIERARCHICAL -> "Hierarchical"
                                     LayoutAlgorithm.FORCE_DIRECTED -> "Force"
+                                    LayoutAlgorithm.CUSTOM -> "Circular"
                                 }
                             )
                         }

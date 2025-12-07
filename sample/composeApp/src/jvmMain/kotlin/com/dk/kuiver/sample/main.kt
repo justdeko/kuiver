@@ -8,6 +8,7 @@ import androidx.compose.ui.window.rememberWindowState
 import kuiver.sample.composeapp.generated.resources.Res
 import kuiver.sample.composeapp.generated.resources.kuiver_icon
 import org.jetbrains.compose.resources.painterResource
+import java.awt.Dimension
 
 fun main() = application {
     Window(
@@ -18,6 +19,7 @@ fun main() = application {
             size = DpSize(1920.dp, 1080.dp)
         )
     ) {
+        window.minimumSize = Dimension(600, 400)
         App()
     }
 }
