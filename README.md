@@ -416,17 +416,12 @@ The library implements several Wasm-specific adjustments to handle browser limit
 As an alpha release, the public API may change between versions. Breaking changes will be noted in
 the changelog.
 
-## Reporting Issues
+## Contributing
 
-Found a bug or have a feature request? Please report it
-on [GitHub Issues](https://github.com/justdeko/kuiver/issues).
-
-When reporting bugs, please include:
-
-- Platform (Android/iOS/JVM/Wasm) and version
-- Kuiver version
-- Minimal reproducible example
-- Expected vs actual behavior
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on:
+- Reporting bugs and requesting features
+- Contributing code and submitting pull requests
+- Development setup and testing
 
 ## Why "Kuiver"?
 
