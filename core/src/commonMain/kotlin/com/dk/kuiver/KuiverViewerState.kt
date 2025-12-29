@@ -18,24 +18,31 @@ import com.dk.kuiver.util.calculateNodeBounds
 
 /**
  * State holder for KuiverViewer component.
- * Manages the graph data, layout, scale, offset, and provides control functions.
  *
- * @property kuiver current kuiver graph and layout data
- * @property layoutedKuiver the kuiver after layout has been applied
- * @property scale current zoom level
- * @property offset current pan offset
- * @property viewWidth width of the visible view area
- * @property canvasWidth width of the drawing canvas
- * @property canvasHeight height of the drawing canvas
- * @property contentOffset offset of overlay content affecting centering
- * @property centerGraph function to center the graph in the view
- * @property zoomIn function to zoom in
- * @property zoomOut function to zoom out
- * @property updateKuiver callback to update the kuiver graph
- * @property updateViewWidth callback to update the view width
- * @property updateCanvasSize callback to update the canvas size
- * @property updateContentOffset callback to update the content offset
- * @property updateTransform callback to update both scale and offset
+ * Manages graph visualization state including zoom, pan, and layout.
+ * The viewer automatically handles canvas sizing and layout calculations.
+ *
+ * @property layoutedKuiver The graph after layout positioning has been applied. Use this to access the current graph structure.
+ * @property scale Current zoom level (1.0 = 100%, 0.5 = 50%, 2.0 = 200%)
+ * @property offset Current pan offset in pixels
+ * @property centerGraph Centers and fits the graph in the viewport
+ * @property zoomIn Zooms in by 20% (capped at 500%)
+ * @property zoomOut Zooms out by 20% (capped at 10%)
+ * @property updateKuiver Updates the graph structure and triggers relayout
+ * @property updateTransform Directly sets zoom level and pan offset (scale, offset)
+ *
+ * ## Internal Properties
+ *
+ * These properties are managed automatically by the viewer. You typically don't need to interact with them:
+ *
+ * @property kuiver The original graph structure (before layout)
+ * @property viewWidth Logical width of the view in DP (for density calculations)
+ * @property canvasWidth Physical canvas width in pixels
+ * @property canvasHeight Physical canvas height in pixels
+ * @property contentOffset Offset for UI overlay content (managed internally)
+ * @property updateViewWidth Internal callback for view width updates
+ * @property updateCanvasSize Internal callback for canvas size updates
+ * @property updateContentOffset Internal callback for content offset updates
  */
 @Stable
 data class KuiverViewerState(
@@ -60,9 +67,26 @@ data class KuiverViewerState(
 /**
  * Creates and remembers a [KuiverViewerState] with the given initial graph and layout configuration.
  *
+ * For persistence across configuration changes, use [rememberSaveableKuiverViewerState].
+ *
  * @param initialKuiver The initial graph to display
- * @param layoutConfig Configuration for the layout algorithm
+ * @param layoutConfig Configuration for the layout algorithm. Defaults to hierarchical layout.
  * @return A remembered [KuiverViewerState] instance
+ *
+ * ```kotlin
+ * val viewerState = rememberKuiverViewerState(
+ *     initialKuiver = myGraph,
+ *     layoutConfig = LayoutConfig.Hierarchical()
+ * )
+ *
+ * KuiverViewer(
+ *     state = viewerState,
+ *     nodeContent = { node -> /* ... */ },
+ *     edgeContent = { edge, from, to -> /* ... */ }
+ * )
+ * ```
+ *
+ * @see rememberSaveableKuiverViewerState for state that persists across configuration changes
  */
 @Composable
 fun rememberKuiverViewerState(
@@ -99,47 +123,38 @@ fun rememberKuiverViewerState(
 }
 
 /**
- * Creates and remembers a saveable [KuiverViewerState] that persists view state across process death.
+ * Creates and remembers a saveable [KuiverViewerState] that persists across configuration changes.
  *
- * This function saves:
- * - View state: scale (zoom level), offset (pan position), and node positions
- * - Graph structure: nodes (IDs, dimensions, positions) and edges
+ * Saves graph structure, zoom level, and pan position. Your application data (node labels, colors, etc.)
+ * must be saved separately - Kuiver only manages the graph structure and view state.
  *
- * This function does NOT save:
- * - User node data - you must manage this separately using node IDs
- * - Layout configuration - you must provide this via layoutConfig
+ * @param initialKuiver The initial graph to display
+ * @param layoutConfig Configuration for the layout algorithm. Defaults to hierarchical layout.
+ * @return A saveable [KuiverViewerState] instance
  *
- * When the state is restored, both the graph structure and view state are preserved.
+ * ## Example
  *
- * **Important**: Kuiver does not save your graph metadata. Manage your node data separately, e.g. using a [Map]
- * keyed by node ID.
+ * ```kotlin
+ * // Your app data (saved separately)
+ * var nodeData by rememberSaveable(stateSaver = nodeDataSaver()) {
+ *     mutableStateOf(mapOf("A" to MyData(...)))
+ * }
  *
- * @param initialKuiver The initial graph to display. Provide this on first composition.
- * @param layoutConfig Configuration for the layout algorithm. Defaults to LayoutConfig().
- * @return A remembered [KuiverViewerState] instance with saveable state
- *
- * @sample
- * ```
- * // Manage your data separately
- * val nodeData by rememberSaveable { mutableStateOf(mapOf(
- *     "1" to NodeData("Start", Color.Red),
- *     "2" to NodeData("End", Color.Blue)
- * )) }
- *
- * // Library manages graph structure and view state
  * val viewerState = rememberSaveableKuiverViewerState(
- *     initialKuiver = myKuiver,
- *     layoutConfig = LayoutConfig(algorithm = LayoutAlgorithm.HIERARCHICAL)
+ *     initialKuiver = myGraph,
+ *     layoutConfig = LayoutConfig.Hierarchical()
  * )
  *
  * KuiverViewer(
  *     state = viewerState,
  *     nodeContent = { node ->
- *         val data = nodeData[node.id]
- *         // Render using data
+ *         val data = nodeData[node.id] // Look up your data
+ *         /* render node using data */
  *     }
  * )
  * ```
+ *
+ * @see rememberKuiverViewerState for non-persistent state
  */
 @Composable
 fun rememberSaveableKuiverViewerState(
