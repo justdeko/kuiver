@@ -14,7 +14,7 @@ import kotlin.math.sqrt
 // Nodes beyond this distance have negligible repulsion force
 private const val MAX_REPULSION_DISTANCE_FACTOR = 3.0f
 
-fun forceDirected(kuiver: Kuiver, layoutConfig: LayoutConfig = LayoutConfig()): Kuiver {
+fun forceDirected(kuiver: Kuiver, layoutConfig: LayoutConfig.ForceDirected = LayoutConfig.ForceDirected()): Kuiver {
     if (layoutConfig.width <= 0f || layoutConfig.height <= 0f) {
         return kuiver // Return original if no valid dimensions
     }

@@ -22,8 +22,7 @@ class HierarchicalLayoutTest {
             addEdge(KuiverEdge(fromId = "B", toId = "C"))
         }
 
-        val config = LayoutConfig(
-            algorithm = LayoutAlgorithm.HIERARCHICAL,
+        val config = LayoutConfig.Hierarchical(
             direction = LayoutDirection.HORIZONTAL,
             width = 600f,
             height = 400f
@@ -54,8 +53,7 @@ class HierarchicalLayoutTest {
             addEdge(KuiverEdge(fromId = "C", toId = "D"))
         }
 
-        val config = LayoutConfig(
-            algorithm = LayoutAlgorithm.HIERARCHICAL,
+        val config = LayoutConfig.Hierarchical(
             direction = LayoutDirection.HORIZONTAL,
             width = 600f,
             height = 400f
@@ -87,8 +85,7 @@ class HierarchicalLayoutTest {
             addEdge(KuiverEdge(fromId = "A", toId = "B"))
         }
 
-        val config = LayoutConfig(
-            algorithm = LayoutAlgorithm.HIERARCHICAL,
+        val config = LayoutConfig.Hierarchical(
             direction = LayoutDirection.VERTICAL,
             width = 400f,
             height = 600f
@@ -115,8 +112,7 @@ class HierarchicalLayoutTest {
             addEdge(KuiverEdge(fromId = "C", toId = "A"))
         }
 
-        val config = LayoutConfig(
-            algorithm = LayoutAlgorithm.HIERARCHICAL,
+        val config = LayoutConfig.Hierarchical(
             width = 600f,
             height = 400f
         )
@@ -148,8 +144,7 @@ class HierarchicalLayoutTest {
             addEdge(KuiverEdge(fromId = "d", toId = "e"))
         }
 
-        val config = LayoutConfig(
-            algorithm = LayoutAlgorithm.HIERARCHICAL,
+        val config = LayoutConfig.Hierarchical(
             direction = LayoutDirection.HORIZONTAL,
             width = 800f,
             height = 600f
@@ -205,8 +200,7 @@ class HierarchicalLayoutTest {
             addEdge(KuiverEdge(fromId = "b", toId = "c"))
         }
 
-        val config = LayoutConfig(
-            algorithm = LayoutAlgorithm.HIERARCHICAL,
+        val config = LayoutConfig.Hierarchical(
             direction = LayoutDirection.HORIZONTAL,
             width = 800f,
             height = 600f
@@ -257,8 +251,7 @@ class HierarchicalLayoutTest {
             addEdge(KuiverEdge(fromId = "large", toId = "medium"))
         }
 
-        val config = LayoutConfig(
-            algorithm = LayoutAlgorithm.HIERARCHICAL,
+        val config = LayoutConfig.Hierarchical(
             direction = LayoutDirection.HORIZONTAL,
             width = 800f,
             height = 600f

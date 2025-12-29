@@ -19,8 +19,7 @@ class ForceDirectedLayoutTest {
             addEdge(KuiverEdge(fromId = "B", toId = "C"))
         }
 
-        val config = LayoutConfig(
-            algorithm = LayoutAlgorithm.FORCE_DIRECTED,
+        val config = LayoutConfig.ForceDirected(
             width = 600f,
             height = 400f,
             iterations = 100
@@ -42,8 +41,7 @@ class ForceDirectedLayoutTest {
             addNode(KuiverNode(id = "A"))
         }
 
-        val config = LayoutConfig(
-            algorithm = LayoutAlgorithm.FORCE_DIRECTED,
+        val config = LayoutConfig.ForceDirected(
             width = 600f,
             height = 400f,
             iterations = 100
@@ -70,8 +68,7 @@ class ForceDirectedLayoutTest {
             addEdge(KuiverEdge(fromId = "C", toId = "A"))
         }
 
-        val config = LayoutConfig(
-            algorithm = LayoutAlgorithm.FORCE_DIRECTED,
+        val config = LayoutConfig.ForceDirected(
             width = 600f,
             height = 400f
         )

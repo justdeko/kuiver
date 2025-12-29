@@ -67,7 +67,7 @@ data class KuiverViewerState(
 @Composable
 fun rememberKuiverViewerState(
     initialKuiver: Kuiver,
-    layoutConfig: LayoutConfig = LayoutConfig()
+    layoutConfig: LayoutConfig = LayoutConfig.Hierarchical()
 ): KuiverViewerState {
     var kuiver by remember { mutableStateOf(initialKuiver) }
     var scale by remember { mutableFloatStateOf(1f) }
@@ -144,7 +144,7 @@ fun rememberKuiverViewerState(
 @Composable
 fun rememberSaveableKuiverViewerState(
     initialKuiver: Kuiver,
-    layoutConfig: LayoutConfig = LayoutConfig()
+    layoutConfig: LayoutConfig = LayoutConfig.Hierarchical()
 ): KuiverViewerState {
     // Saveable state for the entire graph (now possible since it's data-agnostic!)
     var kuiver by rememberSaveable(stateSaver = kuiverSaver()) {
@@ -214,10 +214,20 @@ private fun createKuiverViewerState(
     // Run layout when dependencies change
     LaunchedEffect(kuiver, layoutConfig, canvasWidth, canvasHeight) {
         val newLayouted = if (canvasWidth > 0f && canvasHeight > 0f) {
-            val configWithDimensions = layoutConfig.copy(
-                width = canvasWidth,
-                height = canvasHeight
-            )
+            val configWithDimensions = when (layoutConfig) {
+                is LayoutConfig.Hierarchical -> layoutConfig.copy(
+                    width = canvasWidth,
+                    height = canvasHeight
+                )
+                is LayoutConfig.ForceDirected -> layoutConfig.copy(
+                    width = canvasWidth,
+                    height = canvasHeight
+                )
+                is LayoutConfig.Custom -> layoutConfig.copy(
+                    width = canvasWidth,
+                    height = canvasHeight
+                )
+            }
             layout(kuiver, configWithDimensions)
         } else {
             kuiver

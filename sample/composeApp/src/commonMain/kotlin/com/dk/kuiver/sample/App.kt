@@ -48,7 +48,6 @@ import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
 import com.dk.kuiver.model.buildKuiver
-import com.dk.kuiver.model.layout.LayoutAlgorithm
 import com.dk.kuiver.model.layout.LayoutConfig
 import com.dk.kuiver.model.layout.LayoutDirection
 import com.dk.kuiver.rememberSaveableKuiverViewerState
@@ -68,6 +67,12 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 enum class Screen {
     GRAPH_BUILDER,
     PROCESS_DIAGRAM
+}
+
+// Layout algorithm selection for the sample app UI
+enum class LayoutAlgorithm {
+    HIERARCHICAL,
+    FORCE_DIRECTED
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -125,10 +130,12 @@ private fun GraphBuilderScreen(
     }
 
     val layoutConfig = remember(selectedLayoutAlgorithm, selectedLayoutDirection) {
-        LayoutConfig(
-            algorithm = selectedLayoutAlgorithm,
-            direction = selectedLayoutDirection
-        )
+        when (selectedLayoutAlgorithm) {
+            LayoutAlgorithm.HIERARCHICAL -> LayoutConfig.Hierarchical(
+                direction = selectedLayoutDirection
+            )
+            LayoutAlgorithm.FORCE_DIRECTED -> LayoutConfig.ForceDirected()
+        }
     }
 
     val kuiverViewerState = rememberSaveableKuiverViewerState(

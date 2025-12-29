@@ -9,7 +9,7 @@ import com.dk.kuiver.model.buildKuiverWithClassifiedEdges
  * Sugiyama hierarchical layout algorithm.
  * Phases: 1) Cycle removal, 2) Layer assignment, 3) Crossing minimization, 4) Coordinate assignment
  */
-internal fun hierarchical(kuiver: Kuiver, layoutConfig: LayoutConfig = LayoutConfig()): Kuiver {
+internal fun hierarchical(kuiver: Kuiver, layoutConfig: LayoutConfig.Hierarchical = LayoutConfig.Hierarchical()): Kuiver {
     // Phase 1: Cycle Removal
     val (acyclicEdges, _) = if (kuiver.hasCycles()) {
         separateBackEdges(kuiver)

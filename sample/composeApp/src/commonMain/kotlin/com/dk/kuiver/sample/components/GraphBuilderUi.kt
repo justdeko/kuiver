@@ -53,8 +53,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.dk.kuiver.model.layout.LayoutAlgorithm
 import com.dk.kuiver.model.layout.LayoutDirection
+import com.dk.kuiver.sample.LayoutAlgorithm
 import com.dk.kuiver.sample.NodeColorType
 import com.dk.kuiver.sample.NodeColors
 
@@ -225,7 +225,7 @@ fun GraphControlMenu(
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
                 ) {
-                    LayoutAlgorithm.entries.dropLast(1).forEachIndexed { index, algorithm ->
+                    LayoutAlgorithm.entries.forEachIndexed { index, algorithm ->
                         ToggleButton(
                             checked = selectedLayoutAlgorithm == algorithm,
                             onCheckedChange = { onLayoutAlgorithmChange(algorithm) },
@@ -240,7 +240,6 @@ fun GraphControlMenu(
                                 when (algorithm) {
                                     LayoutAlgorithm.HIERARCHICAL -> "Hierarchical"
                                     LayoutAlgorithm.FORCE_DIRECTED -> "Force"
-                                    LayoutAlgorithm.CUSTOM -> "Circular"
                                 }
                             )
                         }

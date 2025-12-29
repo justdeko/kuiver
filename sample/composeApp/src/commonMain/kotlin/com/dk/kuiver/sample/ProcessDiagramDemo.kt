@@ -47,7 +47,6 @@ import androidx.compose.ui.unit.sp
 import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
 import com.dk.kuiver.model.buildKuiver
-import com.dk.kuiver.model.layout.LayoutAlgorithm
 import com.dk.kuiver.model.layout.LayoutConfig
 import com.dk.kuiver.rememberSaveableKuiverViewerState
 import com.dk.kuiver.renderer.KuiverViewer
@@ -223,10 +222,11 @@ fun ProcessDiagramDemo(
     }
 
     val layoutConfig = remember(selectedLayoutAlgorithm) {
-        LayoutConfig(
-            algorithm = selectedLayoutAlgorithm
-            // No need to manually set spacing - will be calculated from measured node sizes!
-        )
+        when (selectedLayoutAlgorithm) {
+            LayoutAlgorithm.HIERARCHICAL -> LayoutConfig.Hierarchical()
+            LayoutAlgorithm.FORCE_DIRECTED -> LayoutConfig.ForceDirected()
+        }
+        // No need to manually set spacing - will be calculated from measured node sizes!
     }
 
     val kuiverViewerState = rememberSaveableKuiverViewerState(
