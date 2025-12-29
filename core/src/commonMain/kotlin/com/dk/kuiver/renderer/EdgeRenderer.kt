@@ -104,26 +104,27 @@ private fun calculateEdgeEndpoints(
     val normalizedDirection = Offset(direction.x / distance, direction.y / distance)
 
     // Calculate intersection with rectangle edges based on direction
-    // Small padding to account for borders
-    val padding = 4f
-    val fromHalfWidth = fromNodeWidth / 2f + padding
-    val fromHalfHeight = fromNodeHeight / 2f + padding
-    val toHalfWidth = toNodeWidth / 2f + padding
-    val toHalfHeight = toNodeHeight / 2f + padding
+    val fromHalfWidth = fromNodeWidth / 2f
+    val fromHalfHeight = fromNodeHeight / 2f
+    val toHalfWidth = toNodeWidth / 2f
+    val toHalfHeight = toNodeHeight / 2f
 
     // Calculate which edge of the rectangle the line intersects
     val fromNodeRadius = calculateNodeRadius(normalizedDirection, fromHalfWidth, fromHalfHeight)
     val toNodeRadius = calculateNodeRadius(normalizedDirection, toHalfWidth, toHalfHeight)
 
-    // Calculate edge start and end points at node boundaries
+    // Apply padding uniformly by extending the radius
+    val padding = 4f
+
+    // Calculate edge start and end points at node boundaries (with padding)
     val edgeStart = Offset(
-        fromCenter.x + normalizedDirection.x * fromNodeRadius,
-        fromCenter.y + normalizedDirection.y * fromNodeRadius
+        fromCenter.x + normalizedDirection.x * (fromNodeRadius + padding),
+        fromCenter.y + normalizedDirection.y * (fromNodeRadius + padding)
     )
 
     val edgeEnd = Offset(
-        toCenter.x - normalizedDirection.x * toNodeRadius,
-        toCenter.y - normalizedDirection.y * toNodeRadius
+        toCenter.x - normalizedDirection.x * (toNodeRadius + padding),
+        toCenter.y - normalizedDirection.y * (toNodeRadius + padding)
     )
 
     return Pair(edgeStart, edgeEnd)

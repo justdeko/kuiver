@@ -58,6 +58,7 @@ class Kuiver {
     private val _nodes = mutableMapOf<String, KuiverNode>()
     private val _edges = mutableSetOf<KuiverEdge>()
     private val _adjacencyList = mutableMapOf<String, MutableSet<String>>()
+    private val _edgeMap = mutableMapOf<Pair<String, String>, KuiverEdge>()
 
     val nodes: Map<String, KuiverNode> get() = _nodes
     val edges: Set<KuiverEdge> get() = _edges
@@ -77,6 +78,7 @@ class Kuiver {
 
         _edges.add(edge)
         _adjacencyList[edge.fromId]?.add(edge.toId)
+        _edgeMap[edge.fromId to edge.toId] = edge
         return true
     }
 
@@ -136,8 +138,7 @@ class Kuiver {
             inPath.add(nodeId)
 
             _adjacencyList[nodeId]?.forEach { neighbor ->
-                // Find the edge from nodeId to neighbor
-                val edge = _edges.find { it.fromId == nodeId && it.toId == neighbor }
+                val edge = _edgeMap[nodeId to neighbor]
 
                 if (edge != null && !result.containsKey(edge)) {
                     when {

@@ -10,6 +10,10 @@ import kotlin.math.min
 import kotlin.math.sin
 import kotlin.math.sqrt
 
+// Maximum distance for repulsion calculations (optimization: skip distant nodes)
+// Nodes beyond this distance have negligible repulsion force
+private const val MAX_REPULSION_DISTANCE_FACTOR = 3.0f
+
 fun forceDirected(kuiver: Kuiver, layoutConfig: LayoutConfig = LayoutConfig()): Kuiver {
     if (layoutConfig.width <= 0f || layoutConfig.height <= 0f) {
         return kuiver // Return original if no valid dimensions
@@ -62,7 +66,7 @@ fun forceDirected(kuiver: Kuiver, layoutConfig: LayoutConfig = LayoutConfig()): 
     nodes.forEach { forces[it] = Offset.Zero }
 
     repeat(layoutConfig.iterations) {
-        // Reset forces to zero
+        // Reset forces to zero (reuse map instead of recreating)
         nodes.forEach { forces[it] = Offset.Zero }
 
         // Calculate repulsion forces between all node pairs
@@ -81,6 +85,10 @@ fun forceDirected(kuiver: Kuiver, layoutConfig: LayoutConfig = LayoutConfig()): 
                     val dx = posA.x - posB.x
                     val dy = posA.y - posB.y
                     val distance = sqrt(dx * dx + dy * dy)
+
+                    // Distance culling: skip nodes beyond maximum repulsion distance
+                    val maxRepulsionDistance = pairMinDistance * MAX_REPULSION_DISTANCE_FACTOR
+                    if (distance > maxRepulsionDistance) return@forEach
 
                     if (distance > 1f) { // Avoid division by zero
                         // Use minimum distance to ensure nodes don't get too close

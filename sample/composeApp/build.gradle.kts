@@ -43,7 +43,7 @@ kotlin {
         commonMain.dependencies {
             implementation(project(":core"))
             // uncomment this and comment the import above to test any published versions
-            // implementation("io.github.justdeko:kuiver:0.1.0-SNAPSHOT")
+            //implementation(libs.kuiver)
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(libs.material3)
