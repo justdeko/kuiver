@@ -53,8 +53,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.dk.kuiver.model.layout.LayoutAlgorithm
 import com.dk.kuiver.model.layout.LayoutDirection
+import com.dk.kuiver.sample.LayoutAlgorithm
 import com.dk.kuiver.sample.NodeColorType
 import com.dk.kuiver.sample.NodeColors
 
@@ -225,7 +225,7 @@ fun GraphControlMenu(
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
                 ) {
-                    LayoutAlgorithm.entries.dropLast(1).forEachIndexed { index, algorithm ->
+                    LayoutAlgorithm.entries.forEachIndexed { index, algorithm ->
                         ToggleButton(
                             checked = selectedLayoutAlgorithm == algorithm,
                             onCheckedChange = { onLayoutAlgorithmChange(algorithm) },
@@ -240,7 +240,6 @@ fun GraphControlMenu(
                                 when (algorithm) {
                                     LayoutAlgorithm.HIERARCHICAL -> "Hierarchical"
                                     LayoutAlgorithm.FORCE_DIRECTED -> "Force"
-                                    LayoutAlgorithm.CUSTOM -> "Circular"
                                 }
                             )
                         }
@@ -311,7 +310,6 @@ fun NodeCreationForm(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Single text field for label only
                 OutlinedTextField(
                     value = newNodeData,
                     onValueChange = onNodeDataChange,
@@ -321,12 +319,10 @@ fun NodeCreationForm(
                     shape = RoundedCornerShape(12.dp)
                 )
 
-                // Compact color selection
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Random color button (gradient)
                     Box(
                         modifier = Modifier
                             .size(28.dp)
@@ -353,7 +349,6 @@ fun NodeCreationForm(
                         }
                     }
 
-                    // Solid color buttons
                     NodeColorType.ALL.forEach { colorType ->
                         val color = NodeColors.getColor(colorType)
                         Button(
@@ -370,7 +365,6 @@ fun NodeCreationForm(
                     }
                 }
 
-                // Create button
                 Button(
                     onClick = onCreateNode,
                     modifier = Modifier.size(height = 40.dp, width = 56.dp),

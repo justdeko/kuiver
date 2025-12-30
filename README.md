@@ -74,8 +74,7 @@ fun MyGraphViewer() {
     }
 
     // Configure layout
-    val layoutConfig = LayoutConfig(
-        algorithm = LayoutAlgorithm.HIERARCHICAL,
+    val layoutConfig = LayoutConfig.Hierarchical(
         direction = LayoutDirection.HORIZONTAL
     )
 
@@ -166,14 +165,17 @@ addNode(
 
 ## Layout Algorithms
 
+> **Note:** The layout algorithms are simple implementations based on established graph layouting
+> techniques. While inspired by academic research, they are not direct ports of published
+> implementations. Expect flaws and suboptimal layouts on complex graphs.
+
 ### Hierarchical Layout
 
 Best for directed acyclic graphs (DAGs) and tree structures. Automatically handles cycles by
 classifying back edges.
 
 ```kotlin
-val layoutConfig = LayoutConfig(
-    algorithm = LayoutAlgorithm.HIERARCHICAL,
+val layoutConfig = LayoutConfig.Hierarchical(
     direction = LayoutDirection.HORIZONTAL,  // or VERTICAL
     levelSpacing = 150f,      // Distance between hierarchy levels
     nodeSpacing = 100f        // Distance between nodes in same level
@@ -193,8 +195,7 @@ Best for understanding relationships in general graphs. Creates organic, balance
 physics simulation.
 
 ```kotlin
-val layoutConfig = LayoutConfig(
-    algorithm = LayoutAlgorithm.FORCE_DIRECTED,
+val layoutConfig = LayoutConfig.ForceDirected(
     iterations = 200,              // Simulation steps (more = better layout, slower)
     repulsionStrength = 500f,      // How strongly nodes push apart
     attractionStrength = 0.02f,    // How strongly connected nodes pull together
@@ -204,7 +205,7 @@ val layoutConfig = LayoutConfig(
 
 ### Custom Layouts
 
-You can provide your own layout algorithm using the `CUSTOM` layout option. This gives you full
+You can provide your own layout algorithm using `LayoutConfig.Custom`. This gives you full
 control over node positioning.
 
 ```kotlin
@@ -229,17 +230,15 @@ val circularLayout: LayoutProvider = { kuiver, config ->
 }
 
 // Use the custom layout
-val layoutConfig = LayoutConfig(
-    algorithm = LayoutAlgorithm.CUSTOM,
-    customLayoutProvider = circularLayout
+val layoutConfig = LayoutConfig.Custom(
+    provider = circularLayout
 )
 ```
 
 **Custom Layout Tips:**
 
-- Your layout function receives the `Kuiver` graph and `LayoutConfig`
+- Your layout function receives the `Kuiver` graph and `LayoutConfig` (use `LayoutConfig.Custom`)
 - Access canvas dimensions via `config.width` and `config.height`
-- Use `config.nodeSpacing`, `config.levelSpacing`, and other fields as hints for your algorithm
 - Always use `buildKuiverWithClassifiedEdges(updatedNodes, kuiver.edges)` to construct the result
 - Handle zero dimensions gracefully (canvas might not be measured yet on first layout)
 - Use `remember` to stabilize your layout function in Compose to avoid unnecessary recompositions

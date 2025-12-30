@@ -47,7 +47,6 @@ import androidx.compose.ui.unit.sp
 import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
 import com.dk.kuiver.model.buildKuiver
-import com.dk.kuiver.model.layout.LayoutAlgorithm
 import com.dk.kuiver.model.layout.LayoutConfig
 import com.dk.kuiver.rememberSaveableKuiverViewerState
 import com.dk.kuiver.renderer.KuiverViewer
@@ -62,7 +61,6 @@ fun ProcessDiagramDemo(
 ) {
     var selectedLayoutAlgorithm by rememberSaveable { mutableStateOf(LayoutAlgorithm.HIERARCHICAL) }
 
-    // Node data managed separately (user responsibility)
     val processNodeData = remember {
         mapOf(
             "start" to ProcessNode("Wake Up", "Time for breakfast!", ProcessNodeType.START, ProcessIcon.SUN),
@@ -175,10 +173,8 @@ fun ProcessDiagramDemo(
         )
     }
 
-    // Graph structure (library manages this)
     val processKuiver = remember {
         buildKuiver {
-            // Add nodes with just IDs
             processNodeData.keys.forEach { id ->
                 addNode(KuiverNode(id))
             }
@@ -223,10 +219,10 @@ fun ProcessDiagramDemo(
     }
 
     val layoutConfig = remember(selectedLayoutAlgorithm) {
-        LayoutConfig(
-            algorithm = selectedLayoutAlgorithm
-            // No need to manually set spacing - will be calculated from measured node sizes!
-        )
+        when (selectedLayoutAlgorithm) {
+            LayoutAlgorithm.HIERARCHICAL -> LayoutConfig.Hierarchical()
+            LayoutAlgorithm.FORCE_DIRECTED -> LayoutConfig.ForceDirected()
+        }
     }
 
     val kuiverViewerState = rememberSaveableKuiverViewerState(
@@ -301,7 +297,6 @@ fun ProcessDiagramDemo(
                 }
             )
 
-            // Zoom controls using HorizontalFloatingToolbar (matching graph builder)
             HorizontalFloatingToolbar(
                 expanded = true,
                 modifier = Modifier
@@ -360,7 +355,6 @@ private fun ProcessNodeContent(data: ProcessNode) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Icon
             Icon(
                 imageVector = data.icon.imageVector,
                 contentDescription = data.title,
@@ -370,7 +364,6 @@ private fun ProcessNodeContent(data: ProcessNode) {
                     .width(32.dp)
             )
 
-            // Title
             Text(
                 text = data.title,
                 color = Color.White,
@@ -381,7 +374,6 @@ private fun ProcessNodeContent(data: ProcessNode) {
                 overflow = TextOverflow.Ellipsis
             )
 
-            // Description
             if (data.description.isNotEmpty()) {
                 Text(
                     text = data.description,

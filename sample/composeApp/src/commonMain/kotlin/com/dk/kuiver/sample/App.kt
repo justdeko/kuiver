@@ -48,7 +48,6 @@ import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
 import com.dk.kuiver.model.buildKuiver
-import com.dk.kuiver.model.layout.LayoutAlgorithm
 import com.dk.kuiver.model.layout.LayoutConfig
 import com.dk.kuiver.model.layout.LayoutDirection
 import com.dk.kuiver.rememberSaveableKuiverViewerState
@@ -68,6 +67,12 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 enum class Screen {
     GRAPH_BUILDER,
     PROCESS_DIAGRAM
+}
+
+// Layout algorithm selection for the sample app UI
+enum class LayoutAlgorithm {
+    HIERARCHICAL,
+    FORCE_DIRECTED
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -125,10 +130,12 @@ private fun GraphBuilderScreen(
     }
 
     val layoutConfig = remember(selectedLayoutAlgorithm, selectedLayoutDirection) {
-        LayoutConfig(
-            algorithm = selectedLayoutAlgorithm,
-            direction = selectedLayoutDirection
-        )
+        when (selectedLayoutAlgorithm) {
+            LayoutAlgorithm.HIERARCHICAL -> LayoutConfig.Hierarchical(
+                direction = selectedLayoutDirection
+            )
+            LayoutAlgorithm.FORCE_DIRECTED -> LayoutConfig.ForceDirected()
+        }
     }
 
     val kuiverViewerState = rememberSaveableKuiverViewerState(
@@ -159,16 +166,13 @@ private fun GraphBuilderScreen(
     var isAutoGenerating by rememberSaveable { mutableStateOf(false) }
     var shouldGenerateNode by rememberSaveable { mutableStateOf(true) } // Alternates between node and edge
 
-    // Connection mode state
     val connectionState = rememberConnectionState()
 
-    // toolbar stuff
     var toolbarExpanded by rememberSaveable { mutableStateOf(false) }
 
     // Track overlay content height for centering offset
     var overlayContentHeight by rememberSaveable { mutableStateOf(0) }
 
-    // Update content offset when overlay height changes
     LaunchedEffect(overlayContentHeight) {
         val offset = Offset(0f, overlayContentHeight.toFloat())
         kuiverViewerState.updateContentOffset(offset)
@@ -249,7 +253,6 @@ private fun GraphBuilderScreen(
             .systemBarsPadding()
     ) {
 
-        // Graph Viewer with zoom controls
         Box(modifier = Modifier.fillMaxSize()) {
             KuiverViewer(
                 state = kuiverViewerState,
@@ -258,10 +261,8 @@ private fun GraphBuilderScreen(
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.surface),
                 nodeContent = { node ->
-                    // Look up node data by ID
                     val data = nodeData[node.id]
                     if (data != null) {
-                        // Get color from node data
                         val backgroundColor = NodeColors.getColor(data.colorType)
                         val textColor = NodeColors.getTextColor(data.colorType)
 

@@ -27,9 +27,8 @@ class CustomLayoutTest {
             k
         }
 
-        val config = LayoutConfig(
-            algorithm = LayoutAlgorithm.CUSTOM,
-            customLayoutProvider = customLayout
+        val config = LayoutConfig.Custom(
+            provider = customLayout
         )
 
         layout(kuiver, config)
@@ -52,9 +51,8 @@ class CustomLayoutTest {
             k
         }
 
-        val config = LayoutConfig(
-            algorithm = LayoutAlgorithm.CUSTOM,
-            customLayoutProvider = customLayout,
+        val config = LayoutConfig.Custom(
+            provider = customLayout,
             width = 800f,
             height = 600f
         )
@@ -80,9 +78,8 @@ class CustomLayoutTest {
             buildKuiverWithClassifiedEdges(updatedNodes, k.edges)
         }
 
-        val config = LayoutConfig(
-            algorithm = LayoutAlgorithm.CUSTOM,
-            customLayoutProvider = customLayout
+        val config = LayoutConfig.Custom(
+            provider = customLayout
         )
 
         val result = layout(kuiver, config)
@@ -93,78 +90,40 @@ class CustomLayoutTest {
     }
 
     @Test
-    fun `throws error when CUSTOM algorithm without provider`() {
-        val kuiver = buildKuiver {
-            addNode(KuiverNode(id = "A"))
-        }
-
-        val config = LayoutConfig(
-            algorithm = LayoutAlgorithm.CUSTOM,
-            customLayoutProvider = null
-        )
-
-        assertFailsWith<IllegalArgumentException> {
-            layout(kuiver, config)
-        }
-    }
-
-    @Test
-    fun `custom layout provider ignored when algorithm is not CUSTOM`() {
-        val kuiver = buildKuiver {
-            addNode(KuiverNode(id = "A"))
-        }
-
-        var customLayoutCalled = false
-        val customLayout: LayoutProvider = { k, _ ->
-            customLayoutCalled = true
-            k
-        }
-
-        val config = LayoutConfig(
-            algorithm = LayoutAlgorithm.HIERARCHICAL,
-            customLayoutProvider = customLayout,  // Should be ignored
-            width = 800f,
-            height = 600f
-        )
-
-        layout(kuiver, config)
-
-        // Custom layout should NOT be called
-        assertFalse(customLayoutCalled, "Custom layout should be ignored when algorithm is not CUSTOM")
-    }
-
-    @Test
     fun `custom layout can use LayoutConfig parameters`() {
         val kuiver = buildKuiver {
             addNode(KuiverNode(id = "A"))
             addNode(KuiverNode(id = "B"))
         }
 
-        // Simple grid layout using nodeSpacing from config
+        // Simple grid layout using width from config
+        val spacing = 150f
         val gridLayout: LayoutProvider = { k, c ->
             val updatedNodes = k.nodes.values.mapIndexed { index, node ->
                 node.copy(
                     position = Offset(
-                        x = index * c.nodeSpacing,
-                        y = 0f
+                        x = index * spacing,
+                        y = c.height / 2f
                     )
                 )
             }
             buildKuiverWithClassifiedEdges(updatedNodes, k.edges)
         }
 
-        val config = LayoutConfig(
-            algorithm = LayoutAlgorithm.CUSTOM,
-            customLayoutProvider = gridLayout,
-            nodeSpacing = 150f
+        val config = LayoutConfig.Custom(
+            provider = gridLayout,
+            width = 600f,
+            height = 400f
         )
 
         val result = layout(kuiver, config)
 
-        // Nodes should be spaced 150 units apart
+        // Nodes should be spaced 150 units apart horizontally, centered vertically
         val nodesList = result.nodes.values.toList()
         assertEquals(0f, nodesList[0].position.x)
         assertEquals(150f, nodesList[1].position.x)
+        assertEquals(200f, nodesList[0].position.y) // height/2
+        assertEquals(200f, nodesList[1].position.y)
     }
 
     @Test
@@ -194,9 +153,8 @@ class CustomLayoutTest {
             buildKuiverWithClassifiedEdges(updatedNodes, k.edges)
         }
 
-        val config = LayoutConfig(
-            algorithm = LayoutAlgorithm.CUSTOM,
-            customLayoutProvider = circularLayout,
+        val config = LayoutConfig.Custom(
+            provider = circularLayout,
             width = 400f,
             height = 400f
         )
@@ -228,9 +186,8 @@ class CustomLayoutTest {
             buildKuiverWithClassifiedEdges(updatedNodes, k.edges)
         }
 
-        val config = LayoutConfig(
-            algorithm = LayoutAlgorithm.CUSTOM,
-            customLayoutProvider = customLayout
+        val config = LayoutConfig.Custom(
+            provider = customLayout
         )
 
         val result = layout(kuiver, config)
@@ -245,9 +202,8 @@ class CustomLayoutTest {
 
         val customLayout: LayoutProvider = { k, _ -> k }
 
-        val config = LayoutConfig(
-            algorithm = LayoutAlgorithm.CUSTOM,
-            customLayoutProvider = customLayout
+        val config = LayoutConfig.Custom(
+            provider = customLayout
         )
 
         val result = layout(kuiver, config)
@@ -282,9 +238,8 @@ class CustomLayoutTest {
             buildKuiverWithClassifiedEdges(updatedNodes, k.edges)
         }
 
-        val config = LayoutConfig(
-            algorithm = LayoutAlgorithm.CUSTOM,
-            customLayoutProvider = gridLayout,
+        val config = LayoutConfig.Custom(
+            provider = gridLayout,
             width = 600f,
             height = 600f
         )

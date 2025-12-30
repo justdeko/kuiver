@@ -33,16 +33,13 @@ fun buildKuiverWithClassifiedEdges(
     nodes: Collection<KuiverNode>,
     originalEdges: Collection<KuiverEdge>
 ): Kuiver {
-    // Build temporary graph for classification
     val tempKuiver = Kuiver().apply {
         nodes.forEach { addNode(it) }
         originalEdges.forEach { addEdge(it) }
     }
 
-    // Classify all edges in single pass
     val edgeClassifications = tempKuiver.classifyAllEdges()
 
-    // Build final graph with classified edges
     return Kuiver().apply {
         nodes.forEach { addNode(it) }
         edgeClassifications.forEach { (edge, type) ->
@@ -58,6 +55,7 @@ class Kuiver {
     private val _nodes = mutableMapOf<String, KuiverNode>()
     private val _edges = mutableSetOf<KuiverEdge>()
     private val _adjacencyList = mutableMapOf<String, MutableSet<String>>()
+    private val _edgeMap = mutableMapOf<Pair<String, String>, KuiverEdge>()
 
     val nodes: Map<String, KuiverNode> get() = _nodes
     val edges: Set<KuiverEdge> get() = _edges
@@ -70,13 +68,13 @@ class Kuiver {
     }
 
     fun addEdge(edge: KuiverEdge): Boolean {
-        // Validate nodes exist
         if (!_nodes.containsKey(edge.fromId) || !_nodes.containsKey(edge.toId)) {
             return false
         }
 
         _edges.add(edge)
         _adjacencyList[edge.fromId]?.add(edge.toId)
+        _edgeMap[edge.fromId to edge.toId] = edge
         return true
     }
 
@@ -107,7 +105,6 @@ class Kuiver {
      * Note: For better performance when classifying multiple edges, use classifyAllEdges().
      */
     fun classifyEdge(edge: KuiverEdge): EdgeType {
-        // For single edge classification, use the optimized batch method
         return classifyAllEdges()[edge] ?: EdgeType.CROSS
     }
 
@@ -118,7 +115,6 @@ class Kuiver {
     fun classifyAllEdges(): Map<KuiverEdge, EdgeType> {
         val result = mutableMapOf<KuiverEdge, EdgeType>()
 
-        // Quick self-loop check
         _edges.forEach { edge ->
             if (edge.fromId == edge.toId) {
                 result[edge] = EdgeType.SELF_LOOP
@@ -136,8 +132,7 @@ class Kuiver {
             inPath.add(nodeId)
 
             _adjacencyList[nodeId]?.forEach { neighbor ->
-                // Find the edge from nodeId to neighbor
-                val edge = _edges.find { it.fromId == nodeId && it.toId == neighbor }
+                val edge = _edgeMap[nodeId to neighbor]
 
                 if (edge != null && !result.containsKey(edge)) {
                     when {
