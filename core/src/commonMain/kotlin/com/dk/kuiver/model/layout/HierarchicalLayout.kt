@@ -7,7 +7,16 @@ import com.dk.kuiver.model.buildKuiverWithClassifiedEdges
 
 /**
  * Sugiyama hierarchical layout algorithm.
- * Phases: 1) Cycle removal, 2) Layer assignment, 3) Crossing minimization, 4) Coordinate assignment
+ *
+ * Implements the four-phase approach for layered graph drawing:
+ * 1. Cycle removal - Identify and handle back edges using DFS
+ * 2. Layer assignment - Assign nodes to levels using longest path
+ * 3. Crossing minimization - Reduce edge crossings with barycenter heuristic
+ * 4. Coordinate assignment - Position nodes within their assigned layers
+ *
+ * References:
+ * - Sugiyama et al. (1981): "Methods for Visual Understanding of Hierarchical System Structures"
+ * - Battista et al. (1998): "Graph Drawing: Algorithms for the Visualization of Graphs"
  */
 internal fun hierarchical(kuiver: Kuiver, layoutConfig: LayoutConfig.Hierarchical = LayoutConfig.Hierarchical()): Kuiver {
     // Phase 1: Cycle Removal
@@ -57,7 +66,6 @@ internal fun hierarchical(kuiver: Kuiver, layoutConfig: LayoutConfig.Hierarchica
     // Phase 3: Crossing Minimization
     val orderedNodes = minimizeCrossings(nodesByLevel, maxLevel, parentMap, childrenMap)
 
-    // Add spacers for bypass edges to avoid visual obstruction
     val adjustedNodes = avoidBypassEdgeObstruction(kuiver, orderedNodes, levels)
 
     // Phase 4: Coordinate Assignment

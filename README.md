@@ -165,6 +165,10 @@ addNode(
 
 ## Layout Algorithms
 
+> **Note:** The layout algorithms are simple implementations based on established graph layouting
+> techniques. While inspired by academic research, they are not direct ports of published
+> implementations. Expect flaws and suboptimal layouts on complex graphs.
+
 ### Hierarchical Layout
 
 Best for directed acyclic graphs (DAGs) and tree structures. Automatically handles cycles by

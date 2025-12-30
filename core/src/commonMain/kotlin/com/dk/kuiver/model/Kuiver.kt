@@ -33,16 +33,13 @@ fun buildKuiverWithClassifiedEdges(
     nodes: Collection<KuiverNode>,
     originalEdges: Collection<KuiverEdge>
 ): Kuiver {
-    // Build temporary graph for classification
     val tempKuiver = Kuiver().apply {
         nodes.forEach { addNode(it) }
         originalEdges.forEach { addEdge(it) }
     }
 
-    // Classify all edges in single pass
     val edgeClassifications = tempKuiver.classifyAllEdges()
 
-    // Build final graph with classified edges
     return Kuiver().apply {
         nodes.forEach { addNode(it) }
         edgeClassifications.forEach { (edge, type) ->
@@ -71,7 +68,6 @@ class Kuiver {
     }
 
     fun addEdge(edge: KuiverEdge): Boolean {
-        // Validate nodes exist
         if (!_nodes.containsKey(edge.fromId) || !_nodes.containsKey(edge.toId)) {
             return false
         }
@@ -109,7 +105,6 @@ class Kuiver {
      * Note: For better performance when classifying multiple edges, use classifyAllEdges().
      */
     fun classifyEdge(edge: KuiverEdge): EdgeType {
-        // For single edge classification, use the optimized batch method
         return classifyAllEdges()[edge] ?: EdgeType.CROSS
     }
 
@@ -120,7 +115,6 @@ class Kuiver {
     fun classifyAllEdges(): Map<KuiverEdge, EdgeType> {
         val result = mutableMapOf<KuiverEdge, EdgeType>()
 
-        // Quick self-loop check
         _edges.forEach { edge ->
             if (edge.fromId == edge.toId) {
                 result[edge] = EdgeType.SELF_LOOP

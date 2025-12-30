@@ -83,7 +83,6 @@ fun KuiverViewer(
     nodeContent: @Composable (KuiverNode) -> Unit,
     edgeContent: @Composable (KuiverEdge, Offset, Offset) -> Unit
 ) {
-    // Check if measurement is needed
     val needsMeasurement = remember(state.kuiver) {
         state.kuiver.nodes.values.any { it.dimensions == null }
     }
@@ -91,7 +90,6 @@ fun KuiverViewer(
     // Track if this is the first measurement for font loading delay
     var hasInitialMeasurementCompleted by remember { mutableStateOf(false) }
 
-    // Measure nodes if needed (in background)
     if (needsMeasurement) {
         val measured = measureNodes(
             kuiver = state.kuiver,
@@ -106,7 +104,6 @@ fun KuiverViewer(
                 hasInitialMeasurementCompleted = true
             }
 
-            // Update DAG with measured dimensions
             val updatedKuiver = state.kuiver.withMeasuredDimensions(measured)
             state.updateKuiver(updatedKuiver)
         }
@@ -155,7 +152,6 @@ internal fun ViewerRenderer(
         val centerX = maxWidth / 2
         val centerY = maxHeight / 2
 
-        // Calculate graph center for proper positioning
         val kuiver = state.layoutedKuiver
         val bounds by remember(kuiver.nodes) {
             derivedStateOf { kuiver.nodes.values.calculatePositionBounds() }
@@ -166,7 +162,7 @@ internal fun ViewerRenderer(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .clipToBounds() // Prevent nodes from drawing outside the DAG viewer bounds
+                .clipToBounds()
                 .onGloballyPositioned { coordinates ->
                     with(density) {
                         val size = coordinates.size
@@ -229,7 +225,7 @@ internal fun ViewerRenderer(
                         translationY = animatedOffset.y
                     )
             ) {
-                // Draw edges first (behind nodes) using composables with animations
+                // Draw edges first so they are behind nodes
                 kuiver.edges.forEach { edge ->
                     val fromNode = kuiver.nodes[edge.fromId]
                     val toNode = kuiver.nodes[edge.toId]
@@ -251,7 +247,6 @@ internal fun ViewerRenderer(
                     }
                 }
 
-                // Draw debug bounds if enabled
                 if (config.showDebugBounds) {
                     RenderDebugBounds(
                         kuiver = kuiver,
@@ -266,7 +261,6 @@ internal fun ViewerRenderer(
                     )
                 }
 
-                // Draw nodes on top with animations
                 kuiver.nodes.values.forEach { node ->
                     key(node.id) {
                         RenderNode(

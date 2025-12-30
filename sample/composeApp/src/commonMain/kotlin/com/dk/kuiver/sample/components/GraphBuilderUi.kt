@@ -310,7 +310,6 @@ fun NodeCreationForm(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Single text field for label only
                 OutlinedTextField(
                     value = newNodeData,
                     onValueChange = onNodeDataChange,
@@ -320,12 +319,10 @@ fun NodeCreationForm(
                     shape = RoundedCornerShape(12.dp)
                 )
 
-                // Compact color selection
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Random color button (gradient)
                     Box(
                         modifier = Modifier
                             .size(28.dp)
@@ -352,7 +349,6 @@ fun NodeCreationForm(
                         }
                     }
 
-                    // Solid color buttons
                     NodeColorType.ALL.forEach { colorType ->
                         val color = NodeColors.getColor(colorType)
                         Button(
@@ -369,7 +365,6 @@ fun NodeCreationForm(
                     }
                 }
 
-                // Create button
                 Button(
                     onClick = onCreateNode,
                     modifier = Modifier.size(height = 40.dp, width = 56.dp),

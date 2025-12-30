@@ -161,20 +161,16 @@ fun rememberSaveableKuiverViewerState(
     initialKuiver: Kuiver,
     layoutConfig: LayoutConfig = LayoutConfig.Hierarchical()
 ): KuiverViewerState {
-    // Saveable state for the entire graph (now possible since it's data-agnostic!)
     var kuiver by rememberSaveable(stateSaver = kuiverSaver()) {
         mutableStateOf(initialKuiver)
     }
 
-    // Saveable state for scale (zoom level)
     var scale by rememberSaveable { mutableFloatStateOf(1f) }
 
-    // Saveable state for offset (pan position) - save as separate x,y values
     var offsetX by rememberSaveable { mutableFloatStateOf(0f) }
     var offsetY by rememberSaveable { mutableFloatStateOf(0f) }
     var offset by remember { mutableStateOf(Offset(offsetX, offsetY)) }
 
-    // Regular non-saveable state
     var viewWidth by remember { mutableFloatStateOf(0f) }
     var canvasWidth by remember { mutableFloatStateOf(0f) }
     var canvasHeight by remember { mutableFloatStateOf(0f) }
