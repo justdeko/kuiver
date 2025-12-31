@@ -406,8 +406,7 @@ println("Topological order: $order")
 
 ## Sample Application
 
-A complete demo app is included in [`/sample`](./sample). Open the project in **IntelliJ IDEA** or *
-*Android Studio**, sync, and select a run configuration (Desktop/Android/iOS/Web) from the dropdown.
+A complete demo app is included in [`/sample`](./sample). Open the project in **IntelliJ IDEA** or **Android Studio**, sync, and select a run configuration (Desktop/Android/iOS/Web) from the dropdown.
 
 You can also run from the command line:
 
