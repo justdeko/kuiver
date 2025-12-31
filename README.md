@@ -38,11 +38,31 @@
 
 Kuiver is available on Maven Central.
 
-Add the dependency to your `build.gradle.kts`:
+For multiplatform projects, add to your common source set:
 
 ```kotlin
-dependencies {
-    implementation("io.github.justdeko:kuiver:0.1.0")
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation("io.github.justdeko:kuiver:0.1.0")
+        }
+    }
+}
+```
+
+Or for a specific platform only:
+
+```kotlin
+kotlin {
+    sourceSets {
+        androidMain.dependencies {
+            implementation("io.github.justdeko:kuiver-android:0.1.0")
+        }
+        iosMain.dependencies {
+            implementation("io.github.justdeko:kuiver-iosarm64:0.1.0")
+        }
+        // etc.
+    }
 }
 ```
 
@@ -52,6 +72,10 @@ dependencies {
 - iOS
 - JVM (Desktop)
 - WebAssembly (experimental - see [limitations](#known-issues--limitations))
+
+> **Note:** The JavaScript (js) target is currently **not supported**. Only WebAssembly (wasmJs) is
+> supported for web deployment. If you have a multiplatform project with JS configured, you'll need
+> to comment out or remove the `js { ... }` block from your `build.gradle.kts`.
 
 ## Basic Usage
 
@@ -74,7 +98,8 @@ fun MyGraphViewer() {
     }
 
     // Configure layout
-    val layoutConfig = LayoutConfig.Hierarchical(
+    val layoutConfig = LayoutConfig(
+        algorithm = LayoutAlgorithm.HIERARCHICAL,
         direction = LayoutDirection.HORIZONTAL
     )
 
@@ -175,7 +200,8 @@ Best for directed acyclic graphs (DAGs) and tree structures. Automatically handl
 classifying back edges.
 
 ```kotlin
-val layoutConfig = LayoutConfig.Hierarchical(
+val layoutConfig = LayoutConfig(
+    algorithm = LayoutAlgorithm.HIERARCHICAL,
     direction = LayoutDirection.HORIZONTAL,  // or VERTICAL
     levelSpacing = 150f,      // Distance between hierarchy levels
     nodeSpacing = 100f        // Distance between nodes in same level
@@ -195,7 +221,8 @@ Best for understanding relationships in general graphs. Creates organic, balance
 physics simulation.
 
 ```kotlin
-val layoutConfig = LayoutConfig.ForceDirected(
+val layoutConfig = LayoutConfig(
+    algorithm = LayoutAlgorithm.FORCE_DIRECTED,
     iterations = 200,              // Simulation steps (more = better layout, slower)
     repulsionStrength = 500f,      // How strongly nodes push apart
     attractionStrength = 0.02f,    // How strongly connected nodes pull together
@@ -205,7 +232,7 @@ val layoutConfig = LayoutConfig.ForceDirected(
 
 ### Custom Layouts
 
-You can provide your own layout algorithm using `LayoutConfig.Custom`. This gives you full
+You can provide your own layout algorithm using the `CUSTOM` layout option. This gives you full
 control over node positioning.
 
 ```kotlin
@@ -230,15 +257,17 @@ val circularLayout: LayoutProvider = { kuiver, config ->
 }
 
 // Use the custom layout
-val layoutConfig = LayoutConfig.Custom(
-    provider = circularLayout
+val layoutConfig = LayoutConfig(
+    algorithm = LayoutAlgorithm.CUSTOM,
+    customLayoutProvider = circularLayout
 )
 ```
 
 **Custom Layout Tips:**
 
-- Your layout function receives the `Kuiver` graph and `LayoutConfig` (use `LayoutConfig.Custom`)
+- Your layout function receives the `Kuiver` graph and `LayoutConfig`
 - Access canvas dimensions via `config.width` and `config.height`
+- Use `config.nodeSpacing`, `config.levelSpacing`, and other fields as hints for your algorithm
 - Always use `buildKuiverWithClassifiedEdges(updatedNodes, kuiver.edges)` to construct the result
 - Handle zero dimensions gracefully (canvas might not be measured yet on first layout)
 - Use `remember` to stabilize your layout function in Compose to avoid unnecessary recompositions
