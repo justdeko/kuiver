@@ -44,7 +44,7 @@ For multiplatform projects, add to your common source set:
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.justdeko:kuiver:0.1.0")
+            implementation("io.github.justdeko:kuiver:0.2.0")
         }
     }
 }
@@ -56,10 +56,10 @@ Or for a specific platform only:
 kotlin {
     sourceSets {
         androidMain.dependencies {
-            implementation("io.github.justdeko:kuiver-android:0.1.0")
+            implementation("io.github.justdeko:kuiver-android:0.2.0")
         }
         iosMain.dependencies {
-            implementation("io.github.justdeko:kuiver-iosarm64:0.1.0")
+            implementation("io.github.justdeko:kuiver-iosarm64:0.2.0")
         }
         // etc.
     }
@@ -71,11 +71,7 @@ kotlin {
 - Android (minSdk 24)
 - iOS
 - JVM (Desktop)
-- WebAssembly (experimental - see [limitations](#known-issues--limitations))
-
-> **Note:** The JavaScript (js) target is currently **not supported**. Only WebAssembly (wasmJs) is
-> supported for web deployment. If you have a multiplatform project with JS configured, you'll need
-> to comment out or remove the `js { ... }` block from your `build.gradle.kts`.
+- Web (wasmJs/js) - experimental, see [limitations](#known-issues--limitations)
 
 ## Basic Usage
 
@@ -86,20 +82,19 @@ fun MyGraphViewer() {
     val kuiver = remember {
         buildKuiver {
             // Add nodes
-            addNode(KuiverNode(id = "A"))
-            addNode(KuiverNode(id = "B"))
-            addNode(KuiverNode(id = "C"))
+            nodes("A", "B", "C")
 
             // Add edges
-            addEdge(KuiverEdge(fromId = "A", toId = "B"))
-            addEdge(KuiverEdge(fromId = "B", toId = "C"))
-            addEdge(KuiverEdge(fromId = "A", toId = "C"))
+            edges(
+                "A" to "B",
+                "B" to "C",
+                "A" to "C"
+            )
         }
     }
 
     // Configure layout
-    val layoutConfig = LayoutConfig(
-        algorithm = LayoutAlgorithm.HIERARCHICAL,
+    val layoutConfig = LayoutConfig.Hierarchical(
         direction = LayoutDirection.HORIZONTAL
     )
 
@@ -176,17 +171,68 @@ Kuiver automatically measures node dimensions from your `nodeContent`. You can a
 dimensions explicitly:
 
 ```kotlin
-// Auto-measured (recommended)
-addNode(KuiverNode(id = "A"))
+buildKuiver {
+    // Auto-measured (recommended)
+    nodes("A")
 
-// Explicit dimensions
-addNode(
-    KuiverNode(
-        id = "B",
-        dimensions = NodeDimensions(width = 120.dp, height = 80.dp)
+    // Explicit dimensions
+    addNode(
+        KuiverNode(
+            id = "B",
+            dimensions = NodeDimensions(width = 120.dp, height = 80.dp)
+        )
     )
-)
+}
 ```
+
+### Edge Anchor Points
+
+By default, edges point and connect to the node center (with consideration of the node boundaries).
+For precise control, you can define custom anchor points:
+
+```kotlin
+nodeContent = { node ->
+    Box(modifier = Modifier.size(120.dp, 80.dp).background(Color.Blue)) {
+        // Define anchors with optional visual indicators
+        KuiverAnchor(
+            anchorId = "left",
+            nodeId = node.id,
+            modifier = Modifier.align(Alignment.CenterStart)
+        ) {
+            Box(
+                Modifier
+                    .size(8.dp)
+                    .background(Color.White, CircleShape)
+            )
+        }
+
+        KuiverAnchor(
+            anchorId = "right",
+            nodeId = node.id,
+            modifier = Modifier.align(Alignment.CenterEnd)
+        )
+
+        Text("Node ${node.id}", modifier = Modifier.align(Alignment.Center))
+    }
+}
+
+// Reference anchors in edges
+buildKuiver {
+    nodes("A", "B")
+    edge(
+        from = "A",
+        to = "B",
+        fromAnchor = "right",
+        toAnchor = "left"
+    )
+}
+```
+
+**Things to keep in mind:**
+- Anchor IDs are scoped per-node (each node has its own namespace).
+- Missing anchors or anchors that aren't found fallback to automatic edge positioning
+
+See `ProcessDiagramDemo.kt` for a complete example with multiple anchors per side.
 
 ## Layout Algorithms
 
@@ -200,8 +246,7 @@ Best for directed acyclic graphs (DAGs) and tree structures. Automatically handl
 classifying back edges.
 
 ```kotlin
-val layoutConfig = LayoutConfig(
-    algorithm = LayoutAlgorithm.HIERARCHICAL,
+val layoutConfig = LayoutConfig.Hierarchical(
     direction = LayoutDirection.HORIZONTAL,  // or VERTICAL
     levelSpacing = 150f,      // Distance between hierarchy levels
     nodeSpacing = 100f        // Distance between nodes in same level
@@ -221,8 +266,7 @@ Best for understanding relationships in general graphs. Creates organic, balance
 physics simulation.
 
 ```kotlin
-val layoutConfig = LayoutConfig(
-    algorithm = LayoutAlgorithm.FORCE_DIRECTED,
+val layoutConfig = LayoutConfig.ForceDirected(
     iterations = 200,              // Simulation steps (more = better layout, slower)
     repulsionStrength = 500f,      // How strongly nodes push apart
     attractionStrength = 0.02f,    // How strongly connected nodes pull together
@@ -232,7 +276,7 @@ val layoutConfig = LayoutConfig(
 
 ### Custom Layouts
 
-You can provide your own layout algorithm using the `CUSTOM` layout option. This gives you full
+You can provide your own layout algorithm using `LayoutConfig.Custom`. This gives you full
 control over node positioning.
 
 ```kotlin
@@ -257,17 +301,15 @@ val circularLayout: LayoutProvider = { kuiver, config ->
 }
 
 // Use the custom layout
-val layoutConfig = LayoutConfig(
-    algorithm = LayoutAlgorithm.CUSTOM,
-    customLayoutProvider = circularLayout
+val layoutConfig = LayoutConfig.Custom(
+    provider = circularLayout
 )
 ```
 
 **Custom Layout Tips:**
 
-- Your layout function receives the `Kuiver` graph and `LayoutConfig`
+- Your layout function receives the `Kuiver` graph and `LayoutConfig` (use `LayoutConfig.Custom`)
 - Access canvas dimensions via `config.width` and `config.height`
-- Use `config.nodeSpacing`, `config.levelSpacing`, and other fields as hints for your algorithm
 - Always use `buildKuiverWithClassifiedEdges(updatedNodes, kuiver.edges)` to construct the result
 - Handle zero dimensions gracefully (canvas might not be measured yet on first layout)
 - Use `remember` to stabilize your layout function in Compose to avoid unnecessary recompositions
@@ -350,15 +392,15 @@ Update the graph structure by passing an updated or new `Kuiver` instance with
 
 ```kotlin
 val kuiver = buildKuiver {
-    addNode(KuiverNode("A"))
-    addNode(KuiverNode("B"))
-    addNode(KuiverNode("C"))
-    addEdge(KuiverEdge("A", "B"))
-    addEdge(KuiverEdge("B", "C"))
+    nodes("A", "B", "C")
+    edges(
+        "A" to "B",
+        "B" to "C"
+    )
 
     // Check before adding edge that would create a cycle
     if (!wouldCreateCycle(from = "C", to = "A")) {
-        addEdge(KuiverEdge("C", "A"))
+        edge("C", "A")
     } else {
         println("Skipping edge C -> A: would create a cycle")
     }
@@ -375,13 +417,12 @@ if (kuiver.hasCycles()) {
 
 ```kotlin
 val kuiver = buildKuiver {
-    // Build graph
-    addNode(KuiverNode("A"))
-    addNode(KuiverNode("B"))
-    addNode(KuiverNode("C"))
-    addEdge(KuiverEdge("A", "B"))
-    addEdge(KuiverEdge("B", "C"))
-    addEdge(KuiverEdge("C", "A"))  // Back edge (creates cycle)
+    nodes("A", "B", "C")
+    edges(
+        "A" to "B",
+        "B" to "C",
+        "C" to "A"  // Back edge (creates cycle)
+    )
 }
 
 // Classify all edges
@@ -416,11 +457,11 @@ You can also run from the command line:
 
 ## Known Issues & Limitations
 
-### WebAssembly Platform
+### Web Platform
 
-The WebAssembly (Wasm) target is **experimental** and has known issues.
+The Web target is **experimental** and has known issues.
 
-The library implements several Wasm-specific adjustments to handle browser limitations:
+The library implements several web-specific adjustments to handle browser limitations:
 
 - **Reduced Pan Velocity**: Default pan velocity is `4f` (vs `30f` on native platforms) to
   compensate for higher scroll sensitivity in browsers
