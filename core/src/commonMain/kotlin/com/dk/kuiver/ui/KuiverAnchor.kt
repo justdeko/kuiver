@@ -17,9 +17,9 @@ import com.dk.kuiver.renderer.LocalAnchorRegistry
  * Place this composable within your node content to define where edges can connect.
  * The anchor's position is calculated relative to the node's top-left corner.
  *
+ * @param modifier Generic compose modifier e.g., for alignment within the node
  * @param anchorId Unique identifier for this anchor within the node (e.g., "left", "right")
  * @param nodeId The ID of the node this anchor belongs to
- * @param modifier Modifier for positioning the anchor (use alignment modifiers to place it)
  * @param content Optional content of the anchor
  *
  * Example:

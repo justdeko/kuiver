@@ -86,7 +86,7 @@ internal fun RenderEdge(
  * Calculate edge endpoints with anchor support.
  * Uses anchors if specified, otherwise falls back to center calculation.
  */
-private fun calculateEdgeEndpointsWithAnchors(
+internal fun calculateEdgeEndpointsWithAnchors(
     edge: KuiverEdge,
     fromNode: KuiverNode,
     toNode: KuiverNode,
@@ -188,7 +188,7 @@ fun calculateAbsoluteAnchorPosition(
  * @param targetHeight Height of the target node
  * @param outbound If true, calculates outbound endpoint (from anchor); if false, inbound (to anchor)
  */
-private fun calculateGeometricEndpoint(
+internal fun calculateGeometricEndpoint(
     from: Offset,
     targetCenter: Offset,
     targetWidth: Float,
@@ -307,7 +307,7 @@ private fun calculateSelfLoopEndpoints(
     return Pair(startPoint, endPoint)
 }
 
-private fun calculateNodeRadius(
+internal fun calculateNodeRadius(
     normalizedDirection: Offset,
     halfWidth: Float,
     halfHeight: Float
