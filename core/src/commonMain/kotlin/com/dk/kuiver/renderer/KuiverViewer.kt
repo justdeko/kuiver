@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -83,6 +84,8 @@ fun KuiverViewer(
     nodeContent: @Composable (KuiverNode) -> Unit,
     edgeContent: @Composable (KuiverEdge, Offset, Offset) -> Unit
 ) {
+    val anchorRegistry = remember { AnchorPositionRegistry() }
+
     val needsMeasurement = remember(state.kuiver) {
         state.kuiver.nodes.values.any { it.dimensions == null }
     }
@@ -93,6 +96,7 @@ fun KuiverViewer(
     if (needsMeasurement) {
         val measured = measureNodes(
             kuiver = state.kuiver,
+            anchorRegistry = anchorRegistry,
             nodeContent = nodeContent
         )
 
@@ -114,6 +118,7 @@ fun KuiverViewer(
         state = state,
         modifier = modifier,
         config = config,
+        anchorRegistry = anchorRegistry,
         nodeContent = nodeContent,
         edgeContent = edgeContent
     )
@@ -124,9 +129,11 @@ internal fun ViewerRenderer(
     state: KuiverViewerState,
     modifier: Modifier = Modifier,
     config: KuiverViewerConfig = KuiverViewerConfig(),
+    anchorRegistry: AnchorPositionRegistry,
     nodeContent: @Composable (KuiverNode) -> Unit,
     edgeContent: @Composable (KuiverEdge, Offset, Offset) -> Unit
 ) {
+
     var targetScale by remember { mutableFloatStateOf(state.scale) }
     var targetOffset by remember { mutableStateOf(state.offset) }
     val density = LocalDensity.current
@@ -134,6 +141,16 @@ internal fun ViewerRenderer(
     LaunchedEffect(state.scale, state.offset) {
         targetScale = state.scale
         targetOffset = state.offset
+    }
+
+    // Remove anchors for nodes that no longer exist
+    LaunchedEffect(state.layoutedKuiver.nodes.keys) {
+        val currentNodeIds = state.layoutedKuiver.nodes.keys
+        anchorRegistry.anchorPositions.keys.forEach { nodeId ->
+            if (nodeId !in currentNodeIds) {
+                anchorRegistry.clearNode(nodeId)
+            }
+        }
     }
 
     val animatedScale by animateFloatAsState(
@@ -215,63 +232,66 @@ internal fun ViewerRenderer(
                     }
                 }
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer(
-                        scaleX = animatedScale,
-                        scaleY = animatedScale,
-                        translationX = animatedOffset.x,
-                        translationY = animatedOffset.y
-                    )
-            ) {
-                // Draw edges first so they are behind nodes
-                kuiver.edges.forEach { edge ->
-                    val fromNode = kuiver.nodes[edge.fromId]
-                    val toNode = kuiver.nodes[edge.toId]
+            CompositionLocalProvider(LocalAnchorRegistry provides anchorRegistry) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer(
+                            scaleX = animatedScale,
+                            scaleY = animatedScale,
+                            translationX = animatedOffset.x,
+                            translationY = animatedOffset.y
+                        )
+                ) {
+                    // Draw edges first so they are behind nodes
+                    kuiver.edges.forEach { edge ->
+                        val fromNode = kuiver.nodes[edge.fromId]
+                        val toNode = kuiver.nodes[edge.toId]
 
-                    if (fromNode != null && toNode != null) {
-                        key(edge.fromId, edge.toId) {
-                            RenderEdge(
-                                edge = edge,
-                                fromNode = fromNode,
-                                toNode = toNode,
-                                centerX = centerX,
-                                centerY = centerY,
-                                graphCenterX = graphCenterX,
-                                graphCenterY = graphCenterY,
-                                animationSpec = config.edgeAnimationSpec,
-                                edgeContent = edgeContent
-                            )
+                        if (fromNode != null && toNode != null) {
+                            key(edge.fromId, edge.toId, edge.fromAnchor, edge.toAnchor) {
+                                RenderEdge(
+                                    edge = edge,
+                                    fromNode = fromNode,
+                                    toNode = toNode,
+                                    centerX = centerX,
+                                    centerY = centerY,
+                                    graphCenterX = graphCenterX,
+                                    graphCenterY = graphCenterY,
+                                    anchorRegistry = anchorRegistry,
+                                    animationSpec = config.edgeAnimationSpec,
+                                    edgeContent = edgeContent
+                                )
+                            }
                         }
                     }
-                }
 
-                if (config.showDebugBounds) {
-                    RenderDebugBounds(
-                        kuiver = kuiver,
-                        centerX = centerX,
-                        centerY = centerY,
-                        graphCenterX = graphCenterX,
-                        graphCenterY = graphCenterY,
-                        showDebugBounds = config.showDebugBounds,
-                        onCanvasSize = { _, _ -> },
-                        onRedBoxCenter = { _ -> },
-                        onBoundsChange = { _ -> }
-                    )
-                }
-
-                kuiver.nodes.values.forEach { node ->
-                    key(node.id) {
-                        RenderNode(
-                            node = node,
+                    if (config.showDebugBounds) {
+                        RenderDebugBounds(
+                            kuiver = kuiver,
                             centerX = centerX,
                             centerY = centerY,
                             graphCenterX = graphCenterX,
                             graphCenterY = graphCenterY,
-                            animationSpec = config.nodeAnimationSpec,
-                            nodeContent = nodeContent
+                            showDebugBounds = config.showDebugBounds,
+                            onCanvasSize = { _, _ -> },
+                            onRedBoxCenter = { _ -> },
+                            onBoundsChange = { _ -> }
                         )
+                    }
+
+                    kuiver.nodes.values.forEach { node ->
+                        key(node.id) {
+                            RenderNode(
+                                node = node,
+                                centerX = centerX,
+                                centerY = centerY,
+                                graphCenterX = graphCenterX,
+                                graphCenterY = graphCenterY,
+                                animationSpec = config.nodeAnimationSpec,
+                                nodeContent = nodeContent
+                            )
+                        }
                     }
                 }
             }
