@@ -1,6 +1,7 @@
 package com.dk.kuiver.renderer
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Constraints
@@ -14,12 +15,14 @@ import com.dk.kuiver.model.NodeDimensions
  * This allows the layout algorithm to use real measured sizes instead of predefined values.
  *
  * @param kuiver The graph containing nodes to measure
+ * @param anchorRegistry The anchor registry to provide during measurement
  * @param nodeContent Composable content for each node
  * @return Map of node IDs to their measured dimensions
  */
 @Composable
 internal fun measureNodes(
     kuiver: Kuiver,
+    anchorRegistry: AnchorPositionRegistry,
     nodeContent: @Composable (KuiverNode) -> Unit
 ): Map<String, NodeDimensions> {
     val density = LocalDensity.current
@@ -33,7 +36,9 @@ internal fun measureNodes(
             } else {
                 // Subcompose and measure this node
                 val measurables = subcompose(nodeId) {
-                    nodeContent(node)
+                    CompositionLocalProvider(LocalAnchorRegistry provides anchorRegistry) {
+                        nodeContent(node)
+                    }
                 }
 
                 // Measure with unbounded constraints to get intrinsic size

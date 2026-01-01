@@ -5,9 +5,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.dp
 
 /**
- * Creates a Saver for Kuiver that can persist the graph structure across process death.
- * Since Kuiver is now data-agnostic (contains only IDs, positions, dimensions, and edges),
- * it can be fully serialized using primitive types.
+ * Saver for Kuiver objects to enable saving and restoring state in composables.
  */
 fun kuiverSaver(): Saver<Kuiver, Any> = Saver(
     save = { kuiver ->
@@ -25,7 +23,9 @@ fun kuiverSaver(): Saver<Kuiver, Any> = Saver(
                 mapOf(
                     "fromId" to edge.fromId,
                     "toId" to edge.toId,
-                    "type" to edge.type?.name
+                    "type" to edge.type?.name,
+                    "fromAnchor" to edge.fromAnchor,
+                    "toAnchor" to edge.toAnchor
                 )
             }
         )
@@ -65,6 +65,8 @@ fun kuiverSaver(): Saver<Kuiver, Any> = Saver(
                 val fromId = edgeMap["fromId"] as String
                 val toId = edgeMap["toId"] as String
                 val typeName = edgeMap["type"] as? String
+                val fromAnchor = edgeMap["fromAnchor"] as? String
+                val toAnchor = edgeMap["toAnchor"] as? String
 
                 val type = typeName?.let { EdgeType.valueOf(it) }
 
@@ -72,7 +74,9 @@ fun kuiverSaver(): Saver<Kuiver, Any> = Saver(
                     KuiverEdge(
                         fromId = fromId,
                         toId = toId,
-                        type = type
+                        type = type,
+                        fromAnchor = fromAnchor,
+                        toAnchor = toAnchor
                     )
                 )
             }

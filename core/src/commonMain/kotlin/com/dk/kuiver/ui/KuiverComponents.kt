@@ -17,10 +17,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
-import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.EdgeType
+import com.dk.kuiver.model.KuiverEdge
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
@@ -92,6 +94,33 @@ fun EdgeContent(
     }
 }
 
+@Composable
+fun OrthogonalEdgeContent(
+    from: Offset,
+    to: Offset,
+    color: Color = Color.Black,
+    strokeWidth: Float = 3f,
+    showArrow: Boolean = true,
+    dashed: Boolean = false,
+    dashLength: Float = 10f,
+    gapLength: Float = 5f,
+    curveFactor: Float = 0.5f
+) {
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        drawOrthogonalEdge(
+            from = from,
+            to = to,
+            color = color,
+            strokeWidth = strokeWidth,
+            showArrow = showArrow,
+            dashed = dashed,
+            dashLength = dashLength,
+            gapLength = gapLength,
+            curveFactor = curveFactor
+        )
+    }
+}
+
 // Edge drawing function
 private fun DrawScope.drawEdge(
     from: Offset,
@@ -146,7 +175,7 @@ private fun DrawScope.drawEdge(
                 gapLength
             )
         ) else null,
-        cap = androidx.compose.ui.graphics.StrokeCap.Round
+        cap = StrokeCap.Round
     )
 
     if (showArrow) {
@@ -242,12 +271,12 @@ private fun DrawScope.drawCurvedEdge(
     drawPath(
         path = path,
         color = color.copy(alpha = 0.8f),
-        style = androidx.compose.ui.graphics.drawscope.Stroke(
+        style = Stroke(
             width = strokeWidth,
             pathEffect = if (dashed) PathEffect.dashPathEffect(
                 floatArrayOf(dashLength, gapLength)
             ) else null,
-            cap = androidx.compose.ui.graphics.StrokeCap.Round
+            cap = StrokeCap.Round
         )
     )
 
@@ -334,12 +363,12 @@ private fun DrawScope.drawSelfLoopEdge(
     drawPath(
         path = path,
         color = color.copy(alpha = 0.8f),
-        style = androidx.compose.ui.graphics.drawscope.Stroke(
+        style = Stroke(
             width = strokeWidth,
             pathEffect = if (dashed) PathEffect.dashPathEffect(
                 floatArrayOf(dashLength, gapLength)
             ) else null,
-            cap = androidx.compose.ui.graphics.StrokeCap.Round
+            cap = StrokeCap.Round
         )
     )
 
@@ -354,6 +383,82 @@ private fun DrawScope.drawSelfLoopEdge(
         val arrowBasePoint = Offset(
             to.x - normalizedDirection.x * arrowOffset,
             to.y - normalizedDirection.y * arrowOffset
+        )
+
+        val arrowPath = Path().apply {
+            moveTo(arrowBasePoint.x, arrowBasePoint.y)
+            lineTo(
+                arrowBasePoint.x - arrowSize * cos(angle - 0.5).toFloat(),
+                arrowBasePoint.y - arrowSize * sin(angle - 0.5).toFloat()
+            )
+            lineTo(
+                arrowBasePoint.x - arrowSize * cos(angle + 0.5).toFloat(),
+                arrowBasePoint.y - arrowSize * sin(angle + 0.5).toFloat()
+            )
+            close()
+        }
+
+        drawPath(path = arrowPath, color = color.copy(alpha = 1.0f))
+    }
+}
+
+// Orthogonal edge drawing function (S-curve with horizontal tangents)
+private fun DrawScope.drawOrthogonalEdge(
+    from: Offset,
+    to: Offset,
+    color: Color,
+    strokeWidth: Float,
+    showArrow: Boolean,
+    dashed: Boolean,
+    dashLength: Float,
+    gapLength: Float,
+    curveFactor: Float
+) {
+    val dx = to.x - from.x
+
+    val arrowSize = 20f
+    val arrowOffset = 8f
+    val lineGap = if (showArrow) strokeWidth / 2f + 2f else 0f
+
+    // Control point distance - how far the curve extends horizontally
+    val controlDistance = kotlin.math.abs(dx) * curveFactor
+
+    // Calculate end point (shortened for arrow)
+    val goingRight = dx > 0f
+    val endX = if (showArrow) {
+        if (goingRight) to.x - (arrowOffset + lineGap) else to.x + (arrowOffset + lineGap)
+    } else {
+        to.x
+    }
+
+    // Create S-curve using cubic Bezier
+    val path = Path().apply {
+        moveTo(from.x, from.y)
+        cubicTo(
+            from.x + controlDistance, from.y,  // First control point (horizontal from start)
+            endX - controlDistance, to.y,       // Second control point (horizontal from end)
+            endX, to.y                          // End point
+        )
+    }
+
+    drawPath(
+        path = path,
+        color = color.copy(alpha = 0.8f),
+        style = Stroke(
+            width = strokeWidth,
+            pathEffect = if (dashed) PathEffect.dashPathEffect(
+                floatArrayOf(dashLength, gapLength)
+            ) else null,
+            cap = StrokeCap.Round
+        )
+    )
+
+    if (showArrow) {
+        val angle = if (goingRight) 0f else kotlin.math.PI.toFloat()
+
+        val arrowBasePoint = Offset(
+            if (goingRight) to.x - arrowOffset else to.x + arrowOffset,
+            to.y
         )
 
         val arrowPath = Path().apply {

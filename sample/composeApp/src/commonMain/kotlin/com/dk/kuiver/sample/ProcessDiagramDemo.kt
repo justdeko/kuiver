@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,14 +38,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
 import com.dk.kuiver.model.buildKuiver
@@ -51,6 +54,8 @@ import com.dk.kuiver.model.layout.LayoutConfig
 import com.dk.kuiver.rememberSaveableKuiverViewerState
 import com.dk.kuiver.renderer.KuiverViewer
 import com.dk.kuiver.renderer.KuiverViewerConfig
+import com.dk.kuiver.ui.KuiverAnchor
+import com.dk.kuiver.ui.OrthogonalEdgeContent
 import com.dk.kuiver.ui.StyledEdgeContent
 import kotlinx.coroutines.delay
 
@@ -60,10 +65,16 @@ fun ProcessDiagramDemo(
     onNavigateBack: () -> Unit
 ) {
     var selectedLayoutAlgorithm by rememberSaveable { mutableStateOf(LayoutAlgorithm.HIERARCHICAL) }
+    var showAnchors by rememberSaveable { mutableStateOf(false) }
 
     val processNodeData = remember {
         mapOf(
-            "start" to ProcessNode("Wake Up", "Time for breakfast!", ProcessNodeType.START, ProcessIcon.SUN),
+            "start" to ProcessNode(
+                "Wake Up",
+                "Time for breakfast!",
+                ProcessNodeType.START,
+                ProcessIcon.SUN
+            ),
             "preheat" to ProcessNode(
                 "Preheat Pan",
                 "Heat skillet to medium",
@@ -116,14 +127,24 @@ fun ProcessDiagramDemo(
                 ProcessNodeType.PROCESS,
                 ProcessIcon.EGG
             ),
-            "cook_eggs" to ProcessNode("Cook Eggs", "Sunny side up", ProcessNodeType.PROCESS, ProcessIcon.PAN),
+            "cook_eggs" to ProcessNode(
+                "Cook Eggs",
+                "Sunny side up",
+                ProcessNodeType.PROCESS,
+                ProcessIcon.PAN
+            ),
             "eggs_check" to ProcessNode(
                 "Eggs Done?",
                 "Check the yolks",
                 ProcessNodeType.DECISION,
                 ProcessIcon.EYES
             ),
-            "eggs_done" to ProcessNode("Eggs Perfect", "Just right!", ProcessNodeType.PROCESS, ProcessIcon.CHECKMARK),
+            "eggs_done" to ProcessNode(
+                "Eggs Perfect",
+                "Just right!",
+                ProcessNodeType.PROCESS,
+                ProcessIcon.CHECKMARK
+            ),
 
             // TOAST TRACK
             "slice_bread" to ProcessNode(
@@ -132,7 +153,12 @@ fun ProcessDiagramDemo(
                 ProcessNodeType.PROCESS,
                 ProcessIcon.BREAD
             ),
-            "toast" to ProcessNode("Toast Bread", "Golden brown", ProcessNodeType.PROCESS, ProcessIcon.FIRE),
+            "toast" to ProcessNode(
+                "Toast Bread",
+                "Golden brown",
+                ProcessNodeType.PROCESS,
+                ProcessIcon.FIRE
+            ),
             "butter" to ProcessNode(
                 "Butter Toast",
                 "Spread while hot",
@@ -153,7 +179,12 @@ fun ProcessDiagramDemo(
                 ProcessNodeType.PROCESS,
                 ProcessIcon.JUICE
             ),
-            "pour_juice" to ProcessNode("Pour Juice", "Into glass", ProcessNodeType.PROCESS, ProcessIcon.JUICE),
+            "pour_juice" to ProcessNode(
+                "Pour Juice",
+                "Into glass",
+                ProcessNodeType.PROCESS,
+                ProcessIcon.JUICE
+            ),
 
             // CONVERGENCE & PLATING
             "plate_food" to ProcessNode(
@@ -168,53 +199,117 @@ fun ProcessDiagramDemo(
                 ProcessNodeType.PROCESS,
                 ProcessIcon.HERB
             ),
-            "serve" to ProcessNode("Serve", "Breakfast is ready!", ProcessNodeType.PROCESS, ProcessIcon.CHEF),
-            "enjoy" to ProcessNode("Enjoy!", "Bon appétit!", ProcessNodeType.END, ProcessIcon.CELEBRATE)
+            "serve" to ProcessNode(
+                "Serve",
+                "Breakfast is ready!",
+                ProcessNodeType.PROCESS,
+                ProcessIcon.CHEF
+            ),
+            "enjoy" to ProcessNode(
+                "Enjoy!",
+                "Bon appétit!",
+                ProcessNodeType.END,
+                ProcessIcon.CELEBRATE
+            )
         )
     }
 
-    val processKuiver = remember {
+    val processKuiver = remember(showAnchors) {
+        val edgeList = listOf(
+            // Setup
+            "start" to "preheat",
+            "start" to "grind_beans",
+            "start" to "slice_bread",
+            "start" to "squeeze_oranges",
+            // Coffee track
+            "grind_beans" to "boil_water",
+            "boil_water" to "brew_coffee",
+            "brew_coffee" to "coffee_ready",
+            "coffee_ready" to "serve",
+            // Bacon & Eggs track
+            "preheat" to "cook_bacon",
+            "cook_bacon" to "bacon_done",
+            "bacon_done" to "crack_eggs",
+            "crack_eggs" to "cook_eggs",
+            "cook_eggs" to "eggs_check",
+            "eggs_check" to "eggs_done",
+            "eggs_check" to "cook_eggs", // Back edge
+            "eggs_done" to "plate_food",
+            // Toast track
+            "slice_bread" to "toast",
+            "toast" to "butter",
+            "butter" to "plate_food",
+            // Juice track
+            "squeeze_oranges" to "strain_juice",
+            "strain_juice" to "pour_juice",
+            "pour_juice" to "serve",
+            // Final plating
+            "plate_food" to "add_garnish",
+            "add_garnish" to "serve",
+            "serve" to "enjoy"
+        )
+
         buildKuiver {
             processNodeData.keys.forEach { id ->
                 addNode(KuiverNode(id))
             }
 
-            // EDGES - Setup
-            addEdge(KuiverEdge("start", "preheat"))
-            addEdge(KuiverEdge("start", "grind_beans"))
-            addEdge(KuiverEdge("start", "slice_bread"))
-            addEdge(KuiverEdge("start", "squeeze_oranges"))
+            if (showAnchors) {
+                val outgoingEdges = edgeList.groupBy { it.first }
+                val incomingEdges = edgeList.groupBy { it.second }
 
-            // Coffee track
-            addEdge(KuiverEdge("grind_beans", "boil_water"))
-            addEdge(KuiverEdge("boil_water", "brew_coffee"))
-            addEdge(KuiverEdge("brew_coffee", "coffee_ready"))
-            addEdge(KuiverEdge("coffee_ready", "serve"))
+                edgeList.forEach { (from, to) ->
+                    // Check if this is a back edge (creates a cycle)
+                    val isBackEdge = wouldCreateCycle(from, to)
 
-            // Bacon & Eggs track
-            addEdge(KuiverEdge("preheat", "cook_bacon"))
-            addEdge(KuiverEdge("cook_bacon", "bacon_done"))
-            addEdge(KuiverEdge("bacon_done", "crack_eggs"))
-            addEdge(KuiverEdge("crack_eggs", "cook_eggs"))
-            addEdge(KuiverEdge("cook_eggs", "eggs_check"))
-            addEdge(KuiverEdge("eggs_check", "eggs_done")) // Yes, done
-            addEdge(KuiverEdge("eggs_check", "cook_eggs")) // No, cook more
-            addEdge(KuiverEdge("eggs_done", "plate_food"))
+                    if (isBackEdge) {
+                        // Back edges use top anchors
+                        val fromBackEdges = outgoingEdges[from]?.filter { (f, t) ->
+                            wouldCreateCycle(f, t)
+                        } ?: emptyList()
+                        val toBackEdges = incomingEdges[to]?.filter { (f, t) ->
+                            wouldCreateCycle(f, t)
+                        } ?: emptyList()
 
-            // Toast track
-            addEdge(KuiverEdge("slice_bread", "toast"))
-            addEdge(KuiverEdge("toast", "butter"))
-            addEdge(KuiverEdge("butter", "plate_food"))
+                        val fromAnchorIndex = fromBackEdges.indexOf(from to to)
+                        val toAnchorIndex = toBackEdges.indexOf(from to to)
 
-            // Juice track
-            addEdge(KuiverEdge("squeeze_oranges", "strain_juice"))
-            addEdge(KuiverEdge("strain_juice", "pour_juice"))
-            addEdge(KuiverEdge("pour_juice", "serve"))
+                        addEdge(
+                            KuiverEdge(
+                                from,
+                                to,
+                                fromAnchor = "back-out-$fromAnchorIndex",
+                                toAnchor = "back-in-$toAnchorIndex"
+                            )
+                        )
+                    } else {
+                        // Regular edges use side anchors
+                        val fromEdges = outgoingEdges[from]?.filter { (f, t) ->
+                            !wouldCreateCycle(f, t)
+                        } ?: emptyList()
+                        val toEdges = incomingEdges[to]?.filter { (f, t) ->
+                            !wouldCreateCycle(f, t)
+                        } ?: emptyList()
 
-            // Final plating and serving
-            addEdge(KuiverEdge("plate_food", "add_garnish"))
-            addEdge(KuiverEdge("add_garnish", "serve"))
-            addEdge(KuiverEdge("serve", "enjoy"))
+                        val fromAnchorIndex = fromEdges.indexOf(from to to)
+                        val toAnchorIndex = toEdges.indexOf(from to to)
+
+                        addEdge(
+                            KuiverEdge(
+                                from,
+                                to,
+                                fromAnchor = "out-$fromAnchorIndex",
+                                toAnchor = "in-$toAnchorIndex"
+                            )
+                        )
+                    }
+                }
+            } else {
+                // Add edges without anchors
+                edgeList.forEach { (from, to) ->
+                    addEdge(KuiverEdge(from, to))
+                }
+            }
         }
     }
 
@@ -229,6 +324,11 @@ fun ProcessDiagramDemo(
         initialKuiver = processKuiver,
         layoutConfig = layoutConfig
     )
+
+    // Update the graph when anchors toggle changes
+    LaunchedEffect(processKuiver) {
+        kuiverViewerState.updateKuiver(processKuiver)
+    }
 
     // Auto-center on initial load and algorithm change
     var initialCenter by rememberSaveable { mutableStateOf(false) }
@@ -267,6 +367,12 @@ fun ProcessDiagramDemo(
                         onClick = { selectedLayoutAlgorithm = LayoutAlgorithm.FORCE_DIRECTED },
                         label = { Text("Force") }
                     )
+                    Spacer(Modifier.width(8.dp))
+                    FilterChip(
+                        selected = showAnchors,
+                        onClick = { showAnchors = !showAnchors },
+                        label = { Text("Anchors") }
+                    )
                 }
             )
         }
@@ -283,17 +389,36 @@ fun ProcessDiagramDemo(
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.surface),
                 nodeContent = { node ->
-                    processNodeData[node.id]?.let { ProcessNodeContent(it) }
+                    processNodeData[node.id]?.let {
+                        ProcessNodeContent(
+                            data = it,
+                            nodeId = node.id,
+                            showAnchors = showAnchors,
+                            kuiver = kuiverViewerState.layoutedKuiver
+                        )
+                    }
                 },
                 edgeContent = { edge, from, to ->
-                    StyledEdgeContent(
-                        edge = edge,
-                        from = from,
-                        to = to,
-                        baseColor = MaterialTheme.colorScheme.outline,
-                        backEdgeColor = MaterialTheme.colorScheme.error,
-                        strokeWidth = 2.5f
-                    )
+                    // Use regular styled edges for back edges, orthogonal for others when anchors enabled
+                    val isBackEdge = edge.fromAnchor?.startsWith("back-") ?: false
+
+                    if (showAnchors && !isBackEdge) {
+                        OrthogonalEdgeContent(
+                            from = from,
+                            to = to,
+                            color = MaterialTheme.colorScheme.outline,
+                            strokeWidth = 2.5f,
+                        )
+                    } else {
+                        StyledEdgeContent(
+                            edge = edge,
+                            from = from,
+                            to = to,
+                            baseColor = MaterialTheme.colorScheme.outline,
+                            backEdgeColor = MaterialTheme.colorScheme.error,
+                            strokeWidth = 2.5f
+                        )
+                    }
                 }
             )
 
@@ -331,7 +456,12 @@ fun ProcessDiagramDemo(
 }
 
 @Composable
-private fun ProcessNodeContent(data: ProcessNode) {
+private fun ProcessNodeContent(
+    data: ProcessNode,
+    nodeId: String,
+    showAnchors: Boolean,
+    kuiver: Kuiver
+) {
     val (backgroundColor, shape) = when (data.type) {
         ProcessNodeType.START -> Color(0xFF4CAF50) to CircleShape
         ProcessNodeType.END -> Color(0xFFF44336) to CircleShape
@@ -344,14 +474,111 @@ private fun ProcessNodeContent(data: ProcessNode) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .clip(shape)
-            .background(backgroundColor)
-            .border(3.dp, Color.White.copy(alpha = 0.3f), shape)
-            .padding(12.dp),
+            .background(backgroundColor, shape)
+            .border(3.dp, Color.White.copy(alpha = 0.3f), shape),
         contentAlignment = Alignment.Center
     ) {
+        // Anchor points when enabled - positioned at the borders
+        if (showAnchors) {
+            // Count incoming and outgoing edges
+            val incomingEdges = kuiver.edges.filter { it.toId == nodeId }
+            val outgoingEdges = kuiver.edges.filter { it.fromId == nodeId }
+
+            // Separate regular edges from back edges
+            val regularIncoming =
+                incomingEdges.filter { !(it.toAnchor?.startsWith("back-") ?: false) }
+            val regularOutgoing =
+                outgoingEdges.filter { !(it.fromAnchor?.startsWith("back-") ?: false) }
+            val backIncoming = incomingEdges.filter { it.toAnchor?.startsWith("back-") ?: false }
+            val backOutgoing = outgoingEdges.filter { it.fromAnchor?.startsWith("back-") ?: false }
+
+            // Create regular incoming anchors (left side)
+            repeat(regularIncoming.size) { index ->
+                val fraction = (index + 1).toFloat() / (regularIncoming.size + 1)
+                val verticalBias = (fraction * 2) - 1
+
+                KuiverAnchor(
+                    anchorId = "in-$index",
+                    nodeId = nodeId,
+                    modifier = Modifier
+                        .align(BiasAlignment(horizontalBias = -1f, verticalBias = verticalBias))
+                        .offset(x = (-3).dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .background(Color.White, CircleShape)
+                            .border(2.dp, backgroundColor, CircleShape)
+                    )
+                }
+            }
+
+            // Create regular outgoing anchors (right side)
+            repeat(regularOutgoing.size) { index ->
+                val fraction = (index + 1).toFloat() / (regularOutgoing.size + 1)
+                val verticalBias = (fraction * 2) - 1
+
+                KuiverAnchor(
+                    anchorId = "out-$index",
+                    nodeId = nodeId,
+                    modifier = Modifier
+                        .align(BiasAlignment(horizontalBias = 1f, verticalBias = verticalBias))
+                        .offset(x = 3.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .background(Color.White, CircleShape)
+                            .border(2.dp, backgroundColor, CircleShape)
+                    )
+                }
+            }
+
+            // Create back edge anchors (top side)
+            repeat(backIncoming.size) { index ->
+                val fraction = (index + 1).toFloat() / (backIncoming.size + backOutgoing.size + 1)
+                val horizontalBias = (fraction * 2) - 1
+
+                KuiverAnchor(
+                    anchorId = "back-in-$index",
+                    nodeId = nodeId,
+                    modifier = Modifier
+                        .align(BiasAlignment(horizontalBias = horizontalBias, verticalBias = -1f))
+                        .offset(y = (-3).dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .background(Color(0xFFFF6B6B), CircleShape)
+                            .border(2.dp, backgroundColor, CircleShape)
+                    )
+                }
+            }
+
+            repeat(backOutgoing.size) { index ->
+                val fraction =
+                    (backIncoming.size + index + 1).toFloat() / (backIncoming.size + backOutgoing.size + 1)
+                val horizontalBias = (fraction * 2) - 1
+
+                KuiverAnchor(
+                    anchorId = "back-out-$index",
+                    nodeId = nodeId,
+                    modifier = Modifier
+                        .align(BiasAlignment(horizontalBias = horizontalBias, verticalBias = -1f))
+                        .offset(y = (-3).dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .background(Color(0xFFFF6B6B), CircleShape)
+                            .border(2.dp, backgroundColor, CircleShape)
+                    )
+                }
+            }
+        }
+
         Column(
-            modifier = Modifier.padding(4.dp),
+            modifier = Modifier.padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {

@@ -6,13 +6,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.dk.kuiver.model.AnchorOffset
 import com.dk.kuiver.model.DEFAULT_NODE_SIZE_DP
 import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
 import kotlin.math.abs
 import kotlin.math.sqrt
+
+private const val EDGE_PADDING = 4f
 
 @Composable
 internal fun RenderEdge(
@@ -23,6 +27,7 @@ internal fun RenderEdge(
     centerY: Dp,
     graphCenterX: Float,
     graphCenterY: Float,
+    anchorRegistry: AnchorPositionRegistry,
     animationSpec: AnimationSpec<Offset>,
     edgeContent: @Composable (KuiverEdge, Offset, Offset) -> Unit
 ) {
@@ -58,18 +63,165 @@ internal fun RenderEdge(
         val toNodeWidth = toNode.dimensions?.width?.toPx() ?: defaultSize
         val toNodeHeight = toNode.dimensions?.height?.toPx() ?: defaultSize
 
-        // Calculate edge endpoints at rectangle boundaries
-        val (edgeStart, edgeEnd) = calculateEdgeEndpoints(
+        val (edgeStart, edgeEnd) = calculateEdgeEndpointsWithAnchors(
+            edge = edge,
+            fromNode = fromNode,
+            toNode = toNode,
             fromCenter = animatedFromCenter,
             toCenter = animatedToCenter,
             fromNodeWidth = fromNodeWidth,
             fromNodeHeight = fromNodeHeight,
             toNodeWidth = toNodeWidth,
             toNodeHeight = toNodeHeight,
-            isSelfLoop = isSelfLoop
+            anchorRegistry = anchorRegistry,
+            isSelfLoop = isSelfLoop,
+            density = this@with
         )
 
         edgeContent(edge, edgeStart, edgeEnd)
+    }
+}
+
+/**
+ * Calculate edge endpoints with anchor support.
+ * Uses anchors if specified, otherwise falls back to center calculation.
+ */
+internal fun calculateEdgeEndpointsWithAnchors(
+    edge: KuiverEdge,
+    fromNode: KuiverNode,
+    toNode: KuiverNode,
+    fromCenter: Offset,
+    toCenter: Offset,
+    fromNodeWidth: Float,
+    fromNodeHeight: Float,
+    toNodeWidth: Float,
+    toNodeHeight: Float,
+    anchorRegistry: AnchorPositionRegistry,
+    isSelfLoop: Boolean,
+    density: Density
+): Pair<Offset, Offset> {
+    val fromAnchorOffset = edge.fromAnchor?.let { anchorRegistry.getAnchorOffset(fromNode.id, it) }
+    val toAnchorOffset = edge.toAnchor?.let { anchorRegistry.getAnchorOffset(toNode.id, it) }
+
+    val edgeStart = fromAnchorOffset?.let {
+        calculateAbsoluteAnchorPosition(
+            nodeCenter = fromCenter,
+            nodeWidth = fromNodeWidth,
+            nodeHeight = fromNodeHeight,
+            anchorOffset = it,
+            density = density
+        )
+    }
+    val edgeEnd = toAnchorOffset?.let {
+        calculateAbsoluteAnchorPosition(
+            nodeCenter = toCenter,
+            nodeWidth = toNodeWidth,
+            nodeHeight = toNodeHeight,
+            anchorOffset = it,
+            density = density
+        )
+    }
+    return when {
+        edgeStart != null && edgeEnd != null -> {
+            Pair(edgeStart, edgeEnd)
+        }
+
+        edgeStart != null && edgeEnd == null -> {
+            val calculatedEnd = calculateGeometricEndpoint(
+                from = edgeStart,
+                targetCenter = toCenter,
+                targetWidth = toNodeWidth,
+                targetHeight = toNodeHeight,
+                outbound = false
+            )
+            Pair(edgeStart, calculatedEnd)
+        }
+
+        edgeStart == null && edgeEnd != null -> {
+            val calculatedStart = calculateGeometricEndpoint(
+                from = edgeEnd,
+                targetCenter = fromCenter,
+                targetWidth = fromNodeWidth,
+                targetHeight = fromNodeHeight,
+                outbound = true
+            )
+            Pair(calculatedStart, edgeEnd)
+        }
+
+        else -> calculateEdgeEndpoints(
+            fromCenter = fromCenter,
+            toCenter = toCenter,
+            fromNodeWidth = fromNodeWidth,
+            fromNodeHeight = fromNodeHeight,
+            toNodeWidth = toNodeWidth,
+            toNodeHeight = toNodeHeight,
+            isSelfLoop = isSelfLoop
+        )
+    }
+}
+
+fun calculateAbsoluteAnchorPosition(
+    nodeCenter: Offset,
+    nodeWidth: Float,
+    nodeHeight: Float,
+    anchorOffset: AnchorOffset,
+    density: Density
+): Offset {
+    val nodeTopLeft = Offset(
+        nodeCenter.x - nodeWidth / 2f,
+        nodeCenter.y - nodeHeight / 2f
+    )
+    return with(density) {
+        Offset(
+            nodeTopLeft.x + anchorOffset.x.toPx(),
+            nodeTopLeft.y + anchorOffset.y.toPx()
+        )
+    }
+}
+
+/**
+ * Calculate geometric endpoint on node boundary when connecting from/to a specific point.
+ *
+ * @param from The fixed anchor point
+ * @param targetCenter Center of the node to calculate endpoint on
+ * @param targetWidth Width of the target node
+ * @param targetHeight Height of the target node
+ * @param outbound If true, calculates outbound endpoint (from anchor); if false, inbound (to anchor)
+ */
+internal fun calculateGeometricEndpoint(
+    from: Offset,
+    targetCenter: Offset,
+    targetWidth: Float,
+    targetHeight: Float,
+    outbound: Boolean
+): Offset {
+    val direction = if (outbound) {
+        Offset(from.x - targetCenter.x, from.y - targetCenter.y)
+    } else {
+        Offset(targetCenter.x - from.x, targetCenter.y - from.y)
+    }
+
+    val distance = sqrt(direction.x * direction.x + direction.y * direction.y)
+
+    if (distance == 0f) return targetCenter
+
+    val normalizedDirection = Offset(direction.x / distance, direction.y / distance)
+    val nodeRadius = calculateNodeRadius(
+        normalizedDirection,
+        targetWidth / 2f,
+        targetHeight / 2f
+    )
+
+    return if (outbound) {
+        Offset(
+            targetCenter.x + normalizedDirection.x * (nodeRadius + EDGE_PADDING),
+            targetCenter.y + normalizedDirection.y * (nodeRadius + EDGE_PADDING)
+        )
+    } else {
+        Offset(
+            targetCenter.x - normalizedDirection.x * (nodeRadius + EDGE_PADDING),
+            targetCenter.y - normalizedDirection.y * (nodeRadius + EDGE_PADDING)
+        )
     }
 }
 
@@ -113,18 +265,15 @@ private fun calculateEdgeEndpoints(
     val fromNodeRadius = calculateNodeRadius(normalizedDirection, fromHalfWidth, fromHalfHeight)
     val toNodeRadius = calculateNodeRadius(normalizedDirection, toHalfWidth, toHalfHeight)
 
-    // Apply padding uniformly by extending the radius
-    val padding = 4f
-
     // Calculate edge start and end points at node boundaries (with padding)
     val edgeStart = Offset(
-        fromCenter.x + normalizedDirection.x * (fromNodeRadius + padding),
-        fromCenter.y + normalizedDirection.y * (fromNodeRadius + padding)
+        fromCenter.x + normalizedDirection.x * (fromNodeRadius + EDGE_PADDING),
+        fromCenter.y + normalizedDirection.y * (fromNodeRadius + EDGE_PADDING)
     )
 
     val edgeEnd = Offset(
-        toCenter.x - normalizedDirection.x * (toNodeRadius + padding),
-        toCenter.y - normalizedDirection.y * (toNodeRadius + padding)
+        toCenter.x - normalizedDirection.x * (toNodeRadius + EDGE_PADDING),
+        toCenter.y - normalizedDirection.y * (toNodeRadius + EDGE_PADDING)
     )
 
     return Pair(edgeStart, edgeEnd)
@@ -158,7 +307,7 @@ private fun calculateSelfLoopEndpoints(
     return Pair(startPoint, endPoint)
 }
 
-private fun calculateNodeRadius(
+internal fun calculateNodeRadius(
     normalizedDirection: Offset,
     halfWidth: Float,
     halfHeight: Float
