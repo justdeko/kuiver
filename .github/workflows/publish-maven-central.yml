@@ -11,6 +11,11 @@ on:
         options:
           - snapshot
           - release
+      allow-existing-tag:
+        description: 'Allow publishing on an existing tag (make sure this is what you want!)'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   publish:
@@ -66,11 +71,16 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.VERSION }}"
           if git rev-parse "$VERSION" >/dev/null 2>&1; then
-            echo "Error: Tag $VERSION already exists"
-            echo "Please bump the version in gradle.properties"
-            exit 1
+            if [[ "${{ github.event.inputs.allow-existing-tag }}" == "false" ]]; then
+              echo "Error: Tag $VERSION already exists"
+              echo "Please bump the version in gradle.properties or enable 'allow-existing-tag'"
+              exit 1
+            else
+              echo "Warning: Tag $VERSION already exists, but proceeding because 'allow-existing-tag' is enabled"
+            fi
+          else
+            echo "Tag $VERSION does not exist, proceeding..."
           fi
-          echo "Tag $VERSION does not exist, proceeding..."
 
       - name: Run all tests
         run: ./gradlew :core:allTests --no-daemon
@@ -95,8 +105,14 @@ jobs:
           VERSION="${{ steps.version.outputs.VERSION }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "$VERSION" -m "Release $VERSION"
-          git push origin "$VERSION"
+
+          if git rev-parse "$VERSION" >/dev/null 2>&1; then
+            echo "Tag $VERSION already exists, skipping tag creation"
+          else
+            git tag -a "$VERSION" -m "Release $VERSION"
+            git push origin "$VERSION"
+            echo "Tag $VERSION created and pushed"
+          fi
 
       - name: Summary
         run: |
