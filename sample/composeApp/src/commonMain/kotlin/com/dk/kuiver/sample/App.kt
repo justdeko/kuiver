@@ -48,8 +48,10 @@ import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
 import com.dk.kuiver.model.buildKuiver
+import com.dk.kuiver.model.edges
 import com.dk.kuiver.model.layout.LayoutConfig
 import com.dk.kuiver.model.layout.LayoutDirection
+import com.dk.kuiver.model.nodes
 import com.dk.kuiver.rememberSaveableKuiverViewerState
 import com.dk.kuiver.renderer.KuiverViewer
 import com.dk.kuiver.renderer.KuiverViewerConfig
@@ -121,11 +123,11 @@ private fun GraphBuilderScreen(
 
     val initialKuiver = remember {
         buildKuiver {
-            addNode(KuiverNode("1"))
-            addNode(KuiverNode("2"))
-            addNode(KuiverNode("3"))
-            addEdge(KuiverEdge("1", "2"))
-            addEdge(KuiverEdge("2", "3"))
+            nodes("1", "2", "3")
+            edges(
+                "1" to "2",
+                "2" to "3"
+            )
         }
     }
 
@@ -134,6 +136,7 @@ private fun GraphBuilderScreen(
             LayoutAlgorithm.HIERARCHICAL -> LayoutConfig.Hierarchical(
                 direction = selectedLayoutDirection
             )
+
             LayoutAlgorithm.FORCE_DIRECTED -> LayoutConfig.ForceDirected()
         }
     }

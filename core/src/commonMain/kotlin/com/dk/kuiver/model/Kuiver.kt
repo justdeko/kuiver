@@ -1,54 +1,6 @@
 package com.dk.kuiver.model
 
 /**
- * DSL function for building Kuiver graphs with a clean, declarative syntax.
- *
- * This function creates a new Kuiver instance and applies the provided builder block.
- * Once built, the resulting Kuiver should be treated as immutable.
- *
- * Example:
- * ```kotlin
- * val graph = buildKuiver {
- *     addNode(KuiverNode(id = "A"))
- *     addNode(KuiverNode(id = "B"))
- *     addEdge(KuiverEdge(fromId = "A", toId = "B"))
- * }
- * ```
- *
- * @param block Builder block for constructing the graph
- * @return A new Kuiver instance (treat as immutable after construction)
- */
-fun buildKuiver(block: Kuiver.() -> Unit): Kuiver = Kuiver().apply(block)
-
-/**
- * Builds a new Kuiver instance with the given nodes and edges from the original graph,
- * automatically classifying all edges in a single optimized pass.
- * This eliminates the need to build the graph twice.
- *
- * @param nodes The nodes to include in the new graph
- * @param originalEdges The edges from the original graph (without type classification)
- * @return A new Kuiver instance with all edges classified by type
- */
-fun buildKuiverWithClassifiedEdges(
-    nodes: Collection<KuiverNode>,
-    originalEdges: Collection<KuiverEdge>
-): Kuiver {
-    val tempKuiver = Kuiver().apply {
-        nodes.forEach { addNode(it) }
-        originalEdges.forEach { addEdge(it) }
-    }
-
-    val edgeClassifications = tempKuiver.classifyAllEdges()
-
-    return Kuiver().apply {
-        nodes.forEach { addNode(it) }
-        edgeClassifications.forEach { (edge, type) ->
-            addEdge(edge.copy(type = type))
-        }
-    }
-}
-
-/**
  * Graph data structure that supports cycles and self-loops.
  */
 class Kuiver {
