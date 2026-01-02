@@ -47,10 +47,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dk.kuiver.model.Kuiver
-import com.dk.kuiver.model.KuiverEdge
-import com.dk.kuiver.model.KuiverNode
 import com.dk.kuiver.model.buildKuiver
+import com.dk.kuiver.model.edge
+import com.dk.kuiver.model.fromEdgeList
 import com.dk.kuiver.model.layout.LayoutConfig
+import com.dk.kuiver.model.nodes
 import com.dk.kuiver.rememberSaveableKuiverViewerState
 import com.dk.kuiver.renderer.KuiverViewer
 import com.dk.kuiver.renderer.KuiverViewerConfig
@@ -250,9 +251,7 @@ fun ProcessDiagramDemo(
         )
 
         buildKuiver {
-            processNodeData.keys.forEach { id ->
-                addNode(KuiverNode(id))
-            }
+            nodes(processNodeData.keys)
 
             if (showAnchors) {
                 val outgoingEdges = edgeList.groupBy { it.first }
@@ -274,13 +273,11 @@ fun ProcessDiagramDemo(
                         val fromAnchorIndex = fromBackEdges.indexOf(from to to)
                         val toAnchorIndex = toBackEdges.indexOf(from to to)
 
-                        addEdge(
-                            KuiverEdge(
-                                from,
-                                to,
-                                fromAnchor = "back-out-$fromAnchorIndex",
-                                toAnchor = "back-in-$toAnchorIndex"
-                            )
+                        edge(
+                            from,
+                            to,
+                            fromAnchor = "back-out-$fromAnchorIndex",
+                            toAnchor = "back-in-$toAnchorIndex"
                         )
                     } else {
                         // Regular edges use side anchors
@@ -294,21 +291,17 @@ fun ProcessDiagramDemo(
                         val fromAnchorIndex = fromEdges.indexOf(from to to)
                         val toAnchorIndex = toEdges.indexOf(from to to)
 
-                        addEdge(
-                            KuiverEdge(
-                                from,
-                                to,
-                                fromAnchor = "out-$fromAnchorIndex",
-                                toAnchor = "in-$toAnchorIndex"
-                            )
+                        edge(
+                            from = from,
+                            to = to,
+                            fromAnchor = "out-$fromAnchorIndex",
+                            toAnchor = "in-$toAnchorIndex"
                         )
                     }
                 }
             } else {
                 // Add edges without anchors
-                edgeList.forEach { (from, to) ->
-                    addEdge(KuiverEdge(from, to))
-                }
+                fromEdgeList(edgeList, createNodes = false)
             }
         }
     }

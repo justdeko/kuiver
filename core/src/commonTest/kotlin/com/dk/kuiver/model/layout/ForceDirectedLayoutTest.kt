@@ -1,8 +1,8 @@
 package com.dk.kuiver.model.layout
 
-import com.dk.kuiver.model.KuiverEdge
-import com.dk.kuiver.model.KuiverNode
 import com.dk.kuiver.model.buildKuiver
+import com.dk.kuiver.model.edges
+import com.dk.kuiver.model.nodes
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -12,11 +12,11 @@ class ForceDirectedLayoutTest {
     @Test
     fun `places nodes within bounds`() {
         val kuiver = buildKuiver {
-            addNode(KuiverNode(id = "A"))
-            addNode(KuiverNode(id = "B"))
-            addNode(KuiverNode(id = "C"))
-            addEdge(KuiverEdge(fromId = "A", toId = "B"))
-            addEdge(KuiverEdge(fromId = "B", toId = "C"))
+            nodes("A", "B", "C")
+            edges(
+                "A" to "B",
+                "B" to "C"
+            )
         }
 
         val config = LayoutConfig.ForceDirected(
@@ -38,7 +38,7 @@ class ForceDirectedLayoutTest {
     @Test
     fun `single node centers in canvas`() {
         val kuiver = buildKuiver {
-            addNode(KuiverNode(id = "A"))
+            nodes("A")
         }
 
         val config = LayoutConfig.ForceDirected(
@@ -60,12 +60,12 @@ class ForceDirectedLayoutTest {
     @Test
     fun `layout completes with cycles`() {
         val kuiver = buildKuiver {
-            addNode(KuiverNode(id = "A"))
-            addNode(KuiverNode(id = "B"))
-            addNode(KuiverNode(id = "C"))
-            addEdge(KuiverEdge(fromId = "A", toId = "B"))
-            addEdge(KuiverEdge(fromId = "B", toId = "C"))
-            addEdge(KuiverEdge(fromId = "C", toId = "A"))
+            nodes("A", "B", "C")
+            edges(
+                "A" to "B",
+                "B" to "C",
+                "C" to "A"
+            )
         }
 
         val config = LayoutConfig.ForceDirected(

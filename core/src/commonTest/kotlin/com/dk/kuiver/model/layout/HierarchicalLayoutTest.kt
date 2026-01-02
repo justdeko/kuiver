@@ -5,6 +5,9 @@ import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
 import com.dk.kuiver.model.NodeDimensions
 import com.dk.kuiver.model.buildKuiver
+import com.dk.kuiver.model.edge
+import com.dk.kuiver.model.edges
+import com.dk.kuiver.model.nodes
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -15,11 +18,11 @@ class HierarchicalLayoutTest {
     fun `simple DAG layout places nodes at correct levels`() {
         // A -> B -> C (linear chain)
         val kuiver = buildKuiver {
-            addNode(KuiverNode(id = "A"))
-            addNode(KuiverNode(id = "B"))
-            addNode(KuiverNode(id = "C"))
-            addEdge(KuiverEdge(fromId = "A", toId = "B"))
-            addEdge(KuiverEdge(fromId = "B", toId = "C"))
+            nodes("A", "B", "C")
+            edges(
+                "A" to "B",
+                "B" to "C"
+            )
         }
 
         val config = LayoutConfig.Hierarchical(
@@ -43,14 +46,13 @@ class HierarchicalLayoutTest {
     fun `diamond DAG layout handles multiple paths`() {
         // A -> B -> D
         val kuiver = buildKuiver {
-            addNode(KuiverNode(id = "A"))
-            addNode(KuiverNode(id = "B"))
-            addNode(KuiverNode(id = "C"))
-            addNode(KuiverNode(id = "D"))
-            addEdge(KuiverEdge(fromId = "A", toId = "B"))
-            addEdge(KuiverEdge(fromId = "A", toId = "C"))
-            addEdge(KuiverEdge(fromId = "B", toId = "D"))
-            addEdge(KuiverEdge(fromId = "C", toId = "D"))
+            nodes("A", "B", "C", "D")
+            edges(
+                "A" to "B",
+                "A" to "C",
+                "B" to "D",
+                "C" to "D"
+            )
         }
 
         val config = LayoutConfig.Hierarchical(
@@ -80,9 +82,8 @@ class HierarchicalLayoutTest {
     @Test
     fun `vertical direction swaps positioning`() {
         val kuiver = buildKuiver {
-            addNode(KuiverNode(id = "A"))
-            addNode(KuiverNode(id = "B"))
-            addEdge(KuiverEdge(fromId = "A", toId = "B"))
+            nodes("A", "B")
+            edge("A", "B")
         }
 
         val config = LayoutConfig.Hierarchical(
@@ -104,12 +105,12 @@ class HierarchicalLayoutTest {
     fun `layout handles cycles correctly`() {
         // A -> B -> C -> A (cycle)
         val kuiver = buildKuiver {
-            addNode(KuiverNode(id = "A"))
-            addNode(KuiverNode(id = "B"))
-            addNode(KuiverNode(id = "C"))
-            addEdge(KuiverEdge(fromId = "A", toId = "B"))
-            addEdge(KuiverEdge(fromId = "B", toId = "C"))
-            addEdge(KuiverEdge(fromId = "C", toId = "A"))
+            nodes("A", "B", "C")
+            edges(
+                "A" to "B",
+                "B" to "C",
+                "C" to "A"
+            )
         }
 
         val config = LayoutConfig.Hierarchical(
@@ -129,19 +130,17 @@ class HierarchicalLayoutTest {
         // Graph: a->e, a->b, a->d, b->c, b->d, b->e, c->d, d->e
         // Testing scenario where edge b->d might be visually obscured
         val kuiver = buildKuiver {
-            addNode(KuiverNode(id = "a"))
-            addNode(KuiverNode(id = "b"))
-            addNode(KuiverNode(id = "c"))
-            addNode(KuiverNode(id = "d"))
-            addNode(KuiverNode(id = "e"))
-            addEdge(KuiverEdge(fromId = "a", toId = "e"))
-            addEdge(KuiverEdge(fromId = "a", toId = "b"))
-            addEdge(KuiverEdge(fromId = "a", toId = "d"))
-            addEdge(KuiverEdge(fromId = "b", toId = "c"))
-            addEdge(KuiverEdge(fromId = "b", toId = "d"))
-            addEdge(KuiverEdge(fromId = "b", toId = "e"))
-            addEdge(KuiverEdge(fromId = "c", toId = "d"))
-            addEdge(KuiverEdge(fromId = "d", toId = "e"))
+            nodes("a", "b", "c", "d", "e")
+            edges(
+                "a" to "e",
+                "a" to "b",
+                "a" to "d",
+                "b" to "c",
+                "b" to "d",
+                "b" to "e",
+                "c" to "d",
+                "d" to "e"
+            )
         }
 
         val config = LayoutConfig.Hierarchical(
@@ -190,14 +189,12 @@ class HierarchicalLayoutTest {
         // Graph: a->b->c, plus isolated nodes d and e
         // Problem: d and e at level 0 push 'a' to different Y position, causing edge overlap
         val kuiver = buildKuiver {
-            addNode(KuiverNode(id = "a"))
-            addNode(KuiverNode(id = "b"))
-            addNode(KuiverNode(id = "c"))
-            addNode(KuiverNode(id = "d"))  // isolated
-            addNode(KuiverNode(id = "e"))  // isolated
-            addEdge(KuiverEdge(fromId = "a", toId = "b"))
-            addEdge(KuiverEdge(fromId = "a", toId = "c"))
-            addEdge(KuiverEdge(fromId = "b", toId = "c"))
+            nodes("a", "b", "c", "d", "e")  // d and e are isolated
+            edges(
+                "a" to "b",
+                "a" to "c",
+                "b" to "c"
+            )
         }
 
         val config = LayoutConfig.Hierarchical(
@@ -227,7 +224,10 @@ class HierarchicalLayoutTest {
         println("Isolated nodes x: d=${nodeD.position.x}, e=${nodeE.position.x}")
 
         // Isolated nodes should be placed after all connected nodes
-        assertTrue(isolatedX > maxConnectedX, "Isolated nodes should be placed at the rightmost level")
+        assertTrue(
+            isolatedX > maxConnectedX,
+            "Isolated nodes should be placed at the rightmost level"
+        )
         assertEquals(
             nodeD.position.x,
             nodeE.position.x,
