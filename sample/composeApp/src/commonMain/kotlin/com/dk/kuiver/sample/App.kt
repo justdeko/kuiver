@@ -62,6 +62,7 @@ import com.dk.kuiver.sample.components.GraphControlMenu
 import com.dk.kuiver.sample.components.NodeCreationForm
 import com.dk.kuiver.sample.theme.AppTheme
 import com.dk.kuiver.ui.DefaultNodeContent
+import com.dk.kuiver.ui.EdgeLabelStyle
 import com.dk.kuiver.ui.StyledEdgeContent
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -121,6 +122,8 @@ private fun GraphBuilderScreen(
         )
     }
 
+    var edgeData by rememberSaveable(stateSaver = EdgeDataMapSaver) { mutableStateOf(mapOf()) }
+
     val initialKuiver = remember {
         buildKuiver {
             nodes("1", "2", "3")
@@ -161,6 +164,8 @@ private fun GraphBuilderScreen(
     var newNodeData by rememberSaveable { mutableStateOf("") }
     var fromNodeLabel by rememberSaveable { mutableStateOf("") }
     var toNodeLabel by rememberSaveable { mutableStateOf("") }
+    var newEdgeLabel by rememberSaveable { mutableStateOf("") }
+    var newEdgeLabelPosition by rememberSaveable { mutableStateOf(0.5f) }
     var selectedNodeColorType by rememberSaveable { mutableStateOf<NodeColorType?>(null) } // null = random
     var showNodeForm by rememberSaveable { mutableStateOf(false) }
     var showEdgeForm by rememberSaveable { mutableStateOf(false) }
@@ -301,14 +306,20 @@ private fun GraphBuilderScreen(
                     }
                 },
                 edgeContent = { edge, from, to ->
-                    val baseColor = MaterialTheme.colorScheme.outline
-                    val backEdgeColor = MaterialTheme.colorScheme.error
+                    val data = edgeData[edge.fromId edgeTo edge.toId]
                     StyledEdgeContent(
                         edge = edge,
                         from = from,
                         to = to,
-                        baseColor = baseColor,
-                        backEdgeColor = backEdgeColor
+                        baseColor = MaterialTheme.colorScheme.outline,
+                        backEdgeColor = MaterialTheme.colorScheme.error,
+                        label = data?.label,
+                        labelOffset = data?.labelOffset ?: 0.5f,
+                        labelStyle = EdgeLabelStyle(
+                            textColor = MaterialTheme.colorScheme.onSurface,
+                            backgroundColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                            borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                        )
                     )
                 }
             )
@@ -480,6 +491,10 @@ private fun GraphBuilderScreen(
                         toNodeLabel = toNodeLabel,
                         onFromNodeLabelChange = { fromNodeLabel = it },
                         onToNodeLabelChange = { toNodeLabel = it },
+                        edgeLabel = newEdgeLabel,
+                        onEdgeLabelChange = { newEdgeLabel = it },
+                        labelPosition = newEdgeLabelPosition,
+                        onLabelPositionChange = { newEdgeLabelPosition = it },
                         onCreateEdge = {
                             if (fromNodeLabel.isNotBlank() && toNodeLabel.isNotBlank()) {
                                 // Find IDs for the given labels by looking up in nodeData
@@ -496,8 +511,18 @@ private fun GraphBuilderScreen(
                                         addEdge(newEdge)
                                     }
                                     kuiverViewerState.updateKuiver(newKuiver)
+
+                                    if (newEdgeLabel.isNotBlank()) {
+                                        edgeData = edgeData + (
+                                                (fromNodeEntry.key edgeTo toNodeEntry.key) to
+                                                        EdgeData(newEdgeLabel, newEdgeLabelPosition)
+                                                )
+                                    }
+
                                     fromNodeLabel = ""
                                     toNodeLabel = ""
+                                    newEdgeLabel = ""
+                                    newEdgeLabelPosition = 0.5f
                                 }
                             }
                         }
