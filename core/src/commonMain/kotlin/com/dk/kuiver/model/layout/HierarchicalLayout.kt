@@ -76,14 +76,6 @@ internal fun hierarchical(kuiver: Kuiver, layoutConfig: LayoutConfig.Hierarchica
         it.dimensions?.height?.value ?: layoutConfig.nodeSize
     } ?: layoutConfig.nodeSize
 
-    val levelSpacing = maxOf(layoutConfig.levelSpacing, maxNodeWidth + 60f)
-    val nodeSpacing = maxOf(layoutConfig.nodeSpacing, maxNodeHeight + 40f)
-
-    val layoutWidth = maxLevel * levelSpacing
-    val layoutHeight = (nodesByLevel.values.maxOfOrNull { it.size } ?: 1) * nodeSpacing
-    val centerX = if (layoutConfig.width > 0f) (layoutConfig.width - layoutWidth) / 2f else 0f
-    val centerY = if (layoutConfig.height > 0f) (layoutConfig.height - layoutHeight) / 2f else 0f
-
     val updatedNodes = kuiver.nodes.mapValues { (nodeId, node) ->
         val level = levels[nodeId] ?: 0
         val nodesInLevel = adjustedNodes[level] ?: emptyList()
@@ -91,6 +83,14 @@ internal fun hierarchical(kuiver: Kuiver, layoutConfig: LayoutConfig.Hierarchica
 
         val (x, y) = when (layoutConfig.direction) {
             LayoutDirection.HORIZONTAL -> {
+                val levelSpacing = maxOf(layoutConfig.levelSpacing, maxNodeWidth + 60f)
+                val nodeSpacing = maxOf(layoutConfig.nodeSpacing, maxNodeHeight + 40f)
+
+                val layoutWidth = maxLevel * levelSpacing
+                val layoutHeight = (nodesByLevel.values.maxOfOrNull { it.size } ?: 1) * nodeSpacing
+                val centerX = if (layoutConfig.width > 0f) (layoutConfig.width - layoutWidth) / 2f else 0f
+                val centerY = if (layoutConfig.height > 0f) (layoutConfig.height - layoutHeight) / 2f else 0f
+
                 val levelHeight = nodesInLevel.size * nodeSpacing
                 val xPos = level * levelSpacing + centerX
                 val yPos =
@@ -99,6 +99,14 @@ internal fun hierarchical(kuiver: Kuiver, layoutConfig: LayoutConfig.Hierarchica
             }
 
             LayoutDirection.VERTICAL -> {
+                val levelSpacing = maxOf(layoutConfig.levelSpacing, maxNodeHeight + 60f)
+                val nodeSpacing = maxOf(layoutConfig.nodeSpacing, maxNodeWidth + 40f)
+
+                val layoutWidth = (nodesByLevel.values.maxOfOrNull { it.size } ?: 1) * nodeSpacing
+                val layoutHeight = maxLevel * levelSpacing
+                val centerX = if (layoutConfig.width > 0f) (layoutConfig.width - layoutWidth) / 2f else 0f
+                val centerY = if (layoutConfig.height > 0f) (layoutConfig.height - layoutHeight) / 2f else 0f
+
                 val levelWidth = nodesInLevel.size * nodeSpacing
                 val xPos = indexInLevel * nodeSpacing - levelWidth / 2f + nodeSpacing / 2f + centerX
                 val yPos = level * levelSpacing + centerY
