@@ -44,7 +44,7 @@ For multiplatform projects, add to your common source set:
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.justdeko:kuiver:0.2.0")
+            implementation("io.github.justdeko:kuiver:0.2.1")
         }
     }
 }
@@ -56,10 +56,10 @@ Or for a specific platform only:
 kotlin {
     sourceSets {
         androidMain.dependencies {
-            implementation("io.github.justdeko:kuiver-android:0.2.0")
+            implementation("io.github.justdeko:kuiver-android:0.2.1")
         }
         iosMain.dependencies {
-            implementation("io.github.justdeko:kuiver-iosarm64:0.2.0")
+            implementation("io.github.justdeko:kuiver-iosarm64:0.2.1")
         }
         // etc.
     }
