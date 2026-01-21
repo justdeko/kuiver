@@ -39,6 +39,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
@@ -386,6 +387,10 @@ fun EdgeCreationForm(
     toNodeLabel: String,
     onFromNodeLabelChange: (String) -> Unit,
     onToNodeLabelChange: (String) -> Unit,
+    edgeLabel: String = "",
+    onEdgeLabelChange: (String) -> Unit = {},
+    labelPosition: Float = 0.5f,
+    onLabelPositionChange: (Float) -> Unit = {},
     onCreateEdge: () -> Unit
 ) {
     AnimatedVisibility(
@@ -417,40 +422,85 @@ fun EdgeCreationForm(
                     )
                 }
             } else {
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    OutlinedTextField(
-                        value = fromNodeLabel,
-                        onValueChange = onFromNodeLabelChange,
-                        placeholder = { Text("From", fontSize = 12.sp) },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp)
-                    )
-
-                    Text("→", fontSize = 18.sp)
-
-                    OutlinedTextField(
-                        value = toNodeLabel,
-                        onValueChange = onToNodeLabelChange,
-                        placeholder = { Text("To", fontSize = 12.sp) },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp)
-                    )
-
-                    Button(
-                        onClick = onCreateEdge,
-                        modifier = Modifier.size(height = 40.dp, width = 56.dp),
-                        contentPadding = PaddingValues(4.dp),
-                        shape = RoundedCornerShape(12.dp)
+                    // From/To node selection row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("+", fontSize = 20.sp)
+                        OutlinedTextField(
+                            value = fromNodeLabel,
+                            onValueChange = onFromNodeLabelChange,
+                            placeholder = { Text("From", fontSize = 12.sp) },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        Text("→", fontSize = 18.sp)
+
+                        OutlinedTextField(
+                            value = toNodeLabel,
+                            onValueChange = onToNodeLabelChange,
+                            placeholder = { Text("To", fontSize = 12.sp) },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        Button(
+                            onClick = onCreateEdge,
+                            modifier = Modifier.size(height = 40.dp, width = 56.dp),
+                            contentPadding = PaddingValues(4.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("+", fontSize = 20.sp)
+                        }
+                    }
+
+                    // Edge label input row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = edgeLabel,
+                            onValueChange = onEdgeLabelChange,
+                            placeholder = { Text("Label (optional)", fontSize = 12.sp) },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                    }
+
+                    // Label position slider
+                    if (edgeLabel.isNotBlank()) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "Label Position: ${when {
+                                    labelPosition < 0.3f -> "Start"
+                                    labelPosition > 0.7f -> "End"
+                                    else -> "Center"
+                                }}",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                            Slider(
+                                value = labelPosition,
+                                onValueChange = onLabelPositionChange,
+                                valueRange = 0f..1f,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     }
                 }
             }

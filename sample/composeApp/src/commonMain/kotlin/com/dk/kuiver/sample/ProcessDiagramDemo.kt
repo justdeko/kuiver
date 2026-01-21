@@ -55,8 +55,9 @@ import com.dk.kuiver.model.nodes
 import com.dk.kuiver.rememberSaveableKuiverViewerState
 import com.dk.kuiver.renderer.KuiverViewer
 import com.dk.kuiver.renderer.KuiverViewerConfig
+import com.dk.kuiver.ui.EdgeLabelStyle
 import com.dk.kuiver.ui.KuiverAnchor
-import com.dk.kuiver.ui.OrthogonalEdgeContent
+import com.dk.kuiver.ui.OrthogonalEdgeContentWithLabel
 import com.dk.kuiver.ui.StyledEdgeContent
 import kotlinx.coroutines.delay
 
@@ -214,6 +215,21 @@ fun ProcessDiagramDemo(
             )
         )
     }
+
+    // Edge labels for meaningful annotations
+    val edgeLabels = mapOf(
+        "start" to "preheat" to "5 min",
+        "grind_beans" to "boil_water" to "meanwhile",
+        "boil_water" to "brew_coffee" to "4 min",
+        "preheat" to "cook_bacon" to "ready",
+        "cook_bacon" to "bacon_done" to "8 min",
+        "cook_eggs" to "eggs_check" to "check",
+        "eggs_check" to "eggs_done" to "done",
+        "eggs_check" to "cook_eggs" to "cook more",
+        "slice_bread" to "toast" to "2 slices",
+        "toast" to "butter" to "2 min",
+        "pour_juice" to "serve" to "fresh",
+    )
 
     val processKuiver = remember(showAnchors) {
         val edgeList = listOf(
@@ -394,13 +410,22 @@ fun ProcessDiagramDemo(
                 edgeContent = { edge, from, to ->
                     // Use regular styled edges for back edges, orthogonal for others when anchors enabled
                     val isBackEdge = edge.fromAnchor?.startsWith("back-") ?: false
+                    val edgeLabel = edgeLabels[edge.fromId to edge.toId]
 
                     if (showAnchors && !isBackEdge) {
-                        OrthogonalEdgeContent(
+                        OrthogonalEdgeContentWithLabel(
                             from = from,
                             to = to,
+                            label = edgeLabel,
                             color = MaterialTheme.colorScheme.outline,
                             strokeWidth = 2.5f,
+                            labelStyle = EdgeLabelStyle(
+                                textColor = MaterialTheme.colorScheme.onSurface,
+                                backgroundColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                                borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                                fontSize = 11.sp,
+                                rotateWithEdge = true
+                            )
                         )
                     } else {
                         StyledEdgeContent(
@@ -409,7 +434,14 @@ fun ProcessDiagramDemo(
                             to = to,
                             baseColor = MaterialTheme.colorScheme.outline,
                             backEdgeColor = MaterialTheme.colorScheme.error,
-                            strokeWidth = 2.5f
+                            strokeWidth = 2.5f,
+                            label = edgeLabel,
+                            labelStyle = EdgeLabelStyle(
+                                textColor = MaterialTheme.colorScheme.onSurface,
+                                backgroundColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                                borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                                fontSize = 11.sp
+                            )
                         )
                     }
                 }
