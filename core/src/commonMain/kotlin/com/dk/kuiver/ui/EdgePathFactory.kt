@@ -202,27 +202,29 @@ object EdgePathFactory {
         val dx = to.x - from.x
 
         // Control point distance - how far the curve extends horizontally
-        val controlDistance = abs(dx) * curveFactor
+        // Sign matches direction of travel so curves don't loop back
+        val controlDistance = dx * curveFactor
 
         // Calculate control points for S-curve (horizontal tangents)
         val controlPoint1 = Offset(from.x + controlDistance, from.y)
         val controlPoint2 = Offset(to.x - controlDistance, to.y)
 
-        // Calculate endpoint (shortened for arrow)
-        val goingRight = dx > 0f
-        val lineGap = if (showArrow) strokeWidth / 2f + EdgeDrawingDefaults.ARROW_GAP_FROM_LINE else 0f
+        // Calculate endpoint (shortened for arrow along the tangent at t=1)
+        // Cubic Bezier tangent at t=1 is proportional to (P3 - P2)
+        val tangent = Offset(to.x - controlPoint2.x, to.y - controlPoint2.y)
+        val tangentDist = sqrt(tangent.x * tangent.x + tangent.y * tangent.y)
 
-        val endX = if (showArrow) {
-            if (goingRight) {
-                to.x - (EdgeDrawingDefaults.ARROW_OFFSET + lineGap)
-            } else {
-                to.x + (EdgeDrawingDefaults.ARROW_OFFSET + lineGap)
-            }
+        val pathEndpoint = if (showArrow && tangentDist > 0f) {
+            val normalized = Offset(tangent.x / tangentDist, tangent.y / tangentDist)
+            val lineGap = strokeWidth / 2f + EdgeDrawingDefaults.ARROW_GAP_FROM_LINE
+            val shortenBy = EdgeDrawingDefaults.ARROW_OFFSET + lineGap
+            Offset(
+                to.x - normalized.x * shortenBy,
+                to.y - normalized.y * shortenBy
+            )
         } else {
-            to.x
+            to
         }
-
-        val pathEndpoint = Offset(endX, to.y)
 
         // Estimate S-curve length
         val curveLength = estimateCubicBezierLength(from, controlPoint1, controlPoint2, to)
@@ -295,5 +297,103 @@ object EdgePathFactory {
         val dx = b.x - a.x
         val dy = b.y - a.y
         return sqrt(dx * dx + dy * dy)
+    }
+
+    /**
+     * Create a right-angle orthogonal edge path (draw.io style).
+     *
+     * Creates paths with only horizontal and vertical segments, connected
+     * at right angles. The routing strategy determines how the path is laid out.
+     *
+     * @param from Start point of the edge
+     * @param to End point of the edge
+     * @param routing The routing strategy for the edge segments
+     * @param showArrow Whether the edge will have an arrow
+     * @param strokeWidth Width of the edge line
+     * @return EdgePath.RightAngle with calculated waypoints and endpoint
+     */
+    fun createRightAnglePath(
+        from: Offset,
+        to: Offset,
+        routing: RightAngleRouting,
+        showArrow: Boolean = true,
+        strokeWidth: Float = 3f
+    ): EdgePath.RightAngle {
+        // Calculate waypoints based on routing
+        val waypoints = when (routing) {
+            RightAngleRouting.HORIZONTAL_FIRST -> {
+                // Single corner: go horizontal then vertical
+                listOf(Offset(to.x, from.y))
+            }
+            RightAngleRouting.VERTICAL_FIRST -> {
+                // Single corner: go vertical then horizontal
+                listOf(Offset(from.x, to.y))
+            }
+            RightAngleRouting.HORIZONTAL_VERTICAL_HORIZONTAL -> {
+                // Two corners: horizontal -> vertical -> horizontal
+                val midX = (from.x + to.x) / 2f
+                listOf(
+                    Offset(midX, from.y),
+                    Offset(midX, to.y)
+                )
+            }
+            RightAngleRouting.VERTICAL_HORIZONTAL_VERTICAL -> {
+                // Two corners: vertical -> horizontal -> vertical
+                val midY = (from.y + to.y) / 2f
+                listOf(
+                    Offset(from.x, midY),
+                    Offset(to.x, midY)
+                )
+            }
+        }
+
+        // Determine arrow direction based on final segment
+        val lastWaypoint = waypoints.lastOrNull() ?: from
+        val finalDx = to.x - lastWaypoint.x
+        val finalDy = to.y - lastWaypoint.y
+
+        val arrowDirection = when {
+            abs(finalDx) > abs(finalDy) -> {
+                // Horizontal final segment
+                if (finalDx > 0) Offset(1f, 0f) else Offset(-1f, 0f)
+            }
+            abs(finalDy) > abs(finalDx) -> {
+                // Vertical final segment
+                if (finalDy > 0) Offset(0f, 1f) else Offset(0f, -1f)
+            }
+            else -> null
+        }
+
+        // Calculate path endpoint (shortened for arrow)
+        val pathEndpoint = if (showArrow && arrowDirection != null) {
+            val lineGap = strokeWidth / 2f + EdgeDrawingDefaults.ARROW_GAP_FROM_LINE
+            val shortenBy = EdgeDrawingDefaults.ARROW_OFFSET + lineGap
+            Offset(
+                to.x - arrowDirection.x * shortenBy,
+                to.y - arrowDirection.y * shortenBy
+            )
+        } else {
+            to
+        }
+
+        // Calculate total path length
+        val points = buildList {
+            add(from)
+            addAll(waypoints)
+            add(to)
+        }
+        var totalLength = 0f
+        for (i in 0 until points.size - 1) {
+            totalLength += distance(points[i], points[i + 1])
+        }
+
+        return EdgePath.RightAngle(
+            from = from,
+            to = to,
+            waypoints = waypoints,
+            pathEndpoint = pathEndpoint,
+            edgeLength = totalLength,
+            arrowDirection = arrowDirection
+        )
     }
 }

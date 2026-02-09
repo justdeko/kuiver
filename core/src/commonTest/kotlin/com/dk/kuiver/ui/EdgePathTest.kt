@@ -108,8 +108,9 @@ class EdgePathTest {
             showArrow = false
         )
 
-        assertTrue(leftward.controlPoint1.x > leftward.from.x)
-        assertTrue(leftward.controlPoint2.x < leftward.to.x)
+        // Control points should go in the direction of travel (leftward)
+        assertTrue(leftward.controlPoint1.x < leftward.from.x)
+        assertTrue(leftward.controlPoint2.x > leftward.to.x)
         assertEquals(leftward.from.y, leftward.controlPoint1.y, 0.01f)
         assertEquals(leftward.to.y, leftward.controlPoint2.y, 0.01f)
 

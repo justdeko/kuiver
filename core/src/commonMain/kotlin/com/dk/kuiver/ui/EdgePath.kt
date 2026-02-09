@@ -161,4 +161,35 @@ sealed class EdgePath {
             )
         }
     }
+
+    /**
+     * Right-angle orthogonal edge using straight line segments (draw.io style).
+     *
+     * Creates paths with only horizontal and vertical segments, connected
+     * at right angles. Useful for clean, structured diagrams.
+     *
+     * @property from Start point of the edge
+     * @property to End point of the edge
+     * @property waypoints Intermediate points where the path changes direction
+     * @property pathEndpoint Where the path ends (may be shortened for arrow)
+     * @property edgeLength Total length of all segments
+     * @property arrowDirection Direction vector for the arrow (based on final segment)
+     */
+    @Immutable
+    data class RightAngle(
+        override val from: Offset,
+        override val to: Offset,
+        val waypoints: List<Offset>,
+        override val pathEndpoint: Offset,
+        override val edgeLength: Float,
+        val arrowDirection: Offset?
+    ) : EdgePath() {
+        override fun calculateLabelPosition(
+            offset: Float,
+            minEdgeLength: Float
+        ): EdgeLabelPosition? {
+            if (edgeLength < minEdgeLength) return null
+            return calculateRightAngleLabelPosition(from, waypoints, pathEndpoint, edgeLength, offset)
+        }
+    }
 }
