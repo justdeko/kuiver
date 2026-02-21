@@ -156,6 +156,73 @@ fun calculateCubicBezierLabelPosition(
     return EdgeLabelPosition(position, atan2(tangent.y, tangent.x))
 }
 
+/**
+ * Calculates the label position along a right-angle path with multiple segments.
+ *
+ * Walks along the path segments to find the position at the given offset.
+ * The offset represents a proportion of the total path length.
+ *
+ * @param from Start point of the path
+ * @param waypoints Intermediate corner points
+ * @param to End point of the path
+ * @param totalLength Total length of all segments
+ * @param offset Position along the path (0.0 = start, 1.0 = end)
+ * @return Position and tangent angle for the label
+ */
+fun calculateRightAngleLabelPosition(
+    from: Offset,
+    waypoints: List<Offset>,
+    to: Offset,
+    totalLength: Float,
+    offset: Float = 0.5f
+): EdgeLabelPosition {
+    if (totalLength <= 0f) {
+        return EdgeLabelPosition(from, 0f)
+    }
+
+    val t = offset.coerceIn(0f, 1f)
+    val targetDistance = totalLength * t
+
+    // Build list of all points
+    val points = buildList {
+        add(from)
+        addAll(waypoints)
+        add(to)
+    }
+
+    var accumulatedDistance = 0f
+
+    for (i in 0 until points.size - 1) {
+        val segmentStart = points[i]
+        val segmentEnd = points[i + 1]
+        val dx = segmentEnd.x - segmentStart.x
+        val dy = segmentEnd.y - segmentStart.y
+        val segmentLength = kotlin.math.sqrt(dx * dx + dy * dy)
+
+        if (accumulatedDistance + segmentLength >= targetDistance) {
+            // Target is on this segment
+            val remainingDistance = targetDistance - accumulatedDistance
+            val segmentT = if (segmentLength > 0f) remainingDistance / segmentLength else 0f
+
+            val position = Offset(
+                segmentStart.x + dx * segmentT,
+                segmentStart.y + dy * segmentT
+            )
+            val angle = atan2(dy, dx)
+
+            return EdgeLabelPosition(position, angle)
+        }
+
+        accumulatedDistance += segmentLength
+    }
+
+    // Fallback: return the end point
+    val lastSegmentStart = if (points.size >= 2) points[points.size - 2] else from
+    val dx = to.x - lastSegmentStart.x
+    val dy = to.y - lastSegmentStart.y
+    return EdgeLabelPosition(to, atan2(dy, dx))
+}
+
 private const val PI_FLOAT = PI.toFloat()
 private const val TWO_PI_FLOAT = 2f * PI_FLOAT
 

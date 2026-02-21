@@ -2,16 +2,18 @@ package com.dk.kuiver.sample
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -19,6 +21,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomInMap
 import androidx.compose.material.icons.filled.ZoomOut
+import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
@@ -29,6 +32,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -41,11 +45,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dk.kuiver.model.EdgeType
 import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.buildKuiver
 import com.dk.kuiver.model.edge
@@ -59,6 +67,7 @@ import com.dk.kuiver.ui.EdgeLabelStyle
 import com.dk.kuiver.ui.KuiverAnchor
 import com.dk.kuiver.ui.OrthogonalEdgeContentWithLabel
 import com.dk.kuiver.ui.StyledEdgeContent
+import com.dk.kuiver.ui.StyledRightAngleEdgeContent
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -67,6 +76,7 @@ fun ProcessDiagramDemo(
     onNavigateBack: () -> Unit
 ) {
     var selectedLayoutAlgorithm by rememberSaveable { mutableStateOf(LayoutAlgorithm.HIERARCHICAL) }
+    var selectedEdgeStyle by rememberSaveable { mutableStateOf(EdgeStyle.REGULAR) }
     var showAnchors by rememberSaveable { mutableStateOf(false) }
 
     val processNodeData = remember {
@@ -357,33 +367,82 @@ fun ProcessDiagramDemo(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Diagram Demo") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+            Column {
+                TopAppBar(
+                    title = { Text("Diagram Demo") },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        }
                     }
-                },
-                actions = {
-                    FilterChip(
-                        selected = selectedLayoutAlgorithm == LayoutAlgorithm.HIERARCHICAL,
-                        onClick = { selectedLayoutAlgorithm = LayoutAlgorithm.HIERARCHICAL },
-                        label = { Text("Hierarchical") }
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    FilterChip(
-                        selected = selectedLayoutAlgorithm == LayoutAlgorithm.FORCE_DIRECTED,
-                        onClick = { selectedLayoutAlgorithm = LayoutAlgorithm.FORCE_DIRECTED },
-                        label = { Text("Force") }
-                    )
-                    Spacer(Modifier.width(8.dp))
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Layout algorithm toggle group
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
+                    ) {
+                        LayoutAlgorithm.entries.forEachIndexed { index, algorithm ->
+                            ToggleButton(
+                                checked = selectedLayoutAlgorithm == algorithm,
+                                onCheckedChange = { selectedLayoutAlgorithm = algorithm },
+                                modifier = Modifier.semantics { role = Role.RadioButton },
+                                shapes = when (index) {
+                                    0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                                    LayoutAlgorithm.entries.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                                    else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                                }
+                            ) {
+                                Text(
+                                    when (algorithm) {
+                                        LayoutAlgorithm.HIERARCHICAL -> "Hierarchical"
+                                        LayoutAlgorithm.FORCE_DIRECTED -> "Force"
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    // Edge style toggle group
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
+                    ) {
+                        EdgeStyle.entries.forEachIndexed { index, style ->
+                            ToggleButton(
+                                checked = selectedEdgeStyle == style,
+                                onCheckedChange = { selectedEdgeStyle = style },
+                                modifier = Modifier.semantics { role = Role.RadioButton },
+                                shapes = when (index) {
+                                    0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                                    EdgeStyle.entries.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                                    else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                                }
+                            ) {
+                                Text(
+                                    when (style) {
+                                        EdgeStyle.REGULAR -> "Regular"
+                                        EdgeStyle.ORTHOGONAL -> "S-Curve"
+                                        EdgeStyle.RIGHT_ANGLE -> "Right Angle"
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    // Anchors toggle
                     FilterChip(
                         selected = showAnchors,
                         onClick = { showAnchors = !showAnchors },
                         label = { Text("Anchors") }
                     )
                 }
-            )
+            }
         }
     ) { padding ->
         Box(
@@ -408,27 +467,39 @@ fun ProcessDiagramDemo(
                     }
                 },
                 edgeContent = { edge, from, to ->
-                    // Use regular styled edges for back edges, orthogonal for others when anchors enabled
-                    val isBackEdge = edge.fromAnchor?.startsWith("back-") ?: false
                     val edgeLabel = edgeLabels[edge.fromId to edge.toId]
+                    val labelStyle = EdgeLabelStyle(
+                        textColor = MaterialTheme.colorScheme.onSurface,
+                        backgroundColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                        borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                        fontSize = 11.sp
+                    )
 
-                    if (showAnchors && !isBackEdge) {
-                        OrthogonalEdgeContentWithLabel(
-                            from = from,
-                            to = to,
-                            label = edgeLabel,
-                            color = MaterialTheme.colorScheme.outline,
-                            strokeWidth = 2.5f,
-                            labelStyle = EdgeLabelStyle(
-                                textColor = MaterialTheme.colorScheme.onSurface,
-                                backgroundColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
-                                borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                                fontSize = 11.sp,
-                                rotateWithEdge = true
+                    val isBackOrSelfLoop = edge.type == EdgeType.BACK || edge.type == EdgeType.SELF_LOOP
+
+                    when (selectedEdgeStyle) {
+                        EdgeStyle.ORTHOGONAL if !isBackOrSelfLoop ->
+                            OrthogonalEdgeContentWithLabel(
+                                from = from,
+                                to = to,
+                                color = MaterialTheme.colorScheme.outline,
+                                strokeWidth = 2.5f,
+                                label = edgeLabel,
+                                labelStyle = labelStyle.copy(rotateWithEdge = true)
                             )
-                        )
-                    } else {
-                        StyledEdgeContent(
+
+                        EdgeStyle.RIGHT_ANGLE if !isBackOrSelfLoop ->
+                            StyledRightAngleEdgeContent(
+                                edge = edge,
+                                from = from,
+                                to = to,
+                                color = MaterialTheme.colorScheme.outline,
+                                strokeWidth = 2.5f,
+                                label = edgeLabel,
+                                labelStyle = labelStyle
+                            )
+
+                        else -> StyledEdgeContent(
                             edge = edge,
                             from = from,
                             to = to,
@@ -436,12 +507,7 @@ fun ProcessDiagramDemo(
                             backEdgeColor = MaterialTheme.colorScheme.error,
                             strokeWidth = 2.5f,
                             label = edgeLabel,
-                            labelStyle = EdgeLabelStyle(
-                                textColor = MaterialTheme.colorScheme.onSurface,
-                                backgroundColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
-                                borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                                fontSize = 11.sp
-                            )
+                            labelStyle = labelStyle
                         )
                     }
                 }
@@ -639,4 +705,10 @@ private fun ProcessNodeContent(
             }
         }
     }
+}
+
+private enum class EdgeStyle {
+    REGULAR,
+    ORTHOGONAL,
+    RIGHT_ANGLE
 }
