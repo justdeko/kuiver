@@ -30,6 +30,7 @@
 - 2 built-in layout algorithms (hierarchical and force-directed) plus support for custom layouts
 - Handles both acyclic and cyclic graphs
 - Customizable nodes and edges
+- Edge labels
 - Zooming and panning
 - Resizable canvas
 - Layout animations
@@ -44,7 +45,7 @@ For multiplatform projects, add to your common source set:
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.justdeko:kuiver:0.2.1")
+            implementation("io.github.justdeko:kuiver:0.2.5")
         }
     }
 }
@@ -56,10 +57,10 @@ Or for a specific platform only:
 kotlin {
     sourceSets {
         androidMain.dependencies {
-            implementation("io.github.justdeko:kuiver-android:0.2.1")
+            implementation("io.github.justdeko:kuiver-android:0.2.5")
         }
         iosMain.dependencies {
-            implementation("io.github.justdeko:kuiver-iosarm64:0.2.1")
+            implementation("io.github.justdeko:kuiver-iosarm64:0.2.5")
         }
         // etc.
     }
@@ -162,6 +163,59 @@ edgeContent = { edge, from, to ->
         )
         // Draw custom arrows, labels, etc.
     }
+}
+```
+
+### Edge Labels
+
+Use `EdgeContentWithLabel` (or `StyledEdgeContent`) to display text along an edge. Labels
+automatically hide on edges shorter than `minEdgeLengthForLabel` and can optionally rotate
+to follow the edge direction.
+
+```kotlin
+edgeContent = { edge, from, to ->
+    EdgeContentWithLabel(
+        from = from,
+        to = to,
+        label = "my label",
+        labelPlacement = LabelPlacement.CENTER, // START, CENTER, or END
+        labelStyle = EdgeLabelStyle(
+            textColor = Color.Black,
+            backgroundColor = Color.White.copy(alpha = 0.9f),
+            fontSize = 12.sp,
+            rotateWithEdge = false
+        )
+    )
+}
+
+// or use a custom composable as the label
+edgeContent = { edge, from, to ->
+    EdgeContentWithLabel(
+        from = from,
+        to = to,
+        label = "custom",
+        labelContent = { text ->
+            Text(text, color = Color.Red, fontWeight = FontWeight.Bold)
+        }
+    )
+}
+```
+
+`StyledEdgeContent` also accepts the same label parameters, so you can combine automatic
+edge styling with labels in one call.
+
+### Custom Arrow Drawing
+
+Replace the default filled-triangle arrow with any `DrawScope` lambda via the `arrowDrawer`
+parameter, available on all edge composables:
+
+```kotlin
+val circleArrow: ArrowDrawer = { arrowTip, direction, color ->
+    drawCircle(color = color, radius = 8f, center = arrowTip)
+}
+
+edgeContent = { edge, from, to ->
+    EdgeContent(from, to, arrowDrawer = circleArrow)
 }
 ```
 
@@ -475,8 +529,6 @@ The library implements several web-specific adjustments to handle browser limita
 
 - **Multiple Edges**: The library does not currently support multiple edges between the same pair of
   nodes
-- **Edge Labels**: Built-in edge label support is not yet implemented (can be added via custom
-  `edgeContent`)
 - **Large Graphs**: Performance with graphs >100 nodes has not been extensively tested
 
 ### API Stability
