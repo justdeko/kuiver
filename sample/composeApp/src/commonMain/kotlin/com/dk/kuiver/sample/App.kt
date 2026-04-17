@@ -42,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dk.kuiver.model.Kuiver
@@ -65,7 +66,6 @@ import com.dk.kuiver.ui.DefaultNodeContent
 import com.dk.kuiver.ui.EdgeLabelStyle
 import com.dk.kuiver.ui.StyledEdgeContent
 import kotlinx.coroutines.delay
-import org.jetbrains.compose.ui.tooling.preview.Preview
 
 enum class Screen {
     GRAPH_BUILDER,
@@ -78,7 +78,6 @@ enum class LayoutAlgorithm {
     FORCE_DIRECTED
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 @Preview
 fun App() {

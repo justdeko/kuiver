@@ -39,3 +39,4 @@ include(":core")
 
 include(":sample")
 include(":sample:composeApp")
+include(":sample:androidApp")
