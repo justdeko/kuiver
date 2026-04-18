@@ -282,12 +282,20 @@ private fun createKuiverViewerState(
         }
     }
 
-    val zoomIn = remember(scale) {
-        { onScaleChange((scale * 1.2f).coerceAtMost(5f)) }
+    val zoomIn = remember(scale, offset) {
+        {
+            val newScale = (scale * 1.2f).coerceAtMost(5f)
+            onScaleChange(newScale)
+            onOffsetChange(offset * (newScale / scale))
+        }
     }
 
-    val zoomOut = remember(scale) {
-        { onScaleChange((scale / 1.2f).coerceAtLeast(0.1f)) }
+    val zoomOut = remember(scale, offset) {
+        {
+            val newScale = (scale / 1.2f).coerceAtLeast(0.1f)
+            onScaleChange(newScale)
+            onOffsetChange(offset * (newScale / scale))
+        }
     }
 
     val updateKuiver = remember(onKuiverChange) {

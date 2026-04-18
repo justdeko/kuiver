@@ -1,12 +1,13 @@
 package com.dk.kuiver.renderer
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.animateOffsetAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateCentroid
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
@@ -137,10 +138,25 @@ internal fun ViewerRenderer(
     var targetScale by remember { mutableFloatStateOf(state.scale) }
     var targetOffset by remember { mutableStateOf(state.offset) }
     val density = LocalDensity.current
+    // Single progress animatable so scale and offset always interpolate by the same factor
+    val progressAnim = remember { Animatable(1f) }
+    var animStartScale by remember { mutableFloatStateOf(state.scale) }
+    var animStartOffset by remember { mutableStateOf(state.offset) }
 
     LaunchedEffect(state.scale, state.offset) {
+        val alreadyAtTarget = targetScale == state.scale && targetOffset == state.offset
+        // Capture current animated position before updating targets
+        val p = progressAnim.value
+        val curScale = animStartScale + (targetScale - animStartScale) * p
+        val curOffX = animStartOffset.x + (targetOffset.x - animStartOffset.x) * p
+        val curOffY = animStartOffset.y + (targetOffset.y - animStartOffset.y) * p
         targetScale = state.scale
         targetOffset = state.offset
+        if (alreadyAtTarget) return@LaunchedEffect
+        animStartScale = curScale
+        animStartOffset = Offset(curOffX, curOffY)
+        progressAnim.snapTo(0f)
+        progressAnim.animateTo(1f, config.scaleAnimationSpec)
     }
 
     // Remove anchors for nodes that no longer exist
@@ -153,17 +169,6 @@ internal fun ViewerRenderer(
         }
     }
 
-    val animatedScale by animateFloatAsState(
-        targetValue = targetScale,
-        animationSpec = config.scaleAnimationSpec,
-        label = "camera_scale"
-    )
-
-    val animatedOffset by animateOffsetAsState(
-        targetValue = targetOffset,
-        animationSpec = config.offsetAnimationSpec,
-        label = "camera_offset"
-    )
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val centerX = maxWidth / 2
@@ -188,45 +193,93 @@ internal fun ViewerRenderer(
                     }
                 }
                 .pointerInput(Unit) {
-                    detectTransformGestures { _, pan, zoom, _ ->
-                        val newScale =
-                            (targetScale * zoom).coerceIn(config.minScale, config.maxScale)
-                        val newOffset = targetOffset + pan
-                        targetScale = newScale
-                        targetOffset = newOffset
-                        state.updateTransform(newScale, newOffset)
+                    while (true) {
+                        awaitPointerEventScope { awaitFirstDown(requireUnconsumed = false) }
+
+                        while (true) {
+                            var panChange = Offset.Zero
+                            var zoomChange = 1f
+                            var centroid = Offset.Zero
+                            var anyPressed = false
+
+                            awaitPointerEventScope {
+                                val event = awaitPointerEvent()
+                                if (!event.changes.any { it.isConsumed }) {
+                                    panChange = event.calculatePan()
+                                    zoomChange = event.calculateZoom()
+                                    // useCurrent = false: pivot at where fingers were
+                                    centroid = event.calculateCentroid(useCurrent = false)
+                                    event.changes.forEach { it.consume() }
+                                }
+                                anyPressed = event.changes.any { it.pressed }
+                            }
+
+                            if (!anyPressed) break
+
+                            if (panChange != Offset.Zero || zoomChange != 1f) {
+                                val newScale = (targetScale * zoomChange).coerceIn(
+                                    config.minScale,
+                                    config.maxScale
+                                )
+                                val actualZoom = newScale / targetScale
+                                val halfW = size.width / 2f
+                                val halfH = size.height / 2f
+                                val newOffset = Offset(
+                                    x = (centroid.x - halfW) * (1 - actualZoom) + targetOffset.x * actualZoom + panChange.x,
+                                    y = (centroid.y - halfH) * (1 - actualZoom) + targetOffset.y * actualZoom + panChange.y
+                                )
+                                targetScale = newScale
+                                targetOffset = newOffset
+                                animStartScale = newScale
+                                animStartOffset = newOffset
+                                progressAnim.snapTo(1f)
+                            }
+                        }
+                        state.updateTransform(targetScale, targetOffset)
                     }
                 }
                 .pointerInput(Unit) {
-                    awaitEachGesture {
-                        while (true) {
-                            val event = awaitPointerEvent()
+                    // Use awaitPointerEventScope per-event so snapTo can be called
+                    // as a direct suspend call in the unrestricted PointerInputScope,
+                    // guaranteeing it runs before state.updateTransform notifies Compose
+                    while (true) {
+                        val event = awaitPointerEventScope { awaitPointerEvent() }
 
-                            // Handle scroll events for desktop trackpad/mouse wheel
-                            if (event.type == PointerEventType.Scroll) {
-                                val change = event.changes.first()
-                                val scrollDelta = change.scrollDelta
+                        if (event.type == PointerEventType.Scroll) {
+                            val change = event.changes.first()
+                            val scrollDelta = change.scrollDelta
+                            change.consume()
 
-                                // Check if Ctrl is pressed (pinch zoom on macOS trackpad)
-                                if (config.zoomConditionDesktop(event)) {
-                                    // Zoom: Ctrl + scroll or pinch gesture on trackpad
-                                    val zoomFactor = exp(-scrollDelta.y * 0.05f)
-                                    val newScale = (targetScale * zoomFactor).coerceIn(
-                                        config.minScale,
-                                        config.maxScale
-                                    )
-                                    targetScale = newScale
-                                    state.updateTransform(newScale, targetOffset)
-                                } else {
-                                    val panDelta = Offset(
-                                        x = -scrollDelta.x * config.panVelocity,
-                                        y = -scrollDelta.y * config.panVelocity
-                                    )
-                                    val newOffset = targetOffset + panDelta
-                                    targetOffset = newOffset
-                                    state.updateTransform(targetScale, newOffset)
-                                }
-                                change.consume()
+                            if (config.zoomConditionDesktop(event)) {
+                                val zoomFactor = exp(-scrollDelta.y * 0.05f)
+                                val newScale = (targetScale * zoomFactor).coerceIn(
+                                    config.minScale,
+                                    config.maxScale
+                                )
+                                val actualZoom = newScale / targetScale
+                                val focalPoint = change.position
+                                val halfW = size.width / 2f
+                                val halfH = size.height / 2f
+                                val newOffset = Offset(
+                                    x = (focalPoint.x - halfW) * (1 - actualZoom) + targetOffset.x * actualZoom,
+                                    y = (focalPoint.y - halfH) * (1 - actualZoom) + targetOffset.y * actualZoom
+                                )
+                                targetScale = newScale
+                                targetOffset = newOffset
+                                animStartScale = newScale
+                                animStartOffset = newOffset
+                                progressAnim.snapTo(1f)
+                                state.updateTransform(newScale, newOffset)
+                            } else {
+                                val panDelta = Offset(
+                                    x = -scrollDelta.x * config.panVelocity,
+                                    y = -scrollDelta.y * config.panVelocity
+                                )
+                                val newOffset = targetOffset + panDelta
+                                targetOffset = newOffset
+                                animStartOffset = newOffset
+                                progressAnim.snapTo(1f)
+                                state.updateTransform(targetScale, newOffset)
                             }
                         }
                     }
@@ -236,12 +289,14 @@ internal fun ViewerRenderer(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .graphicsLayer(
-                            scaleX = animatedScale,
-                            scaleY = animatedScale,
-                            translationX = animatedOffset.x,
-                            translationY = animatedOffset.y
-                        )
+                        .graphicsLayer {
+                            // Read animation state in draw phase to avoid recomposition per frame
+                            val p = progressAnim.value
+                            scaleX = animStartScale + (targetScale - animStartScale) * p
+                            scaleY = scaleX
+                            translationX = animStartOffset.x + (targetOffset.x - animStartOffset.x) * p
+                            translationY = animStartOffset.y + (targetOffset.y - animStartOffset.y) * p
+                        }
                 ) {
                     // Draw edges first so they are behind nodes
                     kuiver.edges.forEach { edge ->
