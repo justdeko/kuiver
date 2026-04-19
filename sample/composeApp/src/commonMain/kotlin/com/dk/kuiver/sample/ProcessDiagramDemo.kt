@@ -1,5 +1,6 @@
 package com.dk.kuiver.sample
 
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
@@ -449,7 +450,7 @@ fun ProcessDiagramDemo(
         ) {
             KuiverViewer(
                 state = kuiverViewerState,
-                config = KuiverViewerConfig(),
+                config = KuiverViewerConfig(enterAnimationSpec = tween(durationMillis = 400)),
                 modifier = Modifier
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.surface),

@@ -143,12 +143,9 @@ fun rememberSaveableKuiverViewerState(
     var savedScale by rememberSaveable { mutableFloatStateOf(1f) }
     var savedOffsetX by rememberSaveable { mutableFloatStateOf(0f) }
     var savedOffsetY by rememberSaveable { mutableFloatStateOf(0f) }
-    var savedHasFitted by rememberSaveable { mutableStateOf(false) }
 
     val state = remember {
-        KuiverViewerState(savedKuiver, savedScale, Offset(savedOffsetX, savedOffsetY)).also {
-            it.hasFittedInitially = savedHasFitted
-        }
+        KuiverViewerState(savedKuiver, savedScale, Offset(savedOffsetX, savedOffsetY))
     }
 
     // Sync state back to saveable vars via snapshotFlow to avoid composition-phase subscriptions
@@ -160,13 +157,13 @@ fun rememberSaveableKuiverViewerState(
                 savedOffsetX = it.x; savedOffsetY = it.y
             }
         }
-        snapshotFlow { state.hasFittedInitially }.collect { savedHasFitted = it }
     }
 
     setupLayout(state, layoutConfig)
     return state
 }
 
+@Suppress("ComposableNaming")
 @Composable
 private fun setupLayout(state: KuiverViewerState, layoutConfig: LayoutConfig) {
     // Capture at composition time so the effect body uses the snapshot values that
@@ -199,7 +196,8 @@ private fun setupLayout(state: KuiverViewerState, layoutConfig: LayoutConfig) {
             kuiver
         }
         state.layoutedKuiver = laid
-        if (!state.hasFittedInitially &&
+        if (canvasWidth > 0f && canvasHeight > 0f &&
+            !state.hasFittedInitially &&
             laid.nodes.isNotEmpty() &&
             laid.nodes.values.any { it.dimensions != null }
         ) {

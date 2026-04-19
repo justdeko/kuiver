@@ -29,6 +29,7 @@ internal fun RenderEdge(
     graphCenterY: Float,
     anchorRegistry: AnchorPositionRegistry,
     animationSpec: AnimationSpec<Offset>,
+    skipAnimation: Boolean,
     edgeContent: @Composable (KuiverEdge, Offset, Offset) -> Unit
 ) {
     val density = LocalDensity.current
@@ -56,6 +57,9 @@ internal fun RenderEdge(
             label = "edge_to_${edge.fromId}_${edge.toId}"
         )
 
+        val fromCenter = if (skipAnimation) targetFromCenter else animatedFromCenter
+        val toCenter = if (skipAnimation) targetToCenter else animatedToCenter
+
         // Get node dimensions (convert from DP to pixels, use default if dimensions not set)
         val defaultSize = DEFAULT_NODE_SIZE_DP.toPx()
         val fromNodeWidth = fromNode.dimensions?.width?.toPx() ?: defaultSize
@@ -67,8 +71,8 @@ internal fun RenderEdge(
             edge = edge,
             fromNode = fromNode,
             toNode = toNode,
-            fromCenter = animatedFromCenter,
-            toCenter = animatedToCenter,
+            fromCenter = fromCenter,
+            toCenter = toCenter,
             fromNodeWidth = fromNodeWidth,
             fromNodeHeight = fromNodeHeight,
             toNodeWidth = toNodeWidth,

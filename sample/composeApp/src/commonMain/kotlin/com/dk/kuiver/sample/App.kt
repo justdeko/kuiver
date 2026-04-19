@@ -251,7 +251,10 @@ private fun GraphBuilderScreen(
         Box(modifier = Modifier.fillMaxSize()) {
             KuiverViewer(
                 state = kuiverViewerState,
-                config = KuiverViewerConfig(showDebugBounds = showDebugBounds),
+                config = KuiverViewerConfig(
+                    showDebugBounds = showDebugBounds,
+                    animateInitialPlacement = true
+                ),
                 modifier = Modifier
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.surface),

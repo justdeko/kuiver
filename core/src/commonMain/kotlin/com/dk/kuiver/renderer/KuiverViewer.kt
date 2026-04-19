@@ -3,6 +3,8 @@ package com.dk.kuiver.renderer
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculateCentroid
@@ -62,7 +64,9 @@ data class KuiverViewerConfig(
         dampingRatio = Spring.DampingRatioMediumBouncy,
         stiffness = Spring.StiffnessLow
     ),
-    val edgeAnimationSpec: AnimationSpec<Offset> = nodeAnimationSpec
+    val edgeAnimationSpec: AnimationSpec<Offset> = nodeAnimationSpec,
+    val animateInitialPlacement: Boolean = false,
+    val enterAnimationSpec: AnimationSpec<Float>? = null
 )
 
 /**
@@ -168,15 +172,28 @@ internal fun ViewerRenderer(
         val graphCenterX = bounds.centerX
         val graphCenterY = bounds.centerY
 
-        val isContentReady = state.hasFittedInitially ||
-                kuiver.nodes.isEmpty() ||
-                !kuiver.nodes.values.any { it.dimensions != null }
+        val isContentReady = state.hasFittedInitially || kuiver.nodes.isEmpty()
+
+        // initialSnapDone lags one effects-phase behind hasFittedInitially, so the frame
+        // where positions first settle (same snapshot as hasFittedInitially=true) still
+        // uses snap(), then spring kicks in for all subsequent layout changes.
+        var initialSnapDone by remember { mutableStateOf(state.hasFittedInitially) }
+        LaunchedEffect(state.hasFittedInitially) {
+            if (state.hasFittedInitially) initialSnapDone = true
+        }
+        val skipInitialAnimation = !initialSnapDone && !config.animateInitialPlacement
+
+        val contentAlpha by animateFloatAsState(
+            targetValue = if (isContentReady) 1f else 0f,
+            animationSpec = config.enterAnimationSpec ?: snap(),
+            label = "graph_content_enter_anim"
+        )
 
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .clipToBounds()
-                .graphicsLayer { alpha = if (isContentReady) 1f else 0f }
+                .graphicsLayer { alpha = contentAlpha }
                 .onGloballyPositioned { coordinates ->
                     with(density) {
                         val size = coordinates.size
@@ -293,7 +310,8 @@ internal fun ViewerRenderer(
                                     graphCenterX = graphCenterX,
                                     graphCenterY = graphCenterY,
                                     anchorRegistry = anchorRegistry,
-                                    animationSpec = config.edgeAnimationSpec,
+                                    animationSpec = if (skipInitialAnimation) snap() else config.edgeAnimationSpec,
+                                    skipAnimation = skipInitialAnimation,
                                     edgeContent = edgeContent
                                 )
                             }
@@ -322,7 +340,8 @@ internal fun ViewerRenderer(
                                 centerY = centerY,
                                 graphCenterX = graphCenterX,
                                 graphCenterY = graphCenterY,
-                                animationSpec = config.nodeAnimationSpec,
+                                animationSpec = if (skipInitialAnimation) snap() else config.nodeAnimationSpec,
+                                skipAnimation = skipInitialAnimation,
                                 nodeContent = nodeContent
                             )
                         }
