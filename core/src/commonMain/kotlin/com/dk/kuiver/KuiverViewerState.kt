@@ -16,7 +16,9 @@ import com.dk.kuiver.model.kuiverSaver
 import com.dk.kuiver.model.layout.LayoutConfig
 import com.dk.kuiver.model.layout.layout
 import com.dk.kuiver.util.calculateNodeBounds
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.min
 
 internal data class AnimationRequest(val scale: Float, val offset: Offset, val version: Int)
@@ -31,6 +33,8 @@ internal data class AnimationRequest(val scale: Float, val offset: Offset, val v
  * @property canvasWidth Physical canvas width in pixels
  * @property canvasHeight Physical canvas height in pixels
  * @property contentOffset Offset reserved for UI overlay content
+ * @property hasFittedInitially True once the graph has been laid out and auto-centered for the
+ * first time. Useful when you have loading UI that should disappear once the graph is ready.
  */
 @Stable
 class KuiverViewerState internal constructor(
@@ -65,7 +69,8 @@ class KuiverViewerState internal constructor(
     internal var pendingAnimation: AnimationRequest? by mutableStateOf(null)
         private set
 
-    internal var hasFittedInitially: Boolean by mutableStateOf(false)
+    var hasFittedInitially: Boolean by mutableStateOf(false)
+        internal set
 
     fun updateKuiver(newKuiver: Kuiver) {
         kuiver = newKuiver
@@ -143,15 +148,19 @@ fun rememberSaveableKuiverViewerState(
     var savedScale by rememberSaveable { mutableFloatStateOf(1f) }
     var savedOffsetX by rememberSaveable { mutableFloatStateOf(0f) }
     var savedOffsetY by rememberSaveable { mutableFloatStateOf(0f) }
+    var savedHasFitted by rememberSaveable { mutableStateOf(false) }
 
     val state = remember {
-        KuiverViewerState(savedKuiver, savedScale, Offset(savedOffsetX, savedOffsetY))
+        KuiverViewerState(savedKuiver, savedScale, Offset(savedOffsetX, savedOffsetY)).also {
+            it.hasFittedInitially = savedHasFitted
+        }
     }
 
     // Sync state back to saveable vars via snapshotFlow to avoid composition-phase subscriptions
     LaunchedEffect(state) {
         launch { snapshotFlow { state.kuiver }.collect { savedKuiver = it } }
         launch { snapshotFlow { state.scale }.collect { savedScale = it } }
+        launch { snapshotFlow { state.hasFittedInitially }.collect { savedHasFitted = it } }
         launch {
             snapshotFlow { state.offset }.collect {
                 savedOffsetX = it.x; savedOffsetY = it.y
@@ -191,7 +200,7 @@ private fun setupLayout(state: KuiverViewerState, layoutConfig: LayoutConfig) {
                     height = canvasHeight
                 )
             }
-            layout(kuiver, configWithDimensions)
+            withContext(Dispatchers.Default) { layout(kuiver, configWithDimensions) }
         } else {
             kuiver
         }

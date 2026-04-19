@@ -69,7 +69,8 @@ import kotlinx.coroutines.delay
 
 enum class Screen {
     GRAPH_BUILDER,
-    PROCESS_DIAGRAM
+    PROCESS_DIAGRAM,
+    STRESS_TEST,
 }
 
 // Layout algorithm selection for the sample app UI
@@ -90,10 +91,15 @@ fun App() {
             Screen.GRAPH_BUILDER -> GraphBuilderScreen(
                 isDarkTheme = isDarkTheme,
                 onThemeToggle = { isDarkTheme = !isDarkTheme },
-                onNavigateToProcessDemo = { currentScreen = Screen.PROCESS_DIAGRAM }
+                onNavigateToProcessDemo = { currentScreen = Screen.PROCESS_DIAGRAM },
+                onNavigateToStressTest = { currentScreen = Screen.STRESS_TEST },
             )
 
             Screen.PROCESS_DIAGRAM -> ProcessDiagramDemo(
+                onNavigateBack = { currentScreen = Screen.GRAPH_BUILDER }
+            )
+
+            Screen.STRESS_TEST -> StressTestScreen(
                 onNavigateBack = { currentScreen = Screen.GRAPH_BUILDER }
             )
         }
@@ -105,7 +111,8 @@ fun App() {
 private fun GraphBuilderScreen(
     isDarkTheme: Boolean,
     onThemeToggle: () -> Unit,
-    onNavigateToProcessDemo: () -> Unit
+    onNavigateToProcessDemo: () -> Unit,
+    onNavigateToStressTest: () -> Unit,
 ) {
     var selectedLayoutAlgorithm by rememberSaveable { mutableStateOf(LayoutAlgorithm.HIERARCHICAL) }
     var selectedLayoutDirection by rememberSaveable { mutableStateOf(LayoutDirection.HORIZONTAL) }
@@ -373,7 +380,8 @@ private fun GraphBuilderScreen(
                                             showNodeForm = false
                                             showEdgeForm = false
                                         },
-                                        onNavigateToDemo = onNavigateToProcessDemo
+                                        onNavigateToDemo = onNavigateToProcessDemo,
+                                        onNavigateToStressTest = onNavigateToStressTest,
                                     )
                                 }
                             }
@@ -419,7 +427,8 @@ private fun GraphBuilderScreen(
                                             showNodeForm = false
                                             showEdgeForm = false
                                         },
-                                        onNavigateToDemo = onNavigateToProcessDemo
+                                        onNavigateToDemo = onNavigateToProcessDemo,
+                                        onNavigateToStressTest = onNavigateToStressTest,
                                     )
                                 }
                             }
