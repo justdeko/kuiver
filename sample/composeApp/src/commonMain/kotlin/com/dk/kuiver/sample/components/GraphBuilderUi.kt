@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Button
@@ -125,6 +126,7 @@ fun GraphControlMenu(
     onLayoutDirectionChange: (LayoutDirection) -> Unit,
     onClearAll: () -> Unit,
     onNavigateToDemo: () -> Unit,
+    onNavigateToStressTest: () -> Unit,
 ) {
     Card(
         modifier = Modifier
@@ -201,6 +203,16 @@ fun GraphControlMenu(
                         Icon(
                             imageVector = Icons.Filled.Visibility,
                             contentDescription = "View Process Demo"
+                        )
+                    }
+                )
+                clickableItem(
+                    onClick = onNavigateToStressTest,
+                    label = "Stress",
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Filled.Speed,
+                            contentDescription = "Stress Test"
                         )
                     }
                 )

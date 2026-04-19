@@ -202,7 +202,7 @@ internal fun ViewerRenderer(
                         state.canvasHeight = size.height.toFloat()
                     }
                 }
-                .pointerInput(Unit) {
+                .pointerInput(state) {
                     while (true) {
                         awaitPointerEventScope { awaitFirstDown(requireUnconsumed = false) }
 
@@ -245,7 +245,7 @@ internal fun ViewerRenderer(
                         }
                     }
                 }
-                .pointerInput(Unit) {
+                .pointerInput(state) {
                     while (true) {
                         val event = awaitPointerEventScope { awaitPointerEvent() }
 

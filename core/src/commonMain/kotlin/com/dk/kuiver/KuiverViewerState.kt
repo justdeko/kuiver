@@ -16,7 +16,9 @@ import com.dk.kuiver.model.kuiverSaver
 import com.dk.kuiver.model.layout.LayoutConfig
 import com.dk.kuiver.model.layout.layout
 import com.dk.kuiver.util.calculateNodeBounds
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.min
 
 internal data class AnimationRequest(val scale: Float, val offset: Offset, val version: Int)
@@ -65,7 +67,8 @@ class KuiverViewerState internal constructor(
     internal var pendingAnimation: AnimationRequest? by mutableStateOf(null)
         private set
 
-    internal var hasFittedInitially: Boolean by mutableStateOf(false)
+    var hasFittedInitially: Boolean by mutableStateOf(false)
+        internal set
 
     fun updateKuiver(newKuiver: Kuiver) {
         kuiver = newKuiver
@@ -191,7 +194,7 @@ private fun setupLayout(state: KuiverViewerState, layoutConfig: LayoutConfig) {
                     height = canvasHeight
                 )
             }
-            layout(kuiver, configWithDimensions)
+            withContext(Dispatchers.Default) { layout(kuiver, configWithDimensions) }
         } else {
             kuiver
         }
