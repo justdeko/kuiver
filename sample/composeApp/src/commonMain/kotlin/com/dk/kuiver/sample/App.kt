@@ -147,18 +147,6 @@ private fun GraphBuilderScreen(
         initialKuiver = initialKuiver,
         layoutConfig = layoutConfig
     )
-    var initialCenter by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(
-        selectedLayoutAlgorithm,
-        selectedLayoutDirection,
-        kuiverViewerState.canvasWidth > 0f && kuiverViewerState.canvasHeight > 0f,
-    ) {
-        if (kuiverViewerState.canvasWidth > 0f && kuiverViewerState.canvasHeight > 0f && !initialCenter) {
-            initialCenter = true
-            kuiverViewerState.centerGraph()
-        }
-    }
-
     var nextNodeId by rememberSaveable { mutableStateOf(4) } // Start from 4 since we have 3 initial nodes
     var newNodeData by rememberSaveable { mutableStateOf("") }
     var fromNodeLabel by rememberSaveable { mutableStateOf("") }
@@ -551,14 +539,14 @@ private fun GraphBuilderScreen(
                 content = {
                     FilledIconButton(
                         modifier = Modifier.width(64.dp),
-                        onClick = kuiverViewerState.centerGraph,
+                        onClick = kuiverViewerState::centerGraph,
                     ) {
                         Icon(Icons.Filled.ZoomInMap, "center graph")
                     }
                     Spacer(Modifier.width(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(
-                            onClick = kuiverViewerState.zoomOut,
+                            onClick = kuiverViewerState::zoomOut,
                         ) {
                             Icon(Icons.Filled.ZoomOut, "zoom out")
                         }
@@ -570,7 +558,7 @@ private fun GraphBuilderScreen(
                         )
 
                         IconButton(
-                            onClick = kuiverViewerState.zoomIn,
+                            onClick = kuiverViewerState::zoomIn,
                         ) {
                             Icon(Icons.Filled.ZoomIn, "zoom in")
                         }

@@ -18,7 +18,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -36,6 +35,7 @@ import com.dk.kuiver.KuiverViewerState
 import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
 import com.dk.kuiver.util.calculatePositionBounds
+import kotlinx.coroutines.delay
 import kotlin.math.exp
 
 @Immutable
@@ -91,7 +91,6 @@ fun KuiverViewer(
         state.kuiver.nodes.values.any { it.dimensions == null }
     }
 
-    // Track if this is the first measurement for font loading delay
     var hasInitialMeasurementCompleted by remember { mutableStateOf(false) }
 
     if (needsMeasurement) {
@@ -101,20 +100,18 @@ fun KuiverViewer(
             nodeContent = nodeContent
         )
 
-        LaunchedEffect(measured) {
+        LaunchedEffect(state.kuiver) {
             // On web platforms, add a small delay on initial measurement to ensure fonts are loaded
             // This prevents text wrapping issues when fonts haven't finished loading
             if (!hasInitialMeasurementCompleted && config.fontLoadingDelayMs > 0) {
-                kotlinx.coroutines.delay(config.fontLoadingDelayMs)
+                delay(config.fontLoadingDelayMs)
                 hasInitialMeasurementCompleted = true
             }
-
             val updatedKuiver = state.kuiver.withMeasuredDimensions(measured)
             state.updateKuiver(updatedKuiver)
         }
     }
 
-    // Always render - don't skip frames during measurement
     ViewerRenderer(
         state = state,
         modifier = modifier,
@@ -134,41 +131,31 @@ internal fun ViewerRenderer(
     nodeContent: @Composable (KuiverNode) -> Unit,
     edgeContent: @Composable (KuiverEdge, Offset, Offset) -> Unit
 ) {
-
-    var targetScale by remember { mutableFloatStateOf(state.scale) }
-    var targetOffset by remember { mutableStateOf(state.offset) }
     val density = LocalDensity.current
-    // Single progress animatable so scale and offset always interpolate by the same factor
+    // Single progress animatable for both scale and offset in the same frame
     val progressAnim = remember { Animatable(1f) }
-    var animStartScale by remember { mutableFloatStateOf(state.scale) }
-    var animStartOffset by remember { mutableStateOf(state.offset) }
 
-    LaunchedEffect(state.scale, state.offset) {
-        val alreadyAtTarget = targetScale == state.scale && targetOffset == state.offset
-        // Capture current animated position before updating targets
-        val p = progressAnim.value
-        val curScale = animStartScale + (targetScale - animStartScale) * p
-        val curOffX = animStartOffset.x + (targetOffset.x - animStartOffset.x) * p
-        val curOffY = animStartOffset.y + (targetOffset.y - animStartOffset.y) * p
-        targetScale = state.scale
-        targetOffset = state.offset
-        if (alreadyAtTarget) return@LaunchedEffect
-        animStartScale = curScale
-        animStartOffset = Offset(curOffX, curOffY)
+    LaunchedEffect(state.pendingAnimation) {
+        val request = state.pendingAnimation ?: return@LaunchedEffect
+        val startScale = state.scale
+        val startOffset = state.offset
         progressAnim.snapTo(0f)
-        progressAnim.animateTo(1f, config.scaleAnimationSpec)
+        progressAnim.animateTo(1f, config.scaleAnimationSpec) {
+            state.scale = startScale + (request.scale - startScale) * value
+            state.offset = Offset(
+                startOffset.x + (request.offset.x - startOffset.x) * value,
+                startOffset.y + (request.offset.y - startOffset.y) * value
+            )
+        }
     }
 
     // Remove anchors for nodes that no longer exist
     LaunchedEffect(state.layoutedKuiver.nodes.keys) {
         val currentNodeIds = state.layoutedKuiver.nodes.keys
         anchorRegistry.anchorPositions.keys.forEach { nodeId ->
-            if (nodeId !in currentNodeIds) {
-                anchorRegistry.clearNode(nodeId)
-            }
+            if (nodeId !in currentNodeIds) anchorRegistry.clearNode(nodeId)
         }
     }
-
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val centerX = maxWidth / 2
@@ -181,15 +168,21 @@ internal fun ViewerRenderer(
         val graphCenterX = bounds.centerX
         val graphCenterY = bounds.centerY
 
+        val isContentReady = state.hasFittedInitially ||
+                kuiver.nodes.isEmpty() ||
+                !kuiver.nodes.values.any { it.dimensions != null }
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .clipToBounds()
+                .graphicsLayer { alpha = if (isContentReady) 1f else 0f }
                 .onGloballyPositioned { coordinates ->
                     with(density) {
                         val size = coordinates.size
-                        state.updateViewWidth(size.width.toDp().value)
-                        state.updateCanvasSize(size.width.toFloat(), size.height.toFloat())
+                        state.viewWidth = size.width.toDp().value
+                        state.canvasWidth = size.width.toFloat()
+                        state.canvasHeight = size.height.toFloat()
                     }
                 }
                 .pointerInput(Unit) {
@@ -217,31 +210,25 @@ internal fun ViewerRenderer(
                             if (!anyPressed) break
 
                             if (panChange != Offset.Zero || zoomChange != 1f) {
-                                val newScale = (targetScale * zoomChange).coerceIn(
+                                val newScale = (state.scale * zoomChange).coerceIn(
                                     config.minScale,
                                     config.maxScale
                                 )
-                                val actualZoom = newScale / targetScale
+                                val actualZoom = newScale / state.scale
                                 val halfW = size.width / 2f
                                 val halfH = size.height / 2f
                                 val newOffset = Offset(
-                                    x = (centroid.x - halfW) * (1 - actualZoom) + targetOffset.x * actualZoom + panChange.x,
-                                    y = (centroid.y - halfH) * (1 - actualZoom) + targetOffset.y * actualZoom + panChange.y
+                                    x = (centroid.x - halfW) * (1 - actualZoom) + state.offset.x * actualZoom + panChange.x,
+                                    y = (centroid.y - halfH) * (1 - actualZoom) + state.offset.y * actualZoom + panChange.y
                                 )
-                                targetScale = newScale
-                                targetOffset = newOffset
-                                animStartScale = newScale
-                                animStartOffset = newOffset
                                 progressAnim.snapTo(1f)
+                                state.scale = newScale
+                                state.offset = newOffset
                             }
                         }
-                        state.updateTransform(targetScale, targetOffset)
                     }
                 }
                 .pointerInput(Unit) {
-                    // Use awaitPointerEventScope per-event so snapTo can be called
-                    // as a direct suspend call in the unrestricted PointerInputScope,
-                    // guaranteeing it runs before state.updateTransform notifies Compose
                     while (true) {
                         val event = awaitPointerEventScope { awaitPointerEvent() }
 
@@ -252,34 +239,28 @@ internal fun ViewerRenderer(
 
                             if (config.zoomConditionDesktop(event)) {
                                 val zoomFactor = exp(-scrollDelta.y * 0.05f)
-                                val newScale = (targetScale * zoomFactor).coerceIn(
+                                val newScale = (state.scale * zoomFactor).coerceIn(
                                     config.minScale,
                                     config.maxScale
                                 )
-                                val actualZoom = newScale / targetScale
+                                val actualZoom = newScale / state.scale
                                 val focalPoint = change.position
                                 val halfW = size.width / 2f
                                 val halfH = size.height / 2f
                                 val newOffset = Offset(
-                                    x = (focalPoint.x - halfW) * (1 - actualZoom) + targetOffset.x * actualZoom,
-                                    y = (focalPoint.y - halfH) * (1 - actualZoom) + targetOffset.y * actualZoom
+                                    x = (focalPoint.x - halfW) * (1 - actualZoom) + state.offset.x * actualZoom,
+                                    y = (focalPoint.y - halfH) * (1 - actualZoom) + state.offset.y * actualZoom
                                 )
-                                targetScale = newScale
-                                targetOffset = newOffset
-                                animStartScale = newScale
-                                animStartOffset = newOffset
                                 progressAnim.snapTo(1f)
-                                state.updateTransform(newScale, newOffset)
+                                state.scale = newScale
+                                state.offset = newOffset
                             } else {
                                 val panDelta = Offset(
                                     x = -scrollDelta.x * config.panVelocity,
                                     y = -scrollDelta.y * config.panVelocity
                                 )
-                                val newOffset = targetOffset + panDelta
-                                targetOffset = newOffset
-                                animStartOffset = newOffset
                                 progressAnim.snapTo(1f)
-                                state.updateTransform(targetScale, newOffset)
+                                state.offset += panDelta
                             }
                         }
                     }
@@ -290,12 +271,10 @@ internal fun ViewerRenderer(
                     modifier = Modifier
                         .fillMaxSize()
                         .graphicsLayer {
-                            // Read animation state in draw phase to avoid recomposition per frame
-                            val p = progressAnim.value
-                            scaleX = animStartScale + (targetScale - animStartScale) * p
-                            scaleY = scaleX
-                            translationX = animStartOffset.x + (targetOffset.x - animStartOffset.x) * p
-                            translationY = animStartOffset.y + (targetOffset.y - animStartOffset.y) * p
+                            scaleX = state.scale
+                            scaleY = state.scale
+                            translationX = state.offset.x
+                            translationY = state.offset.y
                         }
                 ) {
                     // Draw edges first so they are behind nodes
