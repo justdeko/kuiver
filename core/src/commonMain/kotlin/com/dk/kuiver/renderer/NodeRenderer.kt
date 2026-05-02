@@ -22,6 +22,7 @@ internal fun RenderNode(
     graphCenterX: Float,
     graphCenterY: Float,
     animationSpec: AnimationSpec<Offset>,
+    skipAnimation: Boolean,
     nodeContent: @Composable (KuiverNode) -> Unit
 ) {
     val nodeWidth = node.dimensions?.width ?: DEFAULT_NODE_SIZE_DP
@@ -29,18 +30,23 @@ internal fun RenderNode(
 
     val targetOffsetX = centerX + (node.position.x - graphCenterX).dp - nodeWidth / 2
     val targetOffsetY = centerY + (node.position.y - graphCenterY).dp - nodeHeight / 2
+    val targetOffset = Offset(targetOffsetX.value, targetOffsetY.value)
 
-    val animatedOffsetX by animateOffsetAsState(
-        targetValue = Offset(targetOffsetX.value, targetOffsetY.value),
+    val animatedOffset by animateOffsetAsState(
+        targetValue = targetOffset,
         animationSpec = animationSpec,
         label = "node_position_${node.id}"
     )
 
+    // Use target directly during initial placement to avoid the one-frame delay
+    // inherent in animateOffsetAsState (its internal LaunchedEffect fires after draw).
+    val displayOffset = if (skipAnimation) targetOffset else animatedOffset
+
     Box(
         modifier = Modifier
             .offset(
-                x = animatedOffsetX.x.dp,
-                y = animatedOffsetX.y.dp
+                x = displayOffset.x.dp,
+                y = displayOffset.y.dp
             )
             .size(width = nodeWidth, height = nodeHeight)
     ) {

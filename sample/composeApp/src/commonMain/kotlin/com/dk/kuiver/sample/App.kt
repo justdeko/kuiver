@@ -69,7 +69,8 @@ import kotlinx.coroutines.delay
 
 enum class Screen {
     GRAPH_BUILDER,
-    PROCESS_DIAGRAM
+    PROCESS_DIAGRAM,
+    STRESS_TEST,
 }
 
 // Layout algorithm selection for the sample app UI
@@ -90,10 +91,15 @@ fun App() {
             Screen.GRAPH_BUILDER -> GraphBuilderScreen(
                 isDarkTheme = isDarkTheme,
                 onThemeToggle = { isDarkTheme = !isDarkTheme },
-                onNavigateToProcessDemo = { currentScreen = Screen.PROCESS_DIAGRAM }
+                onNavigateToProcessDemo = { currentScreen = Screen.PROCESS_DIAGRAM },
+                onNavigateToStressTest = { currentScreen = Screen.STRESS_TEST },
             )
 
             Screen.PROCESS_DIAGRAM -> ProcessDiagramDemo(
+                onNavigateBack = { currentScreen = Screen.GRAPH_BUILDER }
+            )
+
+            Screen.STRESS_TEST -> StressTestScreen(
                 onNavigateBack = { currentScreen = Screen.GRAPH_BUILDER }
             )
         }
@@ -105,7 +111,8 @@ fun App() {
 private fun GraphBuilderScreen(
     isDarkTheme: Boolean,
     onThemeToggle: () -> Unit,
-    onNavigateToProcessDemo: () -> Unit
+    onNavigateToProcessDemo: () -> Unit,
+    onNavigateToStressTest: () -> Unit,
 ) {
     var selectedLayoutAlgorithm by rememberSaveable { mutableStateOf(LayoutAlgorithm.HIERARCHICAL) }
     var selectedLayoutDirection by rememberSaveable { mutableStateOf(LayoutDirection.HORIZONTAL) }
@@ -147,18 +154,6 @@ private fun GraphBuilderScreen(
         initialKuiver = initialKuiver,
         layoutConfig = layoutConfig
     )
-    var initialCenter by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(
-        selectedLayoutAlgorithm,
-        selectedLayoutDirection,
-        kuiverViewerState.canvasWidth > 0f && kuiverViewerState.canvasHeight > 0f,
-    ) {
-        if (kuiverViewerState.canvasWidth > 0f && kuiverViewerState.canvasHeight > 0f && !initialCenter) {
-            initialCenter = true
-            kuiverViewerState.centerGraph()
-        }
-    }
-
     var nextNodeId by rememberSaveable { mutableStateOf(4) } // Start from 4 since we have 3 initial nodes
     var newNodeData by rememberSaveable { mutableStateOf("") }
     var fromNodeLabel by rememberSaveable { mutableStateOf("") }
@@ -263,7 +258,10 @@ private fun GraphBuilderScreen(
         Box(modifier = Modifier.fillMaxSize()) {
             KuiverViewer(
                 state = kuiverViewerState,
-                config = KuiverViewerConfig(showDebugBounds = showDebugBounds),
+                config = KuiverViewerConfig(
+                    showDebugBounds = showDebugBounds,
+                    animateInitialPlacement = true
+                ),
                 modifier = Modifier
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.surface),
@@ -382,7 +380,8 @@ private fun GraphBuilderScreen(
                                             showNodeForm = false
                                             showEdgeForm = false
                                         },
-                                        onNavigateToDemo = onNavigateToProcessDemo
+                                        onNavigateToDemo = onNavigateToProcessDemo,
+                                        onNavigateToStressTest = onNavigateToStressTest,
                                     )
                                 }
                             }
@@ -428,7 +427,8 @@ private fun GraphBuilderScreen(
                                             showNodeForm = false
                                             showEdgeForm = false
                                         },
-                                        onNavigateToDemo = onNavigateToProcessDemo
+                                        onNavigateToDemo = onNavigateToProcessDemo,
+                                        onNavigateToStressTest = onNavigateToStressTest,
                                     )
                                 }
                             }
@@ -551,14 +551,14 @@ private fun GraphBuilderScreen(
                 content = {
                     FilledIconButton(
                         modifier = Modifier.width(64.dp),
-                        onClick = kuiverViewerState.centerGraph,
+                        onClick = kuiverViewerState::centerGraph,
                     ) {
                         Icon(Icons.Filled.ZoomInMap, "center graph")
                     }
                     Spacer(Modifier.width(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(
-                            onClick = kuiverViewerState.zoomOut,
+                            onClick = kuiverViewerState::zoomOut,
                         ) {
                             Icon(Icons.Filled.ZoomOut, "zoom out")
                         }
@@ -570,7 +570,7 @@ private fun GraphBuilderScreen(
                         )
 
                         IconButton(
-                            onClick = kuiverViewerState.zoomIn,
+                            onClick = kuiverViewerState::zoomIn,
                         ) {
                             Icon(Icons.Filled.ZoomIn, "zoom in")
                         }

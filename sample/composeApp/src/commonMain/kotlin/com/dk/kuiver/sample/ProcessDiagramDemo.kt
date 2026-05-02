@@ -1,5 +1,6 @@
 package com.dk.kuiver.sample
 
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
@@ -41,6 +42,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
@@ -68,7 +70,7 @@ import com.dk.kuiver.ui.KuiverAnchor
 import com.dk.kuiver.ui.OrthogonalEdgeContentWithLabel
 import com.dk.kuiver.ui.StyledEdgeContent
 import com.dk.kuiver.ui.StyledRightAngleEdgeContent
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -349,20 +351,16 @@ fun ProcessDiagramDemo(
         kuiverViewerState.updateKuiver(processKuiver)
     }
 
-    // Auto-center on initial load and algorithm change
-    var initialCenter by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(
-        kuiverViewerState.canvasWidth > 0f && kuiverViewerState.canvasHeight > 0f,
-        selectedLayoutAlgorithm
-    ) {
-        if (kuiverViewerState.canvasWidth > 0f && kuiverViewerState.canvasHeight > 0f) {
-            if (!initialCenter) {
-                delay(300) // Wait for layout to settle on first load
-                initialCenter = true
-            }
-
-            kuiverViewerState.centerGraph()
+    // Re-center when the algorithm changes
+    var algorithmChangedOnce by remember { mutableStateOf(false) }
+    LaunchedEffect(selectedLayoutAlgorithm) {
+        if (!algorithmChangedOnce) {
+            algorithmChangedOnce = true; return@LaunchedEffect
         }
+        snapshotFlow {
+            kuiverViewerState.layoutedKuiver.nodes.values.any { it.dimensions != null }
+        }.first { it }
+        kuiverViewerState.centerGraph()
     }
 
     Scaffold(
@@ -452,7 +450,7 @@ fun ProcessDiagramDemo(
         ) {
             KuiverViewer(
                 state = kuiverViewerState,
-                config = KuiverViewerConfig(),
+                config = KuiverViewerConfig(enterAnimationSpec = tween(durationMillis = 400)),
                 modifier = Modifier
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.surface),
@@ -475,7 +473,8 @@ fun ProcessDiagramDemo(
                         fontSize = 11.sp
                     )
 
-                    val isBackOrSelfLoop = edge.type == EdgeType.BACK || edge.type == EdgeType.SELF_LOOP
+                    val isBackOrSelfLoop =
+                        edge.type == EdgeType.BACK || edge.type == EdgeType.SELF_LOOP
 
                     when (selectedEdgeStyle) {
                         EdgeStyle.ORTHOGONAL if !isBackOrSelfLoop ->
@@ -520,14 +519,14 @@ fun ProcessDiagramDemo(
                     .padding(16.dp),
                 floatingActionButton = {
                     FloatingToolbarDefaults.VibrantFloatingActionButton(
-                        onClick = kuiverViewerState.centerGraph
+                        onClick = kuiverViewerState::centerGraph
                     ) {
                         Icon(Icons.Filled.ZoomInMap, "Center graph")
                     }
                 },
                 content = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = kuiverViewerState.zoomOut) {
+                        IconButton(onClick = kuiverViewerState::zoomOut) {
                             Icon(Icons.Filled.ZoomOut, "Zoom out")
                         }
                         Text(
@@ -536,7 +535,7 @@ fun ProcessDiagramDemo(
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium
                         )
-                        IconButton(onClick = kuiverViewerState.zoomIn) {
+                        IconButton(onClick = kuiverViewerState::zoomIn) {
                             Icon(Icons.Filled.ZoomIn, "Zoom in")
                         }
                     }
