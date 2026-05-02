@@ -110,6 +110,16 @@ class KuiverViewerState internal constructor(
         requestAnimation(newScale, offset * (newScale / scale))
     }
 
+    fun updateTransform(scale: Float, offset: Offset, animated: Boolean = false) {
+        if (animated) {
+            requestAnimation(scale, offset)
+        } else {
+            pendingAnimation = null
+            this.scale = scale
+            this.offset = offset
+        }
+    }
+
     private fun requestAnimation(targetScale: Float, targetOffset: Offset) {
         pendingAnimation = AnimationRequest(targetScale, targetOffset, ++animationVersion)
     }
