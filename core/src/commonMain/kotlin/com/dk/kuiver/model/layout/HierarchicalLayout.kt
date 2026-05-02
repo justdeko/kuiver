@@ -18,7 +18,10 @@ import com.dk.kuiver.model.buildKuiverWithClassifiedEdges
  * - Sugiyama et al. (1981): "Methods for Visual Understanding of Hierarchical System Structures"
  * - Battista et al. (1998): "Graph Drawing: Algorithms for the Visualization of Graphs"
  */
-internal fun hierarchical(kuiver: Kuiver, layoutConfig: LayoutConfig.Hierarchical = LayoutConfig.Hierarchical()): Kuiver {
+internal fun hierarchical(
+    kuiver: Kuiver,
+    layoutConfig: LayoutConfig.Hierarchical = LayoutConfig.Hierarchical()
+): Kuiver {
     // Phase 1: Cycle Removal
     val (acyclicEdges, _) = if (kuiver.hasCycles()) {
         separateBackEdges(kuiver)
@@ -88,8 +91,10 @@ internal fun hierarchical(kuiver: Kuiver, layoutConfig: LayoutConfig.Hierarchica
 
                 val layoutWidth = maxLevel * levelSpacing
                 val layoutHeight = (nodesByLevel.values.maxOfOrNull { it.size } ?: 1) * nodeSpacing
-                val centerX = if (layoutConfig.width > 0f) (layoutConfig.width - layoutWidth) / 2f else 0f
-                val centerY = if (layoutConfig.height > 0f) (layoutConfig.height - layoutHeight) / 2f else 0f
+                val centerX =
+                    if (layoutConfig.width > 0f) (layoutConfig.width - layoutWidth) / 2f else 0f
+                val centerY =
+                    if (layoutConfig.height > 0f) (layoutConfig.height - layoutHeight) / 2f else 0f
 
                 val levelHeight = nodesInLevel.size * nodeSpacing
                 val xPos = level * levelSpacing + centerX
@@ -104,8 +109,10 @@ internal fun hierarchical(kuiver: Kuiver, layoutConfig: LayoutConfig.Hierarchica
 
                 val layoutWidth = (nodesByLevel.values.maxOfOrNull { it.size } ?: 1) * nodeSpacing
                 val layoutHeight = maxLevel * levelSpacing
-                val centerX = if (layoutConfig.width > 0f) (layoutConfig.width - layoutWidth) / 2f else 0f
-                val centerY = if (layoutConfig.height > 0f) (layoutConfig.height - layoutHeight) / 2f else 0f
+                val centerX =
+                    if (layoutConfig.width > 0f) (layoutConfig.width - layoutWidth) / 2f else 0f
+                val centerY =
+                    if (layoutConfig.height > 0f) (layoutConfig.height - layoutHeight) / 2f else 0f
 
                 val levelWidth = nodesInLevel.size * nodeSpacing
                 val xPos = indexInLevel * nodeSpacing - levelWidth / 2f + nodeSpacing / 2f + centerX
@@ -227,28 +234,41 @@ private fun separateBackEdges(kuiver: Kuiver): Pair<List<KuiverEdge>, List<Kuive
         adjacency.getOrPut(edge.fromId) { mutableListOf() }.add(edge)
     }
 
-    fun dfs(nodeId: String) {
+    val iterStack = ArrayDeque<Pair<String, Iterator<KuiverEdge>>>()
+
+    fun enter(nodeId: String) {
         visited.add(nodeId)
         inPath.add(nodeId)
-
-        adjacency[nodeId]?.forEach { edge ->
-            if (edge !in classified) {
-                classified.add(edge)
-                when {
-                    edge.fromId == edge.toId || edge.toId in inPath -> backEdges.add(edge)
-                    edge.toId !in visited -> {
-                        forwardEdges.add(edge)
-                        dfs(edge.toId)
-                    }
-
-                    else -> forwardEdges.add(edge)
-                }
-            }
-        }
-        inPath.remove(nodeId)
+        iterStack.addLast(
+            nodeId to (adjacency[nodeId]?.iterator() ?: emptyList<KuiverEdge>().iterator())
+        )
     }
 
-    kuiver.nodes.keys.forEach { if (it !in visited) dfs(it) }
+    fun runDfs(start: String) {
+        enter(start)
+        while (iterStack.isNotEmpty()) {
+            val (nodeId, iter) = iterStack.last()
+            if (!iter.hasNext()) {
+                inPath.remove(nodeId)
+                iterStack.removeLast()
+                continue
+            }
+            val edge = iter.next()
+            if (edge in classified) continue
+            classified.add(edge)
+            when {
+                edge.fromId == edge.toId || edge.toId in inPath -> backEdges.add(edge)
+                edge.toId !in visited -> {
+                    forwardEdges.add(edge)
+                    enter(edge.toId)
+                }
+
+                else -> forwardEdges.add(edge)
+            }
+        }
+    }
+
+    kuiver.nodes.keys.forEach { if (it !in visited) runDfs(it) }
     kuiver.edges.forEach { if (it !in classified) forwardEdges.add(it) }
 
     return Pair(forwardEdges, backEdges)

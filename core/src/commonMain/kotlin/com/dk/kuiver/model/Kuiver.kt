@@ -79,50 +79,60 @@ class Kuiver {
         val inPath = mutableSetOf<String>()
         var time = 0
 
-        fun dfs(nodeId: String) {
+        val iterStack = ArrayDeque<Pair<String, Iterator<String>>>()
+
+        fun enter(nodeId: String) {
             discoveryTime[nodeId] = ++time
             inPath.add(nodeId)
+            iterStack.addLast(
+                nodeId to (_adjacencyList[nodeId]?.iterator() ?: emptyList<String>().iterator())
+            )
+        }
 
-            _adjacencyList[nodeId]?.forEach { neighbor ->
+        fun runDfs(start: String) {
+            enter(start)
+            while (iterStack.isNotEmpty()) {
+                val (nodeId, iter) = iterStack.last()
+                if (!iter.hasNext()) {
+                    inPath.remove(nodeId)
+                    finishTime[nodeId] = ++time
+                    iterStack.removeLast()
+                    continue
+                }
+                val neighbor = iter.next()
                 val edge = _edgeMap[nodeId to neighbor]
+                if (edge == null || result.containsKey(edge)) continue
 
-                if (edge != null && !result.containsKey(edge)) {
-                    when {
-                        // Back edge: points to an ancestor currently in the path
-                        inPath.contains(neighbor) -> result[edge] = EdgeType.BACK
-                        // Tree/Forward edge: neighbor not yet visited
-                        !discoveryTime.containsKey(neighbor) -> {
-                            result[edge] = EdgeType.FORWARD
-                            dfs(neighbor)
-                        }
-                        // Cross edge or forward edge to already-visited descendant
-                        else -> {
-                            val neighborDiscovery = discoveryTime[neighbor]!!
-                            val neighborFinish = finishTime[neighbor]
-                            val currentDiscovery = discoveryTime[nodeId]!!
-
-                            // If neighbor was discovered after current node and already finished,
-                            // it's a forward edge to a descendant in our subtree
-                            result[edge] = if (neighborFinish != null &&
-                                neighborDiscovery > currentDiscovery
-                            ) {
-                                EdgeType.FORWARD
-                            } else {
-                                EdgeType.CROSS
-                            }
+                when {
+                    // Back edge: points to an ancestor currently in the path
+                    inPath.contains(neighbor) -> result[edge] = EdgeType.BACK
+                    // Tree/Forward edge: neighbor not yet visited
+                    !discoveryTime.containsKey(neighbor) -> {
+                        result[edge] = EdgeType.FORWARD
+                        enter(neighbor)
+                    }
+                    // Cross edge or forward edge to already-visited descendant
+                    else -> {
+                        val neighborDiscovery = discoveryTime[neighbor]!!
+                        val neighborFinish = finishTime[neighbor]
+                        val currentDiscovery = discoveryTime[nodeId]!!
+                        // If neighbor was discovered after current node and already finished,
+                        // it's a forward edge to a descendant in our subtree
+                        result[edge] = if (neighborFinish != null &&
+                            neighborDiscovery > currentDiscovery
+                        ) {
+                            EdgeType.FORWARD
+                        } else {
+                            EdgeType.CROSS
                         }
                     }
                 }
             }
-
-            inPath.remove(nodeId)
-            finishTime[nodeId] = ++time
         }
-
         // Run DFS from all unvisited nodes
         _nodes.keys.forEach { nodeId ->
             if (!discoveryTime.containsKey(nodeId)) {
-                dfs(nodeId)
+                runDfs(nodeId)
             }
         }
 

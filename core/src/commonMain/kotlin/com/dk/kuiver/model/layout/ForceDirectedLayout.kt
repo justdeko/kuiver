@@ -29,150 +29,174 @@ private const val MAX_REPULSION_DISTANCE_FACTOR = 3.0f
  * - Fruchterman & Reingold (1991): "Graph Drawing by Force-Directed Placement"
  * - Eades (1984): "A Heuristic for Graph Drawing"
  */
-fun forceDirected(kuiver: Kuiver, layoutConfig: LayoutConfig.ForceDirected = LayoutConfig.ForceDirected()): Kuiver {
+fun forceDirected(
+    kuiver: Kuiver,
+    layoutConfig: LayoutConfig.ForceDirected = LayoutConfig.ForceDirected()
+): Kuiver {
     if (layoutConfig.width <= 0f || layoutConfig.height <= 0f) {
         return kuiver
     }
 
-    val nodes = kuiver.nodes.keys.toList()
-    if (nodes.isEmpty()) return kuiver
+    val nodeIds = kuiver.nodes.keys.toList()
+    val n = nodeIds.size
+    if (n == 0) return kuiver
 
-    val positions = mutableMapOf<String, Offset>()
-    val velocities = mutableMapOf<String, Offset>()
-
-    // Pre-calculate node dimensions for all nodes (optimization: avoid recalculating in loops)
-    val nodeSizes = nodes.associateWith { nodeId ->
-        val dims = kuiver.nodes[nodeId]?.dimensions
-        if (dims != null) {
-            (dims.width.value + dims.height.value) / 2f
-        } else {
-            layoutConfig.nodeSize
-        }
+    // avoid Map<String, Offset> lookups and inline-class boxing
+    // for large graphs (no JIT, no escape analysis to elide the boxing).
+    val idToIndex = HashMap<String, Int>(n).apply {
+        nodeIds.forEachIndexed { i, id -> put(id, i) }
     }
 
-    val avgNodeSize =
-        nodeSizes.values.average().toFloat().takeIf { it.isFinite() } ?: layoutConfig.nodeSize
+    val posX = FloatArray(n)
+    val posY = FloatArray(n)
+    val velX = FloatArray(n)
+    val velY = FloatArray(n)
+    val forceX = FloatArray(n)
+    val forceY = FloatArray(n)
+    val sizeAvg = FloatArray(n)
+
+    // Pre-calculate node dimensions for all nodes (optimization: avoid recalculating in loops)
+    var sizeSum = 0f
+    for (i in 0 until n) {
+        val dims = kuiver.nodes[nodeIds[i]]?.dimensions
+        val s =
+            if (dims != null) (dims.width.value + dims.height.value) / 2f else layoutConfig.nodeSize
+        sizeAvg[i] = s
+        sizeSum += s
+    }
+    val avgNodeSize = (sizeSum / n).takeIf { it.isFinite() } ?: layoutConfig.nodeSize
+
+    // resolve edge endpoints to indices once. Edges referencing missing nodes are skipped
+    val edgeCount = kuiver.edges.size
+    val edgeFrom = IntArray(edgeCount)
+    val edgeTo = IntArray(edgeCount)
+    var validEdges = 0
+    kuiver.edges.forEach { edge ->
+        val f = idToIndex[edge.fromId]
+        val t = idToIndex[edge.toId]
+        if (f != null && t != null) {
+            edgeFrom[validEdges] = f
+            edgeTo[validEdges] = t
+            validEdges++
+        }
+    }
 
     val centerX = layoutConfig.width / 2f
     val centerY = layoutConfig.height / 2f
     val initialRadius = min(layoutConfig.width, layoutConfig.height) * 0.3f
 
     val maxVelocity = 10f
+    val maxVelocitySq = maxVelocity * maxVelocity
 
     // Distribute nodes in a circle initially with good spacing
-    nodes.forEachIndexed { index, nodeId ->
-        if (nodes.size == 1) {
-            positions[nodeId] = Offset(centerX, centerY)
-        } else {
-            val angle = (index * 2.0 * PI / nodes.size).toFloat()
-            positions[nodeId] = Offset(
-                centerX + initialRadius * cos(angle),
-                centerY + initialRadius * sin(angle)
-            )
+    if (n == 1) {
+        posX[0] = centerX
+        posY[0] = centerY
+    } else {
+        for (i in 0 until n) {
+            val angle = (i * 2.0 * PI / n).toFloat()
+            posX[i] = centerX + initialRadius * cos(angle)
+            posY[i] = centerY + initialRadius * sin(angle)
         }
-        velocities[nodeId] = Offset.Zero
     }
 
-    // Reusable force map (optimization: reuse instead of recreating each iteration)
-    val forces = mutableMapOf<String, Offset>()
-    nodes.forEach { forces[it] = Offset.Zero }
+    val centeringStrength = 0.01f
+    val repulsion = layoutConfig.repulsionStrength
+    val extraRepulsionBase = repulsion * 0.5f
+    val attraction = layoutConfig.attractionStrength
+    val damping = layoutConfig.damping
+    val width = layoutConfig.width
+    val height = layoutConfig.height
+    val margin = avgNodeSize
+    val maxXBound = width - margin
+    val maxYBound = height - margin
 
     repeat(layoutConfig.iterations) {
-        // Reset forces to zero (reuse map instead of recreating)
-        nodes.forEach { forces[it] = Offset.Zero }
-
-        nodes.forEach { nodeA ->
-            val nodeASizeAvg = nodeSizes[nodeA]!!
-
-            nodes.forEach { nodeB ->
-                if (nodeA != nodeB) {
-                    val nodeBSizeAvg = nodeSizes[nodeB]!!
-
-                    val pairMinDistance = (nodeASizeAvg + nodeBSizeAvg) * 0.9f
-
-                    val posA = positions[nodeA] ?: Offset.Zero
-                    val posB = positions[nodeB] ?: Offset.Zero
-                    val dx = posA.x - posB.x
-                    val dy = posA.y - posB.y
-                    val distance = sqrt(dx * dx + dy * dy)
-
-                    // Distance culling: skip nodes beyond maximum repulsion distance
-                    val maxRepulsionDistance = pairMinDistance * MAX_REPULSION_DISTANCE_FACTOR
-                    if (distance > maxRepulsionDistance) return@forEach
-
-                    if (distance > 1f) { // Avoid division by zero
-                        val effectiveDistance = max(distance, pairMinDistance)
-                        val repulsionForce =
-                            layoutConfig.repulsionStrength / (effectiveDistance * effectiveDistance)
-
-                        val extraRepulsion =
-                            if (distance < pairMinDistance) layoutConfig.repulsionStrength * 0.5f else 0f
-                        val totalRepulsion = repulsionForce + extraRepulsion
-
-                        val fx = (dx / distance) * totalRepulsion
-                        val fy = (dy / distance) * totalRepulsion
-
-                        forces[nodeA] = forces[nodeA]!! + Offset(fx, fy)
-                    }
-                }
-            }
+        for (i in 0 until n) {
+            forceX[i] = 0f
+            forceY[i] = 0f
         }
 
-        kuiver.edges.forEach { edge ->
-            val posFrom = positions[edge.fromId] ?: Offset.Zero
-            val posTo = positions[edge.toId] ?: Offset.Zero
-            val dx = posTo.x - posFrom.x
-            val dy = posTo.y - posFrom.y
-            val distance = sqrt(dx * dx + dy * dy)
+        for (a in 0 until n) {
+            val ax = posX[a]
+            val ay = posY[a]
+            val aSize = sizeAvg[a]
+            var fxA = 0f
+            var fyA = 0f
+            for (b in 0 until n) {
+                if (a == b) continue
+                val pairMinDistance = (aSize + sizeAvg[b]) * 0.9f
+                val dx = ax - posX[b]
+                val dy = ay - posY[b]
+                val distSq = dx * dx + dy * dy
 
-            if (distance > 1f) {
-                val attractionForce = distance * layoutConfig.attractionStrength
-                val fx = (dx / distance) * attractionForce
-                val fy = (dy / distance) * attractionForce
+                val maxRepulsionDistance = pairMinDistance * MAX_REPULSION_DISTANCE_FACTOR
+                if (distSq > maxRepulsionDistance * maxRepulsionDistance) continue
+                if (distSq <= 1f) continue
 
-                forces[edge.fromId] = forces[edge.fromId]!! + Offset(fx, fy)
-                forces[edge.toId] = forces[edge.toId]!! - Offset(fx, fy)
+                val distance = sqrt(distSq)
+                val effectiveDistance = max(distance, pairMinDistance)
+                val repulsionForce = repulsion / (effectiveDistance * effectiveDistance)
+                val extraRepulsion = if (distance < pairMinDistance) extraRepulsionBase else 0f
+                val totalRepulsion = repulsionForce + extraRepulsion
+
+                fxA += (dx / distance) * totalRepulsion
+                fyA += (dy / distance) * totalRepulsion
             }
+            forceX[a] += fxA
+            forceY[a] += fyA
         }
 
-        // Apply centering force to keep disconnected nodes from spreading too far
-        // This is especially important for nodes with no edges
-        val centeringStrength = 0.01f
-        nodes.forEach { nodeId ->
-            val pos = positions[nodeId] ?: Offset.Zero
-            val dx = centerX - pos.x
-            val dy = centerY - pos.y
-            val centeringForce = Offset(dx * centeringStrength, dy * centeringStrength)
-            forces[nodeId] = forces[nodeId]!! + centeringForce
+        for (e in 0 until validEdges) {
+            val f = edgeFrom[e]
+            val t = edgeTo[e]
+            val dx = posX[t] - posX[f]
+            val dy = posY[t] - posY[f]
+            val distSq = dx * dx + dy * dy
+            if (distSq <= 1f) continue
+            val distance = sqrt(distSq)
+            val attractionForce = distance * attraction
+            val fx = (dx / distance) * attractionForce
+            val fy = (dy / distance) * attractionForce
+            forceX[f] += fx
+            forceY[f] += fy
+            forceX[t] -= fx
+            forceY[t] -= fy
         }
 
-        nodes.forEach { nodeId ->
-            val force = forces[nodeId] ?: Offset.Zero
-            var velocity = velocities[nodeId]!! + force
+        for (i in 0 until n) {
+            forceX[i] += (centerX - posX[i]) * centeringStrength
+            forceY[i] += (centerY - posY[i]) * centeringStrength
+        }
 
-            // Limit velocity to prevent instability
-            val velocityMagnitude = sqrt(velocity.x * velocity.x + velocity.y * velocity.y)
-            if (velocityMagnitude > maxVelocity) {
-                velocity *= (maxVelocity / velocityMagnitude)
+        for (i in 0 until n) {
+            var vx = velX[i] + forceX[i]
+            var vy = velY[i] + forceY[i]
+
+            val velMagSq = vx * vx + vy * vy
+            if (velMagSq > maxVelocitySq) {
+                val scale = maxVelocity / sqrt(velMagSq)
+                vx *= scale
+                vy *= scale
             }
 
-            velocity *= layoutConfig.damping
-            velocities[nodeId] = velocity
+            vx *= damping
+            vy *= damping
+            velX[i] = vx
+            velY[i] = vy
 
-            var newPos = positions[nodeId]!! + velocity
-
-            val margin = avgNodeSize
-            newPos = Offset(
-                newPos.x.coerceIn(margin, layoutConfig.width - margin),
-                newPos.y.coerceIn(margin, layoutConfig.height - margin)
-            )
-
-            positions[nodeId] = newPos
+            var nx = posX[i] + vx
+            var ny = posY[i] + vy
+            if (nx < margin) nx = margin else if (nx > maxXBound) nx = maxXBound
+            if (ny < margin) ny = margin else if (ny > maxYBound) ny = maxYBound
+            posX[i] = nx
+            posY[i] = ny
         }
     }
 
     val updatedNodes = kuiver.nodes.mapValues { (nodeId, node) ->
-        node.copy(position = positions[nodeId] ?: Offset.Zero)
+        val idx = idToIndex[nodeId]
+        if (idx != null) node.copy(position = Offset(posX[idx], posY[idx])) else node
     }
 
     return buildKuiverWithClassifiedEdges(
