@@ -45,7 +45,7 @@ For multiplatform projects, add to your common source set:
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.justdeko:kuiver:0.2.5")
+            implementation("io.github.justdeko:kuiver:0.3.0")
         }
     }
 }
@@ -57,10 +57,10 @@ Or for a specific platform only:
 kotlin {
     sourceSets {
         androidMain.dependencies {
-            implementation("io.github.justdeko:kuiver-android:0.2.5")
+            implementation("io.github.justdeko:kuiver-android:0.3.0")
         }
         iosMain.dependencies {
-            implementation("io.github.justdeko:kuiver-iosarm64:0.2.5")
+            implementation("io.github.justdeko:kuiver-iosarm64:0.3.0")
         }
         // etc.
     }
@@ -413,17 +413,20 @@ KuiverViewer(
 ### Programmatic Controls
 
 ```kotlin
-// Zoom and navigation
-viewerState.zoomIn()       // Zoom in (1.2x)
-viewerState.zoomOut()      // Zoom out (1/1.2x)
-viewerState.centerGraph()  // Center graph in viewport
+// Zoom and navigation (animated)
+viewerState.zoomIn()                       // Zoom in (1.2x)
+viewerState.zoomOut()                      // Zoom out (1/1.2x)
+viewerState.centerGraph()                  // Center and fit graph in viewport
+viewerState.centerGraph(animated = false)  // Snap without animation
 
 // Direct control
 viewerState.updateTransform(scale = 1.5f, offset = Offset(100f, 100f))
+viewerState.updateTransform(scale = 1.5f, offset = Offset(100f, 100f), animated = true)
 
 // Access current state
 val currentScale = viewerState.scale
 val currentOffset = viewerState.offset
+val isReady = viewerState.hasFittedInitially  // true when first auto-fit completes
 ```
 
 ### User Interactions
