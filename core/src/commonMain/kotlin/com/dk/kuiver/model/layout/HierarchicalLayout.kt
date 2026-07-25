@@ -39,18 +39,24 @@ internal fun hierarchical(
 
     // Phase 2: Layer Assignment using longest path
     val levels = mutableMapOf<String, Int>()
-    fun calculateLongestPath(nodeId: String, memo: MutableMap<String, Int>): Int {
-        memo[nodeId]?.let { return it }
-        val parents = parentMap[nodeId] ?: emptySet()
-        val level = if (parents.isEmpty()) 0
-        else parents.maxOf { calculateLongestPath(it, memo) } + 1
-        memo[nodeId] = level
-        return level
+    val pendingParents = mutableMapOf<String, Int>()
+    val ready = ArrayDeque<String>()
+    kuiver.nodes.keys.forEach { nodeId ->
+        val parentCount = parentMap[nodeId]?.size ?: 0
+        levels[nodeId] = 0
+        pendingParents[nodeId] = parentCount
+        if (parentCount == 0) ready.addLast(nodeId)
     }
 
-    val memo = mutableMapOf<String, Int>()
-    kuiver.nodes.keys.forEach { nodeId ->
-        levels[nodeId] = calculateLongestPath(nodeId, memo)
+    while (ready.isNotEmpty()) {
+        val nodeId = ready.removeFirst()
+        val childLevel = levels.getValue(nodeId) + 1
+        childrenMap[nodeId]?.forEach { child ->
+            levels[child] = maxOf(levels.getValue(child), childLevel)
+            val pending = pendingParents.getValue(child) - 1
+            pendingParents[child] = pending
+            if (pending == 0) ready.addLast(child)
+        }
     }
 
     // Handle isolated nodes
