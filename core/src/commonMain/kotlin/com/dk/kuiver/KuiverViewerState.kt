@@ -18,6 +18,7 @@ import com.dk.kuiver.model.layout.layout
 import com.dk.kuiver.renderer.KuiverViewerConfig
 import com.dk.kuiver.util.calculateNodeBounds
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.min
@@ -227,7 +228,12 @@ private fun setupLayout(state: KuiverViewerState, layoutConfig: LayoutConfig) {
                     height = canvasHeight
                 )
             }
-            withContext(Dispatchers.Default) { layout(kuiver, configWithDimensions) }
+            withContext(Dispatchers.Default) {
+                // The layout loop never suspends, so a superseded layout would otherwise
+                // run to completion before its replacement starts
+                val layoutContext = coroutineContext
+                layout(kuiver, configWithDimensions) { layoutContext.ensureActive() }
+            }
         } else {
             kuiver
         }
