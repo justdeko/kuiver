@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -47,6 +48,7 @@ data class KuiverViewerConfig(
     val contentPadding: Float = 0.8f,
     val minScale: Float = 0.1f,
     val maxScale: Float = 5f,
+    val zoomStep: Float = 1.2f,
     val panVelocity: Float = PlatformDefaults.defaultPanVelocity,
     val fontLoadingDelayMs: Long = PlatformDefaults.defaultFontLoadingDelayMs,
     val zoomConditionDesktop: (PointerEvent) -> Boolean = { eventType ->
@@ -138,6 +140,9 @@ internal fun ViewerRenderer(
     val density = LocalDensity.current
     // Single progress animatable for both scale and offset in the same frame
     val progressAnim = remember { Animatable(1f) }
+
+    // run before LaunchedEffect so the initial auto-fit already has config
+    SideEffect { state.config = config }
 
     LaunchedEffect(state.pendingAnimation) {
         val request = state.pendingAnimation ?: return@LaunchedEffect
