@@ -235,7 +235,7 @@ class Kuiver {
 
     fun getTopologicalOrder(): List<String> {
         val inDegree = mutableMapOf<String, Int>()
-        val queue = mutableListOf<String>()
+        val queue = ArrayDeque<String>()
         val result = mutableListOf<String>()
 
         // Initialize in-degrees
@@ -246,18 +246,18 @@ class Kuiver {
 
         // Find nodes with no incoming edges
         inDegree.filter { it.value == 0 }.forEach { (nodeId, _) ->
-            queue.add(nodeId)
+            queue.addLast(nodeId)
         }
 
         // Process queue
         while (queue.isNotEmpty()) {
-            val current = queue.removeAt(0)
+            val current = queue.removeFirst()
             result.add(current)
 
             _adjacencyList[current]?.forEach { neighbor ->
                 inDegree[neighbor] = (inDegree[neighbor] ?: 0) - 1
                 if (inDegree[neighbor] == 0) {
-                    queue.add(neighbor)
+                    queue.addLast(neighbor)
                 }
             }
         }

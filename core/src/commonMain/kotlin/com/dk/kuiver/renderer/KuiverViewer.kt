@@ -18,7 +18,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -32,7 +31,7 @@ import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.isCtrlPressed
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import com.dk.kuiver.KuiverViewerState
 import com.dk.kuiver.model.KuiverEdge
@@ -171,9 +170,7 @@ internal fun ViewerRenderer(
         val centerY = maxHeight / 2
 
         val kuiver = state.layoutedKuiver
-        val bounds by remember(kuiver.nodes) {
-            derivedStateOf { kuiver.nodes.values.calculatePositionBounds() }
-        }
+        val bounds = remember(kuiver.nodes) { kuiver.nodes.values.calculatePositionBounds() }
         val graphCenterX = bounds.centerX
         val graphCenterY = bounds.centerY
 
@@ -199,9 +196,8 @@ internal fun ViewerRenderer(
                 .fillMaxSize()
                 .clipToBounds()
                 .graphicsLayer { alpha = contentAlpha }
-                .onGloballyPositioned { coordinates ->
+                .onSizeChanged { size ->
                     with(density) {
-                        val size = coordinates.size
                         state.viewWidth = size.width.toDp().value
                         state.canvasWidth = size.width.toFloat()
                         state.canvasHeight = size.height.toFloat()

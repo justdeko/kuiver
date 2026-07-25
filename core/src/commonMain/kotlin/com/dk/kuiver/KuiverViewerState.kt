@@ -205,7 +205,7 @@ fun rememberSaveableKuiverViewerState(
 private fun setupLayout(state: KuiverViewerState, layoutConfig: LayoutConfig) {
     // Capture at composition time so the effect body uses the snapshot values that
     // triggered this composition, not values written during the layout phase (e.g.
-    // canvasWidth set by onGloballyPositioned). Without this, Frame 1's effect would
+    // canvasWidth set by onSizeChanged). Without this, Frame 1's effect would
     // see canvasWidth > 0 and run layout with the still-unmeasured kuiver.
     val kuiver = state.kuiver
     val canvasWidth = state.canvasWidth

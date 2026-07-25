@@ -88,7 +88,9 @@ internal fun hierarchical(
     val updatedNodes = kuiver.nodes.mapValues { (nodeId, node) ->
         val level = levels[nodeId] ?: 0
         val nodesInLevel = adjustedNodes[level] ?: emptyList()
-        val indexInLevel = nodesInLevel.indexOf(nodeId).takeIf { it >= 0 } ?: 0
+        val indexInLevel = nodesInLevel
+            .indexOfFirst { it is LevelEntry.Node && it.id == nodeId }
+            .takeIf { it >= 0 } ?: 0
 
         val (x, y) = when (layoutConfig.direction) {
             LayoutDirection.HORIZONTAL -> {
@@ -185,6 +187,11 @@ private fun minimizeCrossings(
     return result
 }
 
+private sealed interface LevelEntry {
+    data class Node(val id: String) : LevelEntry
+    data object Spacer : LevelEntry
+}
+
 /**
  * Adds spacers at intermediate levels for bypass edges to reduce visual obstruction
  */
@@ -192,8 +199,10 @@ private fun avoidBypassEdgeObstruction(
     kuiver: Kuiver,
     nodesByLevel: Map<Int, List<String>>,
     levels: Map<String, Int>
-): Map<Int, List<String>> {
-    val result = nodesByLevel.toMutableMap()
+): Map<Int, List<LevelEntry>> {
+    val result = nodesByLevel
+        .mapValues { (_, ids) -> ids.map { LevelEntry.Node(it) as LevelEntry } }
+        .toMutableMap()
 
     // Find bypass edges (edges spanning multiple levels)
     val bypassEdges = kuiver.edges.filter { edge ->
@@ -208,14 +217,14 @@ private fun avoidBypassEdgeObstruction(
         val toLevel = levels[bypassEdge.toId] ?: 0
 
         for (intermediateLevel in fromLevel + 1 until toLevel) {
-            val nodesAtLevel = result[intermediateLevel]?.toMutableList() ?: continue
+            val nodesAtLevel = result[intermediateLevel] ?: continue
 
             if (nodesAtLevel.size == 1) {
-                result[intermediateLevel] = listOf("__bypass_spacer__", nodesAtLevel[0])
+                result[intermediateLevel] = listOf(LevelEntry.Spacer, nodesAtLevel[0])
             } else {
                 val midIndex = nodesAtLevel.size / 2
                 val reordered = nodesAtLevel.take(midIndex) +
-                        listOf("__bypass_spacer__") +
+                        listOf(LevelEntry.Spacer) +
                         nodesAtLevel.drop(midIndex)
                 result[intermediateLevel] = reordered
             }
