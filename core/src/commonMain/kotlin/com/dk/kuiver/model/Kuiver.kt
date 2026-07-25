@@ -32,21 +32,25 @@ class Kuiver {
 
     /**
      * Utility method to check if adding an edge would create a cycle.
-     * Can be used by callers who want to validate before adding edges.
+     *
+     * @param from starting node ID
+     * @param to ending node ID
+     * @return `true` if the condition holds, `false` otherwise
      */
     fun wouldCreateCycle(from: String, to: String): Boolean {
-        // Simple DFS to detect if adding edge would create cycle
-        val visited = mutableSetOf<String>()
-        return hasPath(to, from, visited)
+        return hasPath(to, from)
     }
 
-    private fun hasPath(from: String, to: String, visited: MutableSet<String>): Boolean {
-        if (from == to) return true
-        if (visited.contains(from)) return false
+    private fun hasPath(from: String, to: String): Boolean {
+        val visited = mutableSetOf<String>()
+        val pending = ArrayDeque<String>()
+        pending.addLast(from)
 
-        visited.add(from)
-        _adjacencyList[from]?.forEach { neighbor ->
-            if (hasPath(neighbor, to, visited)) return true
+        while (pending.isNotEmpty()) {
+            val nodeId = pending.removeLast()
+            if (nodeId == to) return true
+            if (!visited.add(nodeId)) continue
+            _adjacencyList[nodeId]?.forEach { pending.addLast(it) }
         }
         return false
     }
@@ -159,36 +163,51 @@ class Kuiver {
         val sccs = mutableListOf<Set<String>>()
         var currentIndex = 0
 
-        fun strongConnect(nodeId: String) {
+        val iterStack = ArrayDeque<Pair<String, Iterator<String>>>()
+
+        fun enter(nodeId: String) {
             index[nodeId] = currentIndex
             lowLink[nodeId] = currentIndex
             currentIndex++
             stack.add(nodeId)
             onStack.add(nodeId)
+            iterStack.addLast(
+                nodeId to (_adjacencyList[nodeId]?.iterator() ?: emptyList<String>().iterator())
+            )
+        }
 
-            _adjacencyList[nodeId]?.forEach { neighbor ->
-                when {
-                    !index.containsKey(neighbor) -> {
-                        strongConnect(neighbor)
-                        lowLink[nodeId] = minOf(lowLink[nodeId]!!, lowLink[neighbor]!!)
+        fun strongConnect(start: String) {
+            enter(start)
+            while (iterStack.isNotEmpty()) {
+                val (nodeId, iter) = iterStack.last()
+                if (iter.hasNext()) {
+                    val neighbor = iter.next()
+                    when {
+                        !index.containsKey(neighbor) -> enter(neighbor)
+                        onStack.contains(neighbor) ->
+                            lowLink[nodeId] = minOf(lowLink[nodeId]!!, index[neighbor]!!)
                     }
-
-                    onStack.contains(neighbor) -> {
-                        lowLink[nodeId] = minOf(lowLink[nodeId]!!, index[neighbor]!!)
-                    }
+                    continue
                 }
-            }
 
-            // If nodeId is a root node, pop the stack and create an SCC
-            if (lowLink[nodeId] == index[nodeId]) {
-                val scc = mutableSetOf<String>()
-                var w: String
-                do {
-                    w = stack.removeAt(stack.lastIndex)
-                    onStack.remove(w)
-                    scc.add(w)
-                } while (w != nodeId)
-                sccs.add(scc)
+                iterStack.removeLast()
+
+                // If nodeId is a root node, pop the stack and create an SCC
+                if (lowLink[nodeId] == index[nodeId]) {
+                    val scc = mutableSetOf<String>()
+                    var w: String
+                    do {
+                        w = stack.removeAt(stack.lastIndex)
+                        onStack.remove(w)
+                        scc.add(w)
+                    } while (w != nodeId)
+                    sccs.add(scc)
+                }
+
+                // Propagate the lowLink up, as returning from the recursive call did
+                iterStack.lastOrNull()?.let { (parentId, _) ->
+                    lowLink[parentId] = minOf(lowLink[parentId]!!, lowLink[nodeId]!!)
+                }
             }
         }
 
@@ -216,7 +235,7 @@ class Kuiver {
 
     fun getTopologicalOrder(): List<String> {
         val inDegree = mutableMapOf<String, Int>()
-        val queue = mutableListOf<String>()
+        val queue = ArrayDeque<String>()
         val result = mutableListOf<String>()
 
         // Initialize in-degrees
@@ -227,18 +246,18 @@ class Kuiver {
 
         // Find nodes with no incoming edges
         inDegree.filter { it.value == 0 }.forEach { (nodeId, _) ->
-            queue.add(nodeId)
+            queue.addLast(nodeId)
         }
 
         // Process queue
         while (queue.isNotEmpty()) {
-            val current = queue.removeAt(0)
+            val current = queue.removeFirst()
             result.add(current)
 
             _adjacencyList[current]?.forEach { neighbor ->
                 inDegree[neighbor] = (inDegree[neighbor] ?: 0) - 1
                 if (inDegree[neighbor] == 0) {
-                    queue.add(neighbor)
+                    queue.addLast(neighbor)
                 }
             }
         }

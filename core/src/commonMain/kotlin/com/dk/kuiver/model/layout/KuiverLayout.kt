@@ -86,7 +86,8 @@ sealed class LayoutConfig {
      * This layout uses a basic physics simulation to create layouts.
      * Nodes repel each other while edges act as springs pulling connected nodes together.
      *
-     * @param iterations Number of simulation steps (more = better layout but slower)
+     * @param iterations Number of simulation steps (more = better layout but slower),
+     *   also sets the cooling schedule so differing counts give unrelated layouts
      * @param repulsionStrength How strongly nodes push each other apart
      * @param attractionStrength How strongly connected nodes pull together
      * @param damping Velocity damping factor (0-1). Higher values = more stability, slower convergence
@@ -159,12 +160,17 @@ sealed class LayoutConfig {
  *
  * @param kuiver The graph to layout
  * @param layoutConfig The layout configuration
+ * @param checkCancellation callback for long-running layouts
  * @return A new Kuiver instance with updated node positions
  */
-internal fun layout(kuiver: Kuiver, layoutConfig: LayoutConfig = LayoutConfig.Hierarchical()): Kuiver {
+internal fun layout(
+    kuiver: Kuiver,
+    layoutConfig: LayoutConfig = LayoutConfig.Hierarchical(),
+    checkCancellation: () -> Unit = {}
+): Kuiver {
     return when (layoutConfig) {
         is LayoutConfig.Hierarchical -> hierarchical(kuiver, layoutConfig)
-        is LayoutConfig.ForceDirected -> forceDirected(kuiver, layoutConfig)
+        is LayoutConfig.ForceDirected -> forceDirected(kuiver, layoutConfig, checkCancellation)
         is LayoutConfig.Custom -> layoutConfig.provider.invoke(kuiver, layoutConfig)
     }
 }

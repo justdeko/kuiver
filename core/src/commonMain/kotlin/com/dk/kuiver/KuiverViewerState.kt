@@ -15,8 +15,10 @@ import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.kuiverSaver
 import com.dk.kuiver.model.layout.LayoutConfig
 import com.dk.kuiver.model.layout.layout
+import com.dk.kuiver.renderer.KuiverViewerConfig
 import com.dk.kuiver.util.calculateNodeBounds
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.min
@@ -65,6 +67,8 @@ class KuiverViewerState internal constructor(
 
     internal var viewWidth: Float by mutableFloatStateOf(0f)
 
+    internal var config: KuiverViewerConfig = KuiverViewerConfig()
+
     private var animationVersion = 0
     internal var pendingAnimation: AnimationRequest? by mutableStateOf(null)
         private set
@@ -83,30 +87,26 @@ class KuiverViewerState internal constructor(
     fun centerGraph(animated: Boolean = true) {
         val centeringOffset = Offset(contentOffset.x / 2f, contentOffset.y / 2f)
         if (layoutedKuiver.nodes.isEmpty() || canvasWidth == 0f || canvasHeight == 0f) {
-            if (animated) requestAnimation(1f, centeringOffset) else {
-                pendingAnimation = null; scale = 1f; offset = centeringOffset
-            }
+            updateTransform(clampScale(1f), centeringOffset, animated)
             return
         }
         val bounds = layoutedKuiver.nodes.values.calculateNodeBounds()
         val density = canvasWidth / viewWidth
         val graphWidthPx = bounds.width * density
         val graphHeightPx = bounds.height * density
-        val targetScaleX = if (graphWidthPx > 0) (canvasWidth * 0.8f) / graphWidthPx else 1f
-        val targetScaleY = if (graphHeightPx > 0) (canvasHeight * 0.8f) / graphHeightPx else 1f
-        val newScale = min(targetScaleX, targetScaleY).coerceIn(0.1f, 2f)
-        if (animated) requestAnimation(newScale, centeringOffset) else {
-            pendingAnimation = null; scale = newScale; offset = centeringOffset
-        }
+        val padding = config.contentPadding
+        val targetScaleX = if (graphWidthPx > 0) (canvasWidth * padding) / graphWidthPx else 1f
+        val targetScaleY = if (graphHeightPx > 0) (canvasHeight * padding) / graphHeightPx else 1f
+        updateTransform(clampScale(min(targetScaleX, targetScaleY)), centeringOffset, animated)
     }
 
     fun zoomIn() {
-        val newScale = (scale * 1.2f).coerceAtMost(5f)
+        val newScale = clampScale(scale * config.zoomStep)
         requestAnimation(newScale, offset * (newScale / scale))
     }
 
     fun zoomOut() {
-        val newScale = (scale / 1.2f).coerceAtLeast(0.1f)
+        val newScale = clampScale(scale / config.zoomStep)
         requestAnimation(newScale, offset * (newScale / scale))
     }
 
@@ -123,6 +123,24 @@ class KuiverViewerState internal constructor(
     private fun requestAnimation(targetScale: Float, targetOffset: Offset) {
         pendingAnimation = AnimationRequest(targetScale, targetOffset, ++animationVersion)
     }
+
+    private fun clampScale(value: Float) = value.coerceIn(config.minScale, config.maxScale)
+}
+
+/**
+ * Fits the graph to the viewport after layout and measurement if [KuiverViewerConfig.fitToContent]
+ *
+ * @param canvasWidth canvas width in pixels
+ * @param canvasHeight canvas height in pixels
+ */
+internal fun KuiverViewerState.applyInitialFit(canvasWidth: Float, canvasHeight: Float) {
+    if (canvasWidth <= 0f || canvasHeight <= 0f) return
+    if (hasFittedInitially) return
+    val nodes = layoutedKuiver.nodes.values
+    if (nodes.isEmpty() || nodes.none { it.dimensions != null }) return
+
+    if (config.fitToContent) centerGraph(animated = false)
+    hasFittedInitially = true
 }
 
 /**
@@ -187,7 +205,7 @@ fun rememberSaveableKuiverViewerState(
 private fun setupLayout(state: KuiverViewerState, layoutConfig: LayoutConfig) {
     // Capture at composition time so the effect body uses the snapshot values that
     // triggered this composition, not values written during the layout phase (e.g.
-    // canvasWidth set by onGloballyPositioned). Without this, Frame 1's effect would
+    // canvasWidth set by onSizeChanged). Without this, Frame 1's effect would
     // see canvasWidth > 0 and run layout with the still-unmeasured kuiver.
     val kuiver = state.kuiver
     val canvasWidth = state.canvasWidth
@@ -210,18 +228,16 @@ private fun setupLayout(state: KuiverViewerState, layoutConfig: LayoutConfig) {
                     height = canvasHeight
                 )
             }
-            withContext(Dispatchers.Default) { layout(kuiver, configWithDimensions) }
+            withContext(Dispatchers.Default) {
+                // The layout loop never suspends, so a superseded layout would otherwise
+                // run to completion before its replacement starts
+                val layoutContext = coroutineContext
+                layout(kuiver, configWithDimensions) { layoutContext.ensureActive() }
+            }
         } else {
             kuiver
         }
         state.layoutedKuiver = laid
-        if (canvasWidth > 0f && canvasHeight > 0f &&
-            !state.hasFittedInitially &&
-            laid.nodes.isNotEmpty() &&
-            laid.nodes.values.any { it.dimensions != null }
-        ) {
-            state.centerGraph(animated = false)
-            state.hasFittedInitially = true
-        }
+        state.applyInitialFit(canvasWidth, canvasHeight)
     }
 }

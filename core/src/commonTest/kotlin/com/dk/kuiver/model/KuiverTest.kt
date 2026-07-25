@@ -82,4 +82,43 @@ class KuiverTest {
         val edge = kuiver.edges.first()
         assertEquals(EdgeType.SELF_LOOP, kuiver.classifyEdge(edge))
     }
+
+    @Test
+    fun `wouldCreateCycle only reports edges that close a loop`() {
+        val kuiver = buildKuiver {
+            nodes("A", "B", "C", "D")
+            edges("A" to "B", "B" to "C")
+        }
+
+        assertTrue(kuiver.wouldCreateCycle("C", "A"), "C->A closes the chain into a loop")
+        assertTrue(kuiver.wouldCreateCycle("A", "A"), "A->A is a self loop")
+        assertFalse(kuiver.wouldCreateCycle("A", "C"), "A->C is a shortcut, not a cycle")
+        assertFalse(kuiver.wouldCreateCycle("D", "A"), "D is disconnected from the chain")
+
+        // Traversal must terminate even when the graph already contains a cycle
+        kuiver.addEdge(KuiverEdge(fromId = "C", toId = "A"))
+        assertTrue(kuiver.wouldCreateCycle("C", "B"))
+        assertFalse(kuiver.wouldCreateCycle("C", "D"))
+    }
+
+    @Test
+    fun `traversals handle a chain too deep for recursion`() {
+        val length = 50_000
+        val kuiver = buildKuiver {
+            nodes((0 until length).map { "n$it" })
+            for (i in 0 until length - 1) edge("n$i", "n${i + 1}")
+        }
+        val head = "n0"
+        val tail = "n${length - 1}"
+
+        assertFalse(kuiver.hasCycles())
+        assertTrue(kuiver.wouldCreateCycle(tail, head))
+        assertFalse(kuiver.wouldCreateCycle(head, tail))
+        assertEquals(length, kuiver.findStronglyConnectedComponents().size)
+
+        kuiver.addEdge(KuiverEdge(fromId = tail, toId = head))
+
+        assertTrue(kuiver.hasCycles())
+        assertEquals(length, kuiver.findStronglyConnectedComponents().single().size)
+    }
 }

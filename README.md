@@ -381,11 +381,12 @@ KuiverViewer(
 
         // Viewport
         fitToContent = true,               // Auto-fit graph to viewport on load
-        contentPadding = 0.8f,             // Padding around content (0-1 scale)
+        contentPadding = 0.8f,             // Fraction of the viewport the graph fills when fitted
 
-        // Zoom
+        // Zoom (applies to gestures, centerGraph() and zoomIn()/zoomOut())
         minScale = 0.1f,                   // Minimum zoom level (10%)
         maxScale = 5f,                     // Maximum zoom level (500%)
+        zoomStep = 1.2f,                   // Multiplier applied by zoomIn()/zoomOut()
 
         // Pan
         panVelocity = 1.0f,                // Scroll sensitivity (platform-specific default)
@@ -414,8 +415,8 @@ KuiverViewer(
 
 ```kotlin
 // Zoom and navigation (animated)
-viewerState.zoomIn()                       // Zoom in (1.2x)
-viewerState.zoomOut()                      // Zoom out (1/1.2x)
+viewerState.zoomIn()                       // Zoom in by config.zoomStep (default 1.2x)
+viewerState.zoomOut()                      // Zoom out by config.zoomStep
 viewerState.centerGraph()                  // Center and fit graph in viewport
 viewerState.centerGraph(animated = false)  // Snap without animation
 
@@ -428,6 +429,10 @@ val currentScale = viewerState.scale
 val currentOffset = viewerState.offset
 val isReady = viewerState.hasFittedInitially  // true when first auto-fit completes
 ```
+
+`zoomIn()`, `zoomOut()` and `centerGraph()` read `contentPadding`, `minScale`, `maxScale` and
+`zoomStep` from the `KuiverViewerConfig` of the `KuiverViewer` the state is passed to, so they stay
+in sync with gestures. `updateTransform` is unclamped by design — it sets exactly what you ask for.
 
 ### User Interactions
 

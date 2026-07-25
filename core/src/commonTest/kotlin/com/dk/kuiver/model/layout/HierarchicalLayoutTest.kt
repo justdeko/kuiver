@@ -281,4 +281,26 @@ class HierarchicalLayoutTest {
         assertTrue(small.position.x < large.position.x, "Nodes should be at different X positions")
         assertTrue(large.position.x < medium.position.x, "Nodes should be at different X positions")
     }
+
+    @Test
+    fun `layout handles a chain too deep for recursion`() {
+        val length = 10_000
+        val kuiver = buildKuiver {
+            nodes((0 until length).map { "n$it" })
+            for (i in 0 until length - 1) edge("n$i", "n${i + 1}")
+        }
+
+        val result = layout(kuiver, LayoutConfig.Hierarchical(direction = LayoutDirection.HORIZONTAL))
+
+        assertEquals(length, result.nodes.size)
+        for (i in 0 until length - 1) {
+            val current = result.nodes.getValue("n$i").position.x
+            val next = result.nodes.getValue("n${i + 1}").position.x
+            assertTrue(current < next, "n$i should be left of n${i + 1}")
+        }
+
+        // additional test for back edge
+        kuiver.addEdge(KuiverEdge(fromId = "n${length - 1}", toId = "n0"))
+        assertEquals(length, layout(kuiver, LayoutConfig.Hierarchical()).nodes.size)
+    }
 }
