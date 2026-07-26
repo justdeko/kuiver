@@ -397,7 +397,7 @@ KuiverViewer(
             stiffness = Spring.StiffnessLow
         ),
         offsetAnimationSpec = spring(), // Pan animation
-        nodeAnimationSpec = spring(),   // Node position animation (during layout)
+        layoutAnimationSpec = spring(), // Progress of a layout change, shared by nodes and edges
 
         // Desktop-specific
         zoomConditionDesktop = { event ->  // When to zoom vs pan on desktop

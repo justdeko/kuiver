@@ -1,9 +1,6 @@
 package com.dk.kuiver.renderer
 
-import androidx.compose.animation.core.AnimationSpec
-import androidx.compose.animation.core.animateOffsetAsState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
@@ -25,10 +22,9 @@ internal fun RenderEdge(
     toNode: KuiverNode,
     centerX: Dp,
     centerY: Dp,
-    graphCenterX: Float,
-    graphCenterY: Float,
+    targets: NodePositions,
+    transition: LayoutTransition,
     anchorRegistry: AnchorPositionRegistry,
-    animationSpec: AnimationSpec<Offset>,
     skipAnimation: Boolean,
     edgeContent: @Composable (KuiverEdge, Offset, Offset) -> Unit
 ) {
@@ -36,29 +32,18 @@ internal fun RenderEdge(
     val isSelfLoop = edge.fromId == edge.toId
 
     with(density) {
-        val targetFromCenter = Offset(
-            centerX.toPx() + (fromNode.position.x - graphCenterX).dp.toPx(),
-            centerY.toPx() + (fromNode.position.y - graphCenterY).dp.toPx()
-        )
-        val targetToCenter = Offset(
-            centerX.toPx() + (toNode.position.x - graphCenterX).dp.toPx(),
-            centerY.toPx() + (toNode.position.y - graphCenterY).dp.toPx()
-        )
+        // edgeContent takes endpoints by value so a moving edge has to resolve them in composition
+        val fromPosition = transition.positionOf(edge.fromId, targets, skipAnimation)
+        val toPosition = transition.positionOf(edge.toId, targets, skipAnimation)
 
-        val animatedFromCenter by animateOffsetAsState(
-            targetValue = targetFromCenter,
-            animationSpec = animationSpec,
-            label = "edge_from_${edge.fromId}_${edge.toId}"
+        val fromCenter = Offset(
+            centerX.toPx() + fromPosition.x.dp.toPx(),
+            centerY.toPx() + fromPosition.y.dp.toPx()
         )
-
-        val animatedToCenter by animateOffsetAsState(
-            targetValue = targetToCenter,
-            animationSpec = animationSpec,
-            label = "edge_to_${edge.fromId}_${edge.toId}"
+        val toCenter = Offset(
+            centerX.toPx() + toPosition.x.dp.toPx(),
+            centerY.toPx() + toPosition.y.dp.toPx()
         )
-
-        val fromCenter = if (skipAnimation) targetFromCenter else animatedFromCenter
-        val toCenter = if (skipAnimation) targetToCenter else animatedToCenter
 
         // Get node dimensions (convert from DP to pixels, use default if dimensions not set)
         val defaultSize = DEFAULT_NODE_SIZE_DP.toPx()

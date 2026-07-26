@@ -61,11 +61,10 @@ data class KuiverViewerConfig(
         dampingRatio = Spring.DampingRatioMediumBouncy,
         stiffness = Spring.StiffnessMedium
     ),
-    val nodeAnimationSpec: AnimationSpec<Offset> = spring(
+    val layoutAnimationSpec: AnimationSpec<Float> = spring(
         dampingRatio = Spring.DampingRatioMediumBouncy,
         stiffness = Spring.StiffnessLow
     ),
-    val edgeAnimationSpec: AnimationSpec<Offset> = nodeAnimationSpec,
     val animateInitialPlacement: Boolean = false,
     val enterAnimationSpec: AnimationSpec<Float>? = null
 )
@@ -139,6 +138,8 @@ internal fun ViewerRenderer(
     val density = LocalDensity.current
     // Single progress animatable for both scale and offset in the same frame
     val progressAnim = remember { Animatable(1f) }
+    // Single progress animation for all node positions, see LayoutTransition
+    val layoutTransition = remember { LayoutTransition() }
 
     // run before LaunchedEffect so the initial auto-fit already has config
     SideEffect { state.config = config }
@@ -174,6 +175,11 @@ internal fun ViewerRenderer(
         val graphCenterX = bounds.centerX
         val graphCenterY = bounds.centerY
 
+        // Immutable target generation, so placement lambdas can capture it
+        val nodeTargets = remember(kuiver.nodes) {
+            kuiver.nodePositionsRelativeTo(graphCenterX, graphCenterY)
+        }
+
         val isContentReady = state.hasFittedInitially || kuiver.nodes.isEmpty()
 
         // initialSnapDone lags one effects-phase behind hasFittedInitially, so the frame
@@ -184,6 +190,14 @@ internal fun ViewerRenderer(
             if (state.hasFittedInitially) initialSnapDone = true
         }
         val skipInitialAnimation = !initialSnapDone && !config.animateInitialPlacement
+
+        LaunchedEffect(nodeTargets, skipInitialAnimation) {
+            layoutTransition.animateTo(
+                targets = nodeTargets,
+                spec = config.layoutAnimationSpec,
+                snap = skipInitialAnimation
+            )
+        }
 
         val contentAlpha by animateFloatAsState(
             targetValue = if (isContentReady) 1f else 0f,
@@ -308,10 +322,9 @@ internal fun ViewerRenderer(
                                     toNode = toNode,
                                     centerX = centerX,
                                     centerY = centerY,
-                                    graphCenterX = graphCenterX,
-                                    graphCenterY = graphCenterY,
+                                    targets = nodeTargets,
+                                    transition = layoutTransition,
                                     anchorRegistry = anchorRegistry,
-                                    animationSpec = if (skipInitialAnimation) snap() else config.edgeAnimationSpec,
                                     skipAnimation = skipInitialAnimation,
                                     edgeContent = edgeContent
                                 )
@@ -339,9 +352,8 @@ internal fun ViewerRenderer(
                                 node = node,
                                 centerX = centerX,
                                 centerY = centerY,
-                                graphCenterX = graphCenterX,
-                                graphCenterY = graphCenterY,
-                                animationSpec = if (skipInitialAnimation) snap() else config.nodeAnimationSpec,
+                                targets = nodeTargets,
+                                transition = layoutTransition,
                                 skipAnimation = skipInitialAnimation,
                                 nodeContent = nodeContent
                             )

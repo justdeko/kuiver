@@ -37,6 +37,7 @@ material-icons-extended = { module = "org.jetbrains.compose.material:material-ic
 # Core only
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "runtime" }
+ui-test = { module = "org.jetbrains.compose.ui:ui-test", version.ref = "uiTooling" }
 
 # Sample only
 ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "uiTooling" }
