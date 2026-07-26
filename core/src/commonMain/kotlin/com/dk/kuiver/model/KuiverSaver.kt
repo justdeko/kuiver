@@ -1,7 +1,7 @@
 package com.dk.kuiver.model
 
 import androidx.compose.runtime.saveable.Saver
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 
 /**
@@ -13,8 +13,8 @@ fun kuiverSaver(): Saver<Kuiver, Any> = Saver(
             "nodes" to kuiver.nodes.map { (id, node) ->
                 mapOf(
                     "id" to id,
-                    "posX" to node.position.x,
-                    "posY" to node.position.y,
+                    "posX" to node.position.x.value,
+                    "posY" to node.position.y.value,
                     "dimWidth" to node.dimensions?.width?.value,
                     "dimHeight" to node.dimensions?.height?.value
                 )
@@ -55,7 +55,7 @@ fun kuiverSaver(): Saver<Kuiver, Any> = Saver(
                     KuiverNode(
                         id = id,
                         dimensions = dimensions,
-                        position = Offset(posX, posY)
+                        position = DpOffset(posX.dp, posY.dp)
                     )
                 )
             }

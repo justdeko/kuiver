@@ -1,6 +1,7 @@
 package com.dk.kuiver.model.layout
 
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.dp
 import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.buildKuiverWithClassifiedEdges
 import kotlin.math.PI
@@ -35,6 +36,25 @@ private const val FINAL_COOLING_FACTOR = 0.1f
 // Checking only between iterations leaves a superseded layout running a full O(n^2) pass
 private const val CANCELLATION_CHECK_INTERVAL = 256
 
+// Room the bounds grant each node, as a multiple of its average size
+// Enough for the packing the centering force settles into, plus slack
+private const val NODE_ROOM_FACTOR = 2.5f
+
+/**
+ * Factor by which the canvas grows into the simulation bounds. 1 while the graph has room on the
+ * canvas; beyond that the bounds grow with the node count, so the boundary clamp does not fold
+ * a large graph into overlap. The viewer's initial fit zooms out to match.
+ */
+internal fun forceDirectedBoundsScale(
+    nodeCount: Int,
+    avgNodeSize: Float,
+    width: Float,
+    height: Float
+): Float {
+    val nodeRoom = avgNodeSize * NODE_ROOM_FACTOR
+    return max(1f, sqrt(nodeCount * nodeRoom * nodeRoom / (width * height)))
+}
+
 /**
  * Force-directed graph layout using physics simulation.
  *
@@ -45,6 +65,14 @@ private const val CANCELLATION_CHECK_INTERVAL = 256
  *
  * The algorithm iteratively applies forces until the system reaches equilibrium,
  * producing an organic layout that reveals graph structure.
+ *
+ * Every distance is dp. The simulation unwraps them to bare floats on the way in and wraps the
+ * result back on the way out, so the hot loops keep working on flat [FloatArray]s, and the forces
+ * and velocities are tuned against the dp scale, giving the same layout on every screen density.
+ *
+ * The canvas sets the aspect ratio and the minimum size of the simulation bounds. A graph with
+ * more nodes than the canvas has room for is laid out over proportionally larger bounds, see
+ * [forceDirectedBoundsScale].
  *
  * References:
  * - Fruchterman & Reingold (1991): "Graph Drawing by Force-Directed Placement"
@@ -60,13 +88,18 @@ internal fun forceDirected(
     layoutConfig: LayoutConfig.ForceDirected,
     checkCancellation: () -> Unit
 ): Kuiver {
-    if (layoutConfig.width <= 0f || layoutConfig.height <= 0f) {
+    if (layoutConfig.width <= 0.dp || layoutConfig.height <= 0.dp) {
         return kuiver
     }
 
     val nodeIds = kuiver.nodes.keys.toList()
     val n = nodeIds.size
     if (n == 0) return kuiver
+
+    // One float per dp from here on, wrapped back up at the end
+    val canvasWidth = layoutConfig.width.value
+    val canvasHeight = layoutConfig.height.value
+    val fallbackNodeSize = layoutConfig.nodeSize.value
 
     // avoid Map<String, Offset> lookups and inline-class boxing
     // for large graphs (no JIT, no escape analysis to elide the boxing).
@@ -88,12 +121,17 @@ internal fun forceDirected(
     for (i in 0 until n) {
         val dims = kuiver.nodes[nodeIds[i]]?.dimensions
         val s =
-            if (dims != null) (dims.width.value + dims.height.value) / 2f else layoutConfig.nodeSize
+            if (dims != null) (dims.width.value + dims.height.value) / 2f else fallbackNodeSize
         sizeAvg[i] = s
         sizeSum += s
         if (s > sizeMax) sizeMax = s
     }
-    val avgNodeSize = (sizeSum / n).takeIf { it.isFinite() } ?: layoutConfig.nodeSize
+    val avgNodeSize = (sizeSum / n).takeIf { it.isFinite() } ?: fallbackNodeSize
+
+    // The canvas sets the aspect ratio and the minimum bounds, not a hard cage
+    val boundsScale = forceDirectedBoundsScale(n, avgNodeSize, canvasWidth, canvasHeight)
+    val width = canvasWidth * boundsScale
+    val height = canvasHeight * boundsScale
 
     // resolve edge endpoints to indices once. Edges referencing missing nodes are skipped
     val edgeCount = kuiver.edges.size
@@ -110,9 +148,9 @@ internal fun forceDirected(
         }
     }
 
-    val centerX = layoutConfig.width / 2f
-    val centerY = layoutConfig.height / 2f
-    val initialRadius = min(layoutConfig.width, layoutConfig.height) * 0.3f
+    val centerX = width / 2f
+    val centerY = height / 2f
+    val initialRadius = min(width, height) * 0.3f
 
     val maxVelocity = 10f
 
@@ -133,8 +171,6 @@ internal fun forceDirected(
     val extraRepulsionBase = repulsion * 0.5f
     val attraction = layoutConfig.attractionStrength
     val damping = layoutConfig.damping
-    val width = layoutConfig.width
-    val height = layoutConfig.height
     val margin = avgNodeSize
     val maxXBound = width - margin
     val maxYBound = height - margin
@@ -326,7 +362,7 @@ internal fun forceDirected(
 
     val updatedNodes = kuiver.nodes.mapValues { (nodeId, node) ->
         val idx = idToIndex[nodeId]
-        if (idx != null) node.copy(position = Offset(posX[idx], posY[idx])) else node
+        if (idx != null) node.copy(position = DpOffset(posX[idx].dp, posY[idx].dp)) else node
     }
 
     return buildKuiverWithClassifiedEdges(

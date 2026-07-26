@@ -7,12 +7,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.lerp
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.lerp
 import com.dk.kuiver.model.Kuiver
 
-/** Node positions of one layout generation, in dp relative to the center of the graph bounds. */
-internal typealias NodePositions = Map<String, Offset>
+/** Node positions of one layout generation, relative to the center of the graph bounds. */
+internal typealias NodePositions = Map<String, DpOffset>
 
 /**
  * Positions of all nodes, relative to the center of the graph bounds.
@@ -21,9 +22,9 @@ internal typealias NodePositions = Map<String, Offset>
  * @param centerY y center of the graph bounds
  * @return positions keyed by node id
  */
-internal fun Kuiver.nodePositionsRelativeTo(centerX: Float, centerY: Float): NodePositions =
+internal fun Kuiver.nodePositionsRelativeTo(centerX: Dp, centerY: Dp): NodePositions =
     nodes.mapValues { (_, node) ->
-        Offset(node.position.x - centerX, node.position.y - centerY)
+        DpOffset(node.position.x - centerX, node.position.y - centerY)
     }
 
 @Stable
@@ -41,14 +42,14 @@ internal class LayoutTransition {
      * @param nodeId id of the node to place
      * @param targets the caller's layout generation, used for nodes the transition has not adopted
      * @param snapToTarget bypasses the transition, so initial placement renders no stale frame
-     * @return the interpolated position, in dp relative to the graph center
+     * @return the interpolated position, relative to the graph center
      */
     fun positionOf(
         nodeId: String,
         targets: NodePositions,
         snapToTarget: Boolean = false
-    ): Offset {
-        val target = targets[nodeId] ?: Offset.Zero
+    ): DpOffset {
+        val target = targets[nodeId] ?: DpOffset.Zero
         if (snapToTarget) return target
         val from = start[nodeId] ?: return target
         val to = end[nodeId] ?: return target

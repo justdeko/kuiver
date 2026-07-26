@@ -1,26 +1,28 @@
 package com.dk.kuiver.util
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.dk.kuiver.model.DEFAULT_NODE_SIZE
 import com.dk.kuiver.model.KuiverNode
 
 /**
- * Represents the bounding box of a set of nodes
+ * Represents the bounding box of a set of nodes, in the dp space the nodes are positioned in
  */
 @Immutable
 data class Bounds(
-    val minX: Float,
-    val maxX: Float,
-    val minY: Float,
-    val maxY: Float
+    val minX: Dp,
+    val maxX: Dp,
+    val minY: Dp,
+    val maxY: Dp
 ) {
-    val centerX: Float get() = (minX + maxX) / 2f
-    val centerY: Float get() = (minY + maxY) / 2f
-    val width: Float get() = maxX - minX
-    val height: Float get() = maxY - minY
+    val centerX: Dp get() = (minX + maxX) / 2f
+    val centerY: Dp get() = (minY + maxY) / 2f
+    val width: Dp get() = maxX - minX
+    val height: Dp get() = maxY - minY
 
     companion object {
-        val EMPTY = Bounds(0f, 0f, 0f, 0f)
+        val EMPTY = Bounds(0.dp, 0.dp, 0.dp, 0.dp)
     }
 }
 
@@ -34,16 +36,17 @@ data class Bounds(
 fun Collection<KuiverNode>.calculateBounds(includeDimensions: Boolean = true): Bounds {
     if (isEmpty()) return Bounds.EMPTY
 
-    var minX = Float.MAX_VALUE
-    var maxX = Float.MIN_VALUE
-    var minY = Float.MAX_VALUE
-    var maxY = Float.MIN_VALUE
+    // Signed infinities, so a graph that sits entirely on one side of the origin still bounds it
+    var minX = Dp.Infinity
+    var maxX = -Dp.Infinity
+    var minY = Dp.Infinity
+    var maxY = -Dp.Infinity
 
     for (node in this) {
         if (includeDimensions) {
             // Include node dimensions in bounds calculation
-            val nodeWidth = node.dimensions?.width?.value ?: DEFAULT_NODE_SIZE
-            val nodeHeight = node.dimensions?.height?.value ?: DEFAULT_NODE_SIZE
+            val nodeWidth = node.dimensions?.width ?: DEFAULT_NODE_SIZE
+            val nodeHeight = node.dimensions?.height ?: DEFAULT_NODE_SIZE
 
             val nodeMinX = node.position.x - nodeWidth / 2
             val nodeMaxX = node.position.x + nodeWidth / 2

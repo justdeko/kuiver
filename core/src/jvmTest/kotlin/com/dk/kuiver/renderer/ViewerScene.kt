@@ -11,6 +11,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.dk.kuiver.KuiverViewerState
 import com.dk.kuiver.model.Kuiver
@@ -145,7 +146,10 @@ internal fun ringGraph(nodeCount: Int, withEdges: Boolean, seed: Int): Kuiver {
             KuiverNode(
                 id = index.toString(),
                 dimensions = NodeDimensions(NODE_WIDTH_DP.dp, NODE_HEIGHT_DP.dp),
-                position = Offset((radius * cos(angle)).toFloat(), (radius * sin(angle)).toFloat())
+                position = DpOffset(
+                    (radius * cos(angle)).toFloat().dp,
+                    (radius * sin(angle)).toFloat().dp
+                )
             )
         )
     }

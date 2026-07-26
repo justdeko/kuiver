@@ -5,9 +5,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import com.dk.kuiver.model.AnchorOffset
-import com.dk.kuiver.model.DEFAULT_NODE_SIZE_DP
+import com.dk.kuiver.model.DEFAULT_NODE_SIZE
 import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
 import kotlin.math.abs
@@ -63,16 +62,16 @@ internal fun Density.resolveEdgeEndpoints(
     val toPosition = transition.positionOf(edge.toId, targets, skipAnimation)
 
     val fromCenter = Offset(
-        centerX.toPx() + fromPosition.x.dp.toPx(),
-        centerY.toPx() + fromPosition.y.dp.toPx()
+        centerX.toPx() + fromPosition.x.toPx(),
+        centerY.toPx() + fromPosition.y.toPx()
     )
     val toCenter = Offset(
-        centerX.toPx() + toPosition.x.dp.toPx(),
-        centerY.toPx() + toPosition.y.dp.toPx()
+        centerX.toPx() + toPosition.x.toPx(),
+        centerY.toPx() + toPosition.y.toPx()
     )
 
     // Get node dimensions (convert from DP to pixels, use default if dimensions not set)
-    val defaultSize = DEFAULT_NODE_SIZE_DP.toPx()
+    val defaultSize = DEFAULT_NODE_SIZE.toPx()
     val fromNodeWidth = fromNode.dimensions?.width?.toPx() ?: defaultSize
     val fromNodeHeight = fromNode.dimensions?.height?.toPx() ?: defaultSize
     val toNodeWidth = toNode.dimensions?.width?.toPx() ?: defaultSize

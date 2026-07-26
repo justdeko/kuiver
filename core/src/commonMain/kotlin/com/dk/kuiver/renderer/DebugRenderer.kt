@@ -23,8 +23,8 @@ internal fun RenderDebugBounds(
     kuiver: Kuiver,
     centerX: Dp,
     centerY: Dp,
-    graphCenterX: Float,
-    graphCenterY: Float,
+    graphCenterX: Dp,
+    graphCenterY: Dp,
     showDebugBounds: Boolean,
     onCanvasSize: (Float, Float) -> Unit,
     onRedBoxCenter: (Offset) -> Unit,
@@ -36,10 +36,10 @@ internal fun RenderDebugBounds(
 
     // Canvas for debug drawing
     Canvas(modifier = Modifier.fillMaxSize()) {
-        val boundLeft = centerX.toPx() + (bounds.minX - graphCenterX).dp.toPx()
-        val boundRight = centerX.toPx() + (bounds.maxX - graphCenterX).dp.toPx()
-        val boundTop = centerY.toPx() + (bounds.minY - graphCenterY).dp.toPx()
-        val boundBottom = centerY.toPx() + (bounds.maxY - graphCenterY).dp.toPx()
+        val boundLeft = centerX.toPx() + (bounds.minX - graphCenterX).toPx()
+        val boundRight = centerX.toPx() + (bounds.maxX - graphCenterX).toPx()
+        val boundTop = centerY.toPx() + (bounds.minY - graphCenterY).toPx()
+        val boundBottom = centerY.toPx() + (bounds.maxY - graphCenterY).toPx()
 
         // Calculate red box center and position relative to parent view
         val redBoxCenterX = (boundLeft + boundRight) / 2f
@@ -76,12 +76,12 @@ internal fun RenderDebugBounds(
     Box(
         modifier = Modifier
             .offset(
-                x = centerX + (bounds.minX - graphCenterX).dp,
-                y = centerY + (bounds.minY - graphCenterY).dp
+                x = centerX + (bounds.minX - graphCenterX),
+                y = centerY + (bounds.minY - graphCenterY)
             )
             .size(
-                width = (bounds.maxX - bounds.minX).dp,
-                height = (bounds.maxY - bounds.minY).dp
+                width = bounds.width,
+                height = bounds.height
             )
             .onGloballyPositioned { coordinates ->
                 onBoundsChange(coordinates)

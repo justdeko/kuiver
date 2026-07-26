@@ -1,6 +1,6 @@
 package com.dk.kuiver.model
 
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -12,8 +12,8 @@ class KuiverSaverTest {
     @Test
     fun `restore kuiver with all properties`() {
         val original = buildKuiver {
-            addNode(KuiverNode("node1", NodeDimensions(80.dp, 60.dp), Offset(100f, 200f)))
-            addNode(KuiverNode("node2", null, Offset(300f, 400f)))
+            addNode(KuiverNode("node1", NodeDimensions(80.dp, 60.dp), DpOffset(100.dp, 200.dp)))
+            addNode(KuiverNode("node2", null, DpOffset(300.dp, 400.dp)))
             addEdge(KuiverEdge("node1", "node2", EdgeType.FORWARD, "right", "left"))
             addEdge(KuiverEdge("node2", "node1"))
         }
@@ -22,8 +22,8 @@ class KuiverSaverTest {
             "nodes" to original.nodes.map { (id, node) ->
                 mapOf(
                     "id" to id,
-                    "posX" to node.position.x,
-                    "posY" to node.position.y,
+                    "posX" to node.position.x.value,
+                    "posY" to node.position.y.value,
                     "dimWidth" to node.dimensions?.width?.value,
                     "dimHeight" to node.dimensions?.height?.value
                 )
@@ -44,15 +44,15 @@ class KuiverSaverTest {
 
         // Node with dimensions: position (100,200), dimensions 80x60
         val node1 = restored.nodes["node1"]!!
-        assertEquals(100f, node1.position.x)
-        assertEquals(200f, node1.position.y)
+        assertEquals(100.dp, node1.position.x)
+        assertEquals(200.dp, node1.position.y)
         assertEquals(80.dp, node1.dimensions?.width)
         assertEquals(60.dp, node1.dimensions?.height)
 
         // Node without dimensions: position (300,400), null dimensions
         val node2 = restored.nodes["node2"]!!
-        assertEquals(300f, node2.position.x)
-        assertEquals(400f, node2.position.y)
+        assertEquals(300.dp, node2.position.x)
+        assertEquals(400.dp, node2.position.y)
         assertNull(node2.dimensions)
 
         // Edge with all properties

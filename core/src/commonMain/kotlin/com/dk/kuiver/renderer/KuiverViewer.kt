@@ -253,10 +253,10 @@ internal fun ViewerRenderer(
                 .clipToBounds()
                 .graphicsLayer { alpha = contentAlpha }
                 .onSizeChanged { size ->
+                    // dp, the space the graph is laid out and positioned in
                     with(density) {
-                        state.viewWidth = size.width.toDp().value
-                        state.canvasWidth = size.width.toFloat()
-                        state.canvasHeight = size.height.toFloat()
+                        state.canvasWidth = size.width.toDp()
+                        state.canvasHeight = size.height.toDp()
                     }
                 }
                 .pointerInput(state) {

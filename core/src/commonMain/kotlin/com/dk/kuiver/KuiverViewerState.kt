@@ -11,6 +11,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.NodeDimensions
 import com.dk.kuiver.model.kuiverSaver
@@ -29,13 +31,18 @@ internal data class AnimationRequest(val scale: Float, val offset: Offset, val v
 /**
  * State holder for the KuiverViewer component.
  *
+ * The graph coordinate space is [Dp] end to end: node positions, layout spacing, node dimensions
+ * and [canvasWidth]/[canvasHeight], which makes a graph look the same on every screen density.
+ * [scale] and [offset] are the view transform on top of it and stay in pixels, the space gestures
+ * and `graphicsLayer` work in.
+ *
  * @property kuiver The original graph structure (before layout)
  * @property layoutedKuiver The graph after layout positioning has been applied
  * @property scale Current zoom level, updated live during gestures and animations
  * @property offset Current pan offset in pixels, updated live during gestures and animations
- * @property canvasWidth Physical canvas width in pixels
- * @property canvasHeight Physical canvas height in pixels
- * @property contentOffset Offset reserved for UI overlay content
+ * @property canvasWidth Canvas width
+ * @property canvasHeight Canvas height
+ * @property contentOffset Offset in pixels reserved for UI overlay content
  * @property hasFittedInitially True once the graph has been laid out and auto-centered for the
  * first time. Useful when you have loading UI that should disappear once the graph is ready.
  */
@@ -57,16 +64,14 @@ class KuiverViewerState internal constructor(
     var offset: Offset by mutableStateOf(initialOffset)
         internal set
 
-    var canvasWidth: Float by mutableFloatStateOf(0f)
+    var canvasWidth: Dp by mutableStateOf(0.dp)
         internal set
 
-    var canvasHeight: Float by mutableFloatStateOf(0f)
+    var canvasHeight: Dp by mutableStateOf(0.dp)
         internal set
 
     var contentOffset: Offset by mutableStateOf(Offset.Zero)
         internal set
-
-    internal var viewWidth: Float by mutableFloatStateOf(0f)
 
     /**
      * Renderer-measured sizes of the nodes without explicit dimensions. Applied on top of
@@ -104,17 +109,15 @@ class KuiverViewerState internal constructor(
 
     fun centerGraph(animated: Boolean = true) {
         val centeringOffset = Offset(contentOffset.x / 2f, contentOffset.y / 2f)
-        if (layoutedKuiver.nodes.isEmpty() || canvasWidth == 0f || canvasHeight == 0f) {
+        if (layoutedKuiver.nodes.isEmpty() || canvasWidth == 0.dp || canvasHeight == 0.dp) {
             updateTransform(clampScale(1f), centeringOffset, animated)
             return
         }
         val bounds = layoutedKuiver.nodes.values.calculateNodeBounds()
-        val density = canvasWidth / viewWidth
-        val graphWidthPx = bounds.width * density
-        val graphHeightPx = bounds.height * density
         val padding = config.contentPadding
-        val targetScaleX = if (graphWidthPx > 0) (canvasWidth * padding) / graphWidthPx else 1f
-        val targetScaleY = if (graphHeightPx > 0) (canvasHeight * padding) / graphHeightPx else 1f
+        // Graph bounds and canvas are the same space, so dividing them out gives the scale directly
+        val targetScaleX = if (bounds.width > 0.dp) (canvasWidth * padding) / bounds.width else 1f
+        val targetScaleY = if (bounds.height > 0.dp) (canvasHeight * padding) / bounds.height else 1f
         updateTransform(clampScale(min(targetScaleX, targetScaleY)), centeringOffset, animated)
     }
 
@@ -148,11 +151,11 @@ class KuiverViewerState internal constructor(
 /**
  * Fits the graph to the viewport after layout and measurement if [KuiverViewerConfig.fitToContent]
  *
- * @param canvasWidth canvas width in pixels
- * @param canvasHeight canvas height in pixels
+ * @param canvasWidth canvas width
+ * @param canvasHeight canvas height
  */
-internal fun KuiverViewerState.applyInitialFit(canvasWidth: Float, canvasHeight: Float) {
-    if (canvasWidth <= 0f || canvasHeight <= 0f) return
+internal fun KuiverViewerState.applyInitialFit(canvasWidth: Dp, canvasHeight: Dp) {
+    if (canvasWidth <= 0.dp || canvasHeight <= 0.dp) return
     if (hasFittedInitially) return
     val nodes = layoutedKuiver.nodes.values
     if (nodes.isEmpty() || nodes.none { it.dimensions != null }) return
@@ -236,7 +239,7 @@ private fun setupLayout(state: KuiverViewerState, layoutConfig: LayoutConfig) {
         } else {
             kuiver.withMeasuredDimensions(measuredDimensions)
         }
-        val laid = if (canvasWidth > 0f && canvasHeight > 0f) {
+        val laid = if (canvasWidth > 0.dp && canvasHeight > 0.dp) {
             val configWithDimensions = when (layoutConfig) {
                 is LayoutConfig.Hierarchical -> layoutConfig.copy(
                     width = canvasWidth,

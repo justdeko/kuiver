@@ -334,6 +334,11 @@ See `ProcessDiagramDemo.kt` for a complete example with multiple anchors per sid
 > techniques. While inspired by academic research, they are not direct ports of published
 > implementations. Expect flaws and suboptimal layouts on complex graphs.
 
+Every length a layout deals with is a `Dp`: the canvas size in `LayoutConfig`, the spacing options,
+node dimensions, and the `DpOffset` positions a layout writes to each node. `150.dp` of spacing is
+therefore the same physical distance on a 1x desktop screen and a 3x phone, and there is no pixel
+value anywhere in the graph coordinate space to mix it up with.
+
 ### Hierarchical Layout
 
 Best for directed acyclic graphs (DAGs) and tree structures. Automatically handles cycles by
@@ -342,8 +347,8 @@ classifying back edges.
 ```kotlin
 val layoutConfig = LayoutConfig.Hierarchical(
     direction = LayoutDirection.HORIZONTAL,  // or VERTICAL
-    levelSpacing = 150f,      // Distance between hierarchy levels
-    nodeSpacing = 100f        // Distance between nodes in same level
+    levelSpacing = 150.dp,    // Distance between hierarchy levels
+    nodeSpacing = 100.dp      // Distance between nodes in same level
 )
 ```
 
@@ -384,7 +389,7 @@ val circularLayout: LayoutProvider = { kuiver, config ->
     val updatedNodes = nodesList.mapIndexed { index, node ->
         val angle = (index.toFloat() / nodesList.size) * 2f * PI.toFloat()
         node.copy(
-            position = Offset(
+            position = DpOffset(
                 x = centerX + radius * cos(angle),
                 y = centerY + radius * sin(angle)
             )
@@ -403,7 +408,8 @@ val layoutConfig = LayoutConfig.Custom(
 **Custom Layout Tips:**
 
 - Your layout function receives the `Kuiver` graph and `LayoutConfig` (use `LayoutConfig.Custom`)
-- Access canvas dimensions via `config.width` and `config.height`
+- Access canvas dimensions via `config.width` and `config.height`, both `Dp`
+- Write each node a `DpOffset` position. `Dp` multiplies as `spacing * count`, never `count * spacing`
 - Always use `buildKuiverWithClassifiedEdges(updatedNodes, kuiver.edges)` to construct the result
 - Handle zero dimensions gracefully (canvas might not be measured yet on first layout)
 - Use `remember` to stabilize your layout function in Compose to avoid unnecessary recompositions

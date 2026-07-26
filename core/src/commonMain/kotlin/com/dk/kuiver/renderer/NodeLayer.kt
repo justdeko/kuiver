@@ -80,7 +80,8 @@ internal fun NodeLayer(
 
         val centerXPx = centerX.toPx()
         val centerYPx = centerY.toPx()
-        val pxPerDp = density
+        // The placement block is not a Density, so capture this pass's for the toPx calls
+        val measureScope = this
 
         // Fills the viewport; nodes may reach outside it, which the viewer clips
         val width = if (constraints.hasBoundedWidth) constraints.maxWidth else constraints.minWidth
@@ -88,12 +89,14 @@ internal fun NodeLayer(
             if (constraints.hasBoundedHeight) constraints.maxHeight else constraints.minHeight
 
         layout(width, height) {
-            placed.forEach { (nodeId, placeable) ->
-                val position = transition.positionOf(nodeId, targets, skipAnimation)
-                placeable.place(
-                    x = (centerXPx + position.x * pxPerDp - placeable.width / 2f).roundToInt(),
-                    y = (centerYPx + position.y * pxPerDp - placeable.height / 2f).roundToInt()
-                )
+            with(measureScope) {
+                placed.forEach { (nodeId, placeable) ->
+                    val position = transition.positionOf(nodeId, targets, skipAnimation)
+                    placeable.place(
+                        x = (centerXPx + position.x.toPx() - placeable.width / 2f).roundToInt(),
+                        y = (centerYPx + position.y.toPx() - placeable.height / 2f).roundToInt()
+                    )
+                }
             }
         }
     }

@@ -1,6 +1,8 @@
 package com.dk.kuiver.model.layout
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.dk.kuiver.model.DEFAULT_NODE_SIZE
 import com.dk.kuiver.model.Kuiver
 
@@ -26,6 +28,10 @@ enum class LayoutDirection {
  * This sealed class provides type-safe configuration for different layout algorithms.
  * Each algorithm has its own specific configuration with relevant parameters.
  *
+ * Every length here is a [Dp], the coordinate space layouts work in: canvas size, spacing, node
+ * dimensions and the node positions a layout produces. `150.dp` of spacing is therefore the same
+ * physical distance on every screen density.
+ *
  * @see Hierarchical for DAG and tree layouts
  * @see ForceDirected for general graph layouts
  * @see Custom for user-defined layout algorithms
@@ -33,22 +39,22 @@ enum class LayoutDirection {
 @Immutable
 sealed class LayoutConfig {
     /**
-     * Canvas width in pixels. Set automatically by the viewer from canvas size.
+     * Canvas width. Set automatically by the viewer from canvas size.
      * Can be 0 if canvas hasn't been measured yet.
      */
-    abstract val width: Float
+    abstract val width: Dp
 
     /**
-     * Canvas height in pixels. Set automatically by the viewer from canvas size.
+     * Canvas height. Set automatically by the viewer from canvas size.
      * Can be 0 if canvas hasn't been measured yet.
      */
-    abstract val height: Float
+    abstract val height: Dp
 
     /**
-     * Fallback node size used when a node doesn't specify explicit dimensions.
+     * Fallback node size, used when a node doesn't specify explicit dimensions.
      * Most users should rely on measured node dimensions instead.
      */
-    internal open val nodeSize: Float = DEFAULT_NODE_SIZE
+    internal open val nodeSize: Dp = DEFAULT_NODE_SIZE
 
     /**
      * Hierarchical layout configuration.
@@ -57,8 +63,8 @@ sealed class LayoutConfig {
      * Automatically handles cycles by classifying back edges.
      *
      * @param direction The flow direction of the layout (HORIZONTAL or VERTICAL)
-     * @param levelSpacing Distance between hierarchy levels in pixels
-     * @param nodeSpacing Distance between nodes within the same level in pixels
+     * @param levelSpacing Distance between hierarchy levels
+     * @param nodeSpacing Distance between nodes within the same level
      * @param width Canvas width (usually set automatically by the viewer)
      * @param height Canvas height (usually set automatically by the viewer)
      *
@@ -66,18 +72,18 @@ sealed class LayoutConfig {
      * ```kotlin
      * val config = LayoutConfig.Hierarchical(
      *     direction = LayoutDirection.HORIZONTAL,
-     *     levelSpacing = 150f,
-     *     nodeSpacing = 100f
+     *     levelSpacing = 150.dp,
+     *     nodeSpacing = 100.dp
      * )
      * ```
      */
     @Immutable
     data class Hierarchical(
         val direction: LayoutDirection = LayoutDirection.HORIZONTAL,
-        val levelSpacing: Float = 150f,
-        val nodeSpacing: Float = 100f,
-        override val width: Float = 0f,
-        override val height: Float = 0f
+        val levelSpacing: Dp = 150.dp,
+        val nodeSpacing: Dp = 100.dp,
+        override val width: Dp = 0.dp,
+        override val height: Dp = 0.dp
     ) : LayoutConfig()
 
     /**
@@ -88,7 +94,8 @@ sealed class LayoutConfig {
      *
      * @param iterations Number of simulation steps (more = better layout but slower),
      *   also sets the cooling schedule so differing counts give unrelated layouts
-     * @param repulsionStrength How strongly nodes push each other apart
+     * @param repulsionStrength How strongly nodes push each other apart. A force, not a length,
+     *   so it stays a plain [Float]
      * @param attractionStrength How strongly connected nodes pull together
      * @param damping Velocity damping factor (0-1). Higher values = more stability, slower convergence
      * @param width Canvas width (usually set automatically by the viewer)
@@ -110,8 +117,8 @@ sealed class LayoutConfig {
         val repulsionStrength: Float = 500f,
         val attractionStrength: Float = 0.02f,
         val damping: Float = 0.85f,
-        override val width: Float = 0f,
-        override val height: Float = 0f
+        override val width: Dp = 0.dp,
+        override val height: Dp = 0.dp
     ) : LayoutConfig()
 
     /**
@@ -135,7 +142,7 @@ sealed class LayoutConfig {
      *     val updatedNodes = nodesList.mapIndexed { index, node ->
      *         val angle = (index.toFloat() / nodesList.size) * 2f * PI.toFloat()
      *         node.copy(
-     *             position = Offset(
+     *             position = DpOffset(
      *                 x = centerX + radius * cos(angle),
      *                 y = centerY + radius * sin(angle)
      *             )
@@ -150,8 +157,8 @@ sealed class LayoutConfig {
     @Immutable
     data class Custom(
         val provider: LayoutProvider,
-        override val width: Float = 0f,
-        override val height: Float = 0f
+        override val width: Dp = 0.dp,
+        override val height: Dp = 0.dp
     ) : LayoutConfig()
 }
 

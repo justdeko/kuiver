@@ -1,9 +1,24 @@
 package com.dk.kuiver.model.layout
 
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.dp
 import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.buildKuiverWithClassifiedEdges
+
+// Clearance kept between levels, on top of the largest node along the flow direction
+private val LEVEL_CLEARANCE = 60.dp
+
+// Clearance kept between nodes of a level, on top of the largest node across the flow direction
+private val NODE_CLEARANCE = 40.dp
+
+/**
+ * Offset that centers a layout of [extent] in a canvas of [canvas], or none while the canvas is
+ * still unmeasured.
+ */
+private fun centeringOffset(canvas: Dp, extent: Dp): Dp =
+    if (canvas > 0.dp) (canvas - extent) / 2f else 0.dp
 
 /**
  * Sugiyama hierarchical layout algorithm.
@@ -13,6 +28,9 @@ import com.dk.kuiver.model.buildKuiverWithClassifiedEdges
  * 2. Layer assignment - Assign nodes to levels using longest path
  * 3. Crossing minimization - Reduce edge crossings with barycenter heuristic
  * 4. Coordinate assignment - Position nodes within their assigned layers
+ *
+ * Works in [androidx.compose.ui.unit.Dp] throughout, from the canvas size it is given to the
+ * positions it writes.
  *
  * References:
  * - Sugiyama et al. (1981): "Methods for Visual Understanding of Hierarchical System Structures"
@@ -79,10 +97,10 @@ internal fun hierarchical(
 
     // Phase 4: Coordinate Assignment
     val maxNodeWidth = kuiver.nodes.values.maxOfOrNull {
-        it.dimensions?.width?.value ?: layoutConfig.nodeSize
+        it.dimensions?.width ?: layoutConfig.nodeSize
     } ?: layoutConfig.nodeSize
     val maxNodeHeight = kuiver.nodes.values.maxOfOrNull {
-        it.dimensions?.height?.value ?: layoutConfig.nodeSize
+        it.dimensions?.height ?: layoutConfig.nodeSize
     } ?: layoutConfig.nodeSize
 
     val updatedNodes = kuiver.nodes.mapValues { (nodeId, node) ->
@@ -94,42 +112,41 @@ internal fun hierarchical(
 
         val (x, y) = when (layoutConfig.direction) {
             LayoutDirection.HORIZONTAL -> {
-                val levelSpacing = maxOf(layoutConfig.levelSpacing, maxNodeWidth + 60f)
-                val nodeSpacing = maxOf(layoutConfig.nodeSpacing, maxNodeHeight + 40f)
+                val levelSpacing =
+                    maxOf(layoutConfig.levelSpacing, maxNodeWidth + LEVEL_CLEARANCE)
+                val nodeSpacing = maxOf(layoutConfig.nodeSpacing, maxNodeHeight + NODE_CLEARANCE)
 
-                val layoutWidth = maxLevel * levelSpacing
-                val layoutHeight = (nodesByLevel.values.maxOfOrNull { it.size } ?: 1) * nodeSpacing
-                val centerX =
-                    if (layoutConfig.width > 0f) (layoutConfig.width - layoutWidth) / 2f else 0f
-                val centerY =
-                    if (layoutConfig.height > 0f) (layoutConfig.height - layoutHeight) / 2f else 0f
+                // Dp only multiplies with the count on the right, hence the operand order
+                val layoutWidth = levelSpacing * maxLevel
+                val layoutHeight = nodeSpacing * (nodesByLevel.values.maxOfOrNull { it.size } ?: 1)
+                val centerX = centeringOffset(layoutConfig.width, layoutWidth)
+                val centerY = centeringOffset(layoutConfig.height, layoutHeight)
 
-                val levelHeight = nodesInLevel.size * nodeSpacing
-                val xPos = level * levelSpacing + centerX
+                val levelHeight = nodeSpacing * nodesInLevel.size
+                val xPos = levelSpacing * level + centerX
                 val yPos =
-                    indexInLevel * nodeSpacing - levelHeight / 2f + nodeSpacing / 2f + centerY
+                    nodeSpacing * indexInLevel - levelHeight / 2f + nodeSpacing / 2f + centerY
                 Pair(xPos, yPos)
             }
 
             LayoutDirection.VERTICAL -> {
-                val levelSpacing = maxOf(layoutConfig.levelSpacing, maxNodeHeight + 60f)
-                val nodeSpacing = maxOf(layoutConfig.nodeSpacing, maxNodeWidth + 40f)
+                val levelSpacing =
+                    maxOf(layoutConfig.levelSpacing, maxNodeHeight + LEVEL_CLEARANCE)
+                val nodeSpacing = maxOf(layoutConfig.nodeSpacing, maxNodeWidth + NODE_CLEARANCE)
 
-                val layoutWidth = (nodesByLevel.values.maxOfOrNull { it.size } ?: 1) * nodeSpacing
-                val layoutHeight = maxLevel * levelSpacing
-                val centerX =
-                    if (layoutConfig.width > 0f) (layoutConfig.width - layoutWidth) / 2f else 0f
-                val centerY =
-                    if (layoutConfig.height > 0f) (layoutConfig.height - layoutHeight) / 2f else 0f
+                val layoutWidth = nodeSpacing * (nodesByLevel.values.maxOfOrNull { it.size } ?: 1)
+                val layoutHeight = levelSpacing * maxLevel
+                val centerX = centeringOffset(layoutConfig.width, layoutWidth)
+                val centerY = centeringOffset(layoutConfig.height, layoutHeight)
 
-                val levelWidth = nodesInLevel.size * nodeSpacing
-                val xPos = indexInLevel * nodeSpacing - levelWidth / 2f + nodeSpacing / 2f + centerX
-                val yPos = level * levelSpacing + centerY
+                val levelWidth = nodeSpacing * nodesInLevel.size
+                val xPos = nodeSpacing * indexInLevel - levelWidth / 2f + nodeSpacing / 2f + centerX
+                val yPos = levelSpacing * level + centerY
                 Pair(xPos, yPos)
             }
         }
 
-        node.copy(position = Offset(x, y))
+        node.copy(position = DpOffset(x, y))
     }
 
     return buildKuiverWithClassifiedEdges(

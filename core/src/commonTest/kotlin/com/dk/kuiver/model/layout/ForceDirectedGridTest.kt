@@ -28,7 +28,9 @@ import kotlin.test.assertTrue
 class ForceDirectedGridTest {
 
     private companion object {
-        const val TOLERANCE = 5e-4f
+        // Below the ~0.002px a single dropped pair moves a node, above the float noise the
+        // grid's summation order accumulates at the coordinate magnitudes of grown bounds
+        const val TOLERANCE = 1e-3f
     }
 
     private fun testGraph(nodeCount: Int, seed: Int = 42): Kuiver {
@@ -63,8 +65,8 @@ class ForceDirectedGridTest {
             // Above GRID_MIN_NODE_COUNT so the grid path is the one under test
             val kuiver = testGraph(nodeCount = 300)
             val config = LayoutConfig.ForceDirected(
-                width = 1600f,
-                height = 1200f,
+                width = 1600.dp,
+                height = 1200.dp,
                 iterations = iterations
             )
 
@@ -74,7 +76,8 @@ class ForceDirectedGridTest {
             grid.nodes.forEach { (id, node) ->
                 val (refX, refY) = reference.getValue(id)
                 assertTrue(
-                    abs(node.position.x - refX) < TOLERANCE && abs(node.position.y - refY) < TOLERANCE,
+                    abs(node.position.x.value - refX) < TOLERANCE &&
+                            abs(node.position.y.value - refY) < TOLERANCE,
                     "Node $id diverged from brute force after $iterations iteration(s): " +
                             "grid=(${node.position.x}, ${node.position.y}) reference=($refX, $refY)"
                 )
@@ -83,25 +86,31 @@ class ForceDirectedGridTest {
     }
 
     @Test
-    fun `large graph stays within bounds`() {
+    fun `large graph spreads beyond the canvas but stays within the grown bounds`() {
         val kuiver = testGraph(nodeCount = 500)
-        val config = LayoutConfig.ForceDirected(width = 2000f, height = 1500f)
+        val config = LayoutConfig.ForceDirected(width = 2000.dp, height = 1500.dp)
 
         val result = forceDirected(kuiver, config)
+
+        val avgNodeSize = kuiver.nodes.values
+            .map { (it.dimensions!!.width.value + it.dimensions!!.height.value) / 2f }
+            .average().toFloat()
+        val scale = forceDirectedBoundsScale(500, avgNodeSize, 2000f, 1500f)
+        assertTrue(scale > 1f, "500 nodes should need more room than a 2000x1500 canvas")
 
         assertEquals(500, result.nodes.size)
         result.nodes.values.forEach { node ->
             assertTrue(
-                node.position.x.isFinite() && node.position.y.isFinite(),
+                node.position.x.value.isFinite() && node.position.y.value.isFinite(),
                 "Node ${node.id} has a non-finite position"
             )
             assertTrue(
-                node.position.x in 0f..config.width,
-                "Node ${node.id} x=${node.position.x} outside canvas"
+                node.position.x in 0.dp..config.width * scale,
+                "Node ${node.id} x=${node.position.x} outside bounds"
             )
             assertTrue(
-                node.position.y in 0f..config.height,
-                "Node ${node.id} y=${node.position.y} outside canvas"
+                node.position.y in 0.dp..config.height * scale,
+                "Node ${node.id} y=${node.position.y} outside bounds"
             )
         }
     }
@@ -112,7 +121,7 @@ class ForceDirectedGridTest {
             KuiverNode(id = "n$i", dimensions = NodeDimensions(80f.dp, 60f.dp))
         }
         val kuiver = buildKuiverWithClassifiedEdges(nodes, emptyList())
-        val config = LayoutConfig.ForceDirected(width = 1400f, height = 1000f, iterations = 3)
+        val config = LayoutConfig.ForceDirected(width = 1400.dp, height = 1000.dp, iterations = 3)
 
         val grid = forceDirected(kuiver, config)
         val reference = bruteForceReference(kuiver, config)
@@ -120,7 +129,8 @@ class ForceDirectedGridTest {
         grid.nodes.forEach { (id, node) ->
             val (refX, refY) = reference.getValue(id)
             assertTrue(
-                abs(node.position.x - refX) < TOLERANCE && abs(node.position.y - refY) < TOLERANCE,
+                abs(node.position.x.value - refX) < TOLERANCE &&
+                        abs(node.position.y.value - refY) < TOLERANCE,
                 "Node $id diverged: grid=(${node.position.x}, ${node.position.y}) reference=($refX, $refY)"
             )
         }
@@ -129,7 +139,7 @@ class ForceDirectedGridTest {
     @Test
     fun `cancellation aborts the simulation`() {
         val kuiver = testGraph(nodeCount = 300)
-        val config = LayoutConfig.ForceDirected(width = 1600f, height = 1200f)
+        val config = LayoutConfig.ForceDirected(width = 1600.dp, height = 1200.dp)
 
         var checks = 0
         assertFailsWith<CancelledLayout> {
@@ -143,7 +153,7 @@ class ForceDirectedGridTest {
     @Test
     fun `cancellation is polled often enough to interrupt a single iteration`() {
         val kuiver = testGraph(nodeCount = 500)
-        val config = LayoutConfig.ForceDirected(width = 1600f, height = 1200f, iterations = 1)
+        val config = LayoutConfig.ForceDirected(width = 1600.dp, height = 1200.dp, iterations = 1)
 
         var checks = 0
         forceDirected(kuiver, config) { checks++ }
@@ -160,6 +170,10 @@ class ForceDirectedGridTest {
         kuiver: Kuiver,
         layoutConfig: LayoutConfig.ForceDirected
     ): Map<String, Pair<Float, Float>> {
+        val canvasWidth = layoutConfig.width.value
+        val canvasHeight = layoutConfig.height.value
+        val fallbackNodeSize = layoutConfig.nodeSize.value
+
         val nodeIds = kuiver.nodes.keys.toList()
         val n = nodeIds.size
         val idToIndex = HashMap<String, Int>(n).apply {
@@ -180,12 +194,16 @@ class ForceDirectedGridTest {
             val s = if (dims != null) {
                 (dims.width.value + dims.height.value) / 2f
             } else {
-                layoutConfig.nodeSize
+                fallbackNodeSize
             }
             sizeAvg[i] = s
             sizeSum += s
         }
-        val avgNodeSize = (sizeSum / n).takeIf { it.isFinite() } ?: layoutConfig.nodeSize
+        val avgNodeSize = (sizeSum / n).takeIf { it.isFinite() } ?: fallbackNodeSize
+
+        val boundsScale = forceDirectedBoundsScale(n, avgNodeSize, canvasWidth, canvasHeight)
+        val width = canvasWidth * boundsScale
+        val height = canvasHeight * boundsScale
 
         val edgeFrom = IntArray(kuiver.edges.size)
         val edgeTo = IntArray(kuiver.edges.size)
@@ -200,9 +218,9 @@ class ForceDirectedGridTest {
             }
         }
 
-        val centerX = layoutConfig.width / 2f
-        val centerY = layoutConfig.height / 2f
-        val initialRadius = min(layoutConfig.width, layoutConfig.height) * 0.3f
+        val centerX = width / 2f
+        val centerY = height / 2f
+        val initialRadius = min(width, height) * 0.3f
         val maxVelocity = 10f
 
         if (n == 1) {
@@ -222,8 +240,8 @@ class ForceDirectedGridTest {
         val attraction = layoutConfig.attractionStrength
         val damping = layoutConfig.damping
         val margin = avgNodeSize
-        val maxXBound = layoutConfig.width - margin
-        val maxYBound = layoutConfig.height - margin
+        val maxXBound = width - margin
+        val maxYBound = height - margin
         val iterations = layoutConfig.iterations
         val coolingStep = if (iterations > 1) (1f - 0.1f) / (iterations - 1) else 0f
 

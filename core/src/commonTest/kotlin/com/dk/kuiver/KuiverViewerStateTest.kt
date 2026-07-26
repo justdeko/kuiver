@@ -1,6 +1,7 @@
 package com.dk.kuiver
 
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.KuiverNode
@@ -16,8 +17,8 @@ class KuiverViewerStateTest {
 
     private fun wideGraph(measured: Boolean = true) = Kuiver().apply {
         val dimensions = if (measured) NodeDimensions(100.dp, 100.dp) else null
-        addNode(KuiverNode(id = "A", dimensions = dimensions, position = Offset(-350f, 0f)))
-        addNode(KuiverNode(id = "B", dimensions = dimensions, position = Offset(350f, 0f)))
+        addNode(KuiverNode(id = "A", dimensions = dimensions, position = DpOffset(-350.dp, 0.dp)))
+        addNode(KuiverNode(id = "B", dimensions = dimensions, position = DpOffset(350.dp, 0.dp)))
     }
 
     private fun stateWith(
@@ -25,9 +26,8 @@ class KuiverViewerStateTest {
         graph: Kuiver = wideGraph()
     ) = KuiverViewerState(graph).apply {
         layoutedKuiver = graph
-        canvasWidth = 1000f
-        canvasHeight = 1000f
-        viewWidth = 1000f
+        canvasWidth = 1000.dp
+        canvasHeight = 1000.dp
         config = viewerConfig
     }
 
@@ -123,7 +123,7 @@ class KuiverViewerStateTest {
         val unmeasured = wideGraph(measured = false)
         val state = stateWith(KuiverViewerConfig(), unmeasured)
 
-        state.applyInitialFit(0f, 0f)
+        state.applyInitialFit(0.dp, 0.dp)
         assertFalse(state.hasFittedInitially, "canvas has not been measured yet")
 
         state.applyInitialFit(state.canvasWidth, state.canvasHeight)
