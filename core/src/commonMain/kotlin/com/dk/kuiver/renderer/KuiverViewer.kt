@@ -38,7 +38,6 @@ import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
 import com.dk.kuiver.ui.EdgeStyle
 import com.dk.kuiver.util.calculatePositionBounds
-import kotlinx.coroutines.delay
 import kotlin.math.exp
 
 @Immutable
@@ -50,7 +49,6 @@ data class KuiverViewerConfig(
     val maxScale: Float = 5f,
     val zoomStep: Float = 1.2f,
     val panVelocity: Float = PlatformDefaults.defaultPanVelocity,
-    val fontLoadingDelayMs: Long = PlatformDefaults.defaultFontLoadingDelayMs,
     val zoomConditionDesktop: (PointerEvent) -> Boolean = { eventType ->
         eventType.keyboardModifiers.isCtrlPressed
     },
@@ -85,8 +83,8 @@ internal sealed interface EdgeRendering {
 /**
  * Kuiver viewer - Interactive viewer for directed graphs.
  *
- * Automatically measures nodes that don't have explicit dimensions
- * before rendering, ensuring optimal layout spacing.
+ * Nodes that don't have explicit dimensions are measured while they render, and the graph is laid
+ * out again whenever those measurements change.
  *
  * @param state kuiver viewer state
  * @param modifier generic modifier for the viewer
@@ -158,31 +156,6 @@ private fun KuiverViewer(
 ) {
     val anchorRegistry = remember { AnchorPositionRegistry() }
 
-    val needsMeasurement = remember(state.kuiver) {
-        state.kuiver.nodes.values.any { it.dimensions == null }
-    }
-
-    var hasInitialMeasurementCompleted by remember { mutableStateOf(false) }
-
-    if (needsMeasurement) {
-        val measured = measureNodes(
-            kuiver = state.kuiver,
-            anchorRegistry = anchorRegistry,
-            nodeContent = nodeContent
-        )
-
-        LaunchedEffect(state.kuiver) {
-            // On web platforms, add a small delay on initial measurement to ensure fonts are loaded
-            // This prevents text wrapping issues when fonts haven't finished loading
-            if (!hasInitialMeasurementCompleted && config.fontLoadingDelayMs > 0) {
-                delay(config.fontLoadingDelayMs)
-                hasInitialMeasurementCompleted = true
-            }
-            val updatedKuiver = state.kuiver.withMeasuredDimensions(measured)
-            state.updateKuiver(updatedKuiver)
-        }
-    }
-
     ViewerRenderer(
         state = state,
         modifier = modifier,
@@ -207,6 +180,8 @@ internal fun ViewerRenderer(
     val progressAnim = remember { Animatable(1f) }
     // Single progress animation for all node positions, see LayoutTransition
     val layoutTransition = remember { LayoutTransition() }
+    // Stable, so a new generation of node targets does not re-measure the node layer
+    val reportMeasured = remember(state) { state::updateMeasuredDimensions }
 
     // run before LaunchedEffect so the initial auto-fit already has config
     SideEffect { state.config = config }
@@ -426,19 +401,17 @@ internal fun ViewerRenderer(
                         )
                     }
 
-                    kuiver.nodes.values.forEach { node ->
-                        key(node.id) {
-                            RenderNode(
-                                node = node,
-                                centerX = centerX,
-                                centerY = centerY,
-                                targets = nodeTargets,
-                                transition = layoutTransition,
-                                skipAnimation = skipInitialAnimation,
-                                nodeContent = nodeContent
-                            )
-                        }
-                    }
+                    NodeLayer(
+                        kuiver = kuiver,
+                        source = state.kuiver,
+                        centerX = centerX,
+                        centerY = centerY,
+                        targets = nodeTargets,
+                        transition = layoutTransition,
+                        skipAnimation = skipInitialAnimation,
+                        onMeasured = reportMeasured,
+                        nodeContent = nodeContent
+                    )
                 }
             }
         }

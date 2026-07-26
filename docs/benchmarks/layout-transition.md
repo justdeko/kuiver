@@ -71,3 +71,27 @@ draws every edge from one canvas. Apple M2 Pro, macOS 26.5.2, JDK 23.0.2, Compos
 The batched layer takes 1.8 ms off the 5.0 ms frame for the same drawing. It removes composition
 and layout of 300 edge composables per frame, 11400 recompositions over the transition. The draw
 itself is what remains, and both modes pay it.
+
+## 2026-07-26, measurement merged into the render pass
+
+Nodes are subcomposed, measured and placed by one `SubcomposeLayout` instead of being measured in a
+pass of their own and composed again to render. Apple M2 Pro, macOS 26.5.2, JDK 23.0.2, Compose
+Multiplatform 1.11.1, median of 2 runs.
+
+| build  | scenario             | median  | p90     | total  | node recomps | edge recomps |
+|--------|----------------------|---------|---------|--------|--------------|--------------|
+| before | 300 nodes, 300 edges | 2010 us | 2481 us | 83 ms  | 300          | 11400        |
+| after  | 300 nodes, 300 edges | 1922 us | 2425 us | 81 ms  | 300          | 11400        |
+| before | 300 nodes, no edges  | 507 us  | 721 us  | 22 ms  | 300          | 0            |
+| after  | 300 nodes, no edges  | 510 us  | 690 us  | 23 ms  | 300          | 0            |
+| before | 300 nodes, built-in  | 5075 us | 5796 us | 210 ms | 300          | 11400        |
+| after  | 300 nodes, built-in  | 4736 us | 5567 us | 202 ms | 300          | 11400        |
+| before | 300 nodes, batched   | 3208 us | 3828 us | 132 ms | 300          | 0            |
+| after  | 300 nodes, batched   | 3364 us | 3779 us | 138 ms | 300          | 0            |
+
+Transition frames are unchanged, within the noise of this machine: positions are still read in the
+placement block only, so a frame of a transition re-places the nodes without recomposing or
+re-measuring them. What this change removes is on the first frame, which the benchmark does not
+time. Every node used to be composed three times before it settled - once to measure, twice to
+render - and is now composed twice, one per layout generation that reaches the renderer. See
+`NodeMeasurementTest.node content is composed once per layout generation`.

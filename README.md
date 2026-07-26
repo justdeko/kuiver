@@ -274,6 +274,11 @@ buildKuiver {
 }
 ```
 
+Auto-measured nodes are measured while they render, with unbounded constraints, so a node is as
+large as its content wants to be. The measurement is repeated whenever the content changes size, and
+the graph is laid out again with the new sizes, so nodes that grow or shrink at runtime keep their
+spacing. Nodes with explicit dimensions are held to them, and their content is given that much room.
+
 ### Edge Anchor Points
 
 By default, edges point and connect to the node center (with consideration of the node boundaries).
@@ -563,10 +568,13 @@ The library implements several web-specific adjustments to handle browser limita
 - **Reduced Pan Velocity**: Default pan velocity is `4f` (vs `30f` on native platforms) to
   compensate for higher scroll sensitivity in browsers
     - See: `core/src/wasmJsMain/kotlin/com/dk/kuiver/renderer/PlatformDefaults.wasmJs.kt:4`
-- **Font Loading Delay**: 100ms delay on initial node measurement to prevent text wrapping issues
-  when browser fonts haven't finished loading
-    - See: `core/src/wasmJsMain/kotlin/com/dk/kuiver/renderer/PlatformDefaults.wasmJs.kt:5`
-    - This delay only occurs once on initial render
+- **Late Fonts**: a font that finishes loading after the first frame re-measures the text in your
+  nodes. Kuiver measures nodes as it renders them and lays the graph out again when those
+  measurements change, so the nodes end up correctly sized either way. This only arises if you
+  bundle your own font: the default font family is compiled into the Skia binary and needs no fetch.
+  To avoid the one-time reflow when you do bundle one, preload it before showing the viewer, with
+  `preloadFont` from `compose.components.resources` (web only) and a
+  `<link rel="preload" as="fetch">` in your `index.html`
 
 ### General Limitations
 

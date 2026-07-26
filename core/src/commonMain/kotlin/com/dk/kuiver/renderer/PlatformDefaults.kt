@@ -9,10 +9,4 @@ internal expect object PlatformDefaults {
      * Web platforms use a lower value to compensate for higher sensitivity.
      */
     val defaultPanVelocity: Float
-
-    /**
-     * Default font loading delay in milliseconds.
-     * Web platforms use a delay to ensure fonts are loaded before measurement.
-     */
-    val defaultFontLoadingDelayMs: Long
 }

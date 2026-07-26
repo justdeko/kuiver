@@ -12,6 +12,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.geometry.Offset
 import com.dk.kuiver.model.Kuiver
+import com.dk.kuiver.model.NodeDimensions
 import com.dk.kuiver.model.kuiverSaver
 import com.dk.kuiver.model.layout.LayoutConfig
 import com.dk.kuiver.model.layout.layout
@@ -67,6 +68,13 @@ class KuiverViewerState internal constructor(
 
     internal var viewWidth: Float by mutableFloatStateOf(0f)
 
+    /**
+     * Renderer-measured sizes of the nodes without explicit dimensions. Applied on top of
+     * [kuiver] before layout, so [kuiver] stays the caller's graph.
+     */
+    internal var measuredDimensions: Map<String, NodeDimensions> by mutableStateOf(emptyMap())
+        private set
+
     internal var config: KuiverViewerConfig = KuiverViewerConfig()
 
     private var animationVersion = 0
@@ -78,6 +86,16 @@ class KuiverViewerState internal constructor(
 
     fun updateKuiver(newKuiver: Kuiver) {
         kuiver = newKuiver
+    }
+
+    /**
+     * Adopts node sizes from the renderer. Called from the measure phase, so it writes nothing when
+     * the sizes are unchanged.
+     *
+     * @param dimensions sizes of all auto-sized nodes, keyed by node id
+     */
+    internal fun updateMeasuredDimensions(dimensions: Map<String, NodeDimensions>) {
+        if (dimensions != measuredDimensions) measuredDimensions = dimensions
     }
 
     fun updateContentOffset(newOffset: Offset) {
@@ -204,13 +222,20 @@ fun rememberSaveableKuiverViewerState(
 @Composable
 private fun setupLayout(state: KuiverViewerState, layoutConfig: LayoutConfig) {
     // Capture at composition time so the effect body uses the snapshot values that
-    // triggered this composition, not values written during the layout phase (e.g.
-    // canvasWidth set by onSizeChanged). Without this, Frame 1's effect would
-    // see canvasWidth > 0 and run layout with the still-unmeasured kuiver.
+    // triggered this composition, not values written during the measure and layout
+    // phases (canvasWidth from onSizeChanged, measuredDimensions from the node layer).
+    // Without this, Frame 1's effect would see canvasWidth > 0 and run layout with the
+    // still-unmeasured kuiver.
     val kuiver = state.kuiver
+    val measuredDimensions = state.measuredDimensions
     val canvasWidth = state.canvasWidth
     val canvasHeight = state.canvasHeight
-    LaunchedEffect(kuiver, layoutConfig, canvasWidth, canvasHeight) {
+    LaunchedEffect(kuiver, measuredDimensions, layoutConfig, canvasWidth, canvasHeight) {
+        val sizedKuiver = if (measuredDimensions.isEmpty()) {
+            kuiver
+        } else {
+            kuiver.withMeasuredDimensions(measuredDimensions)
+        }
         val laid = if (canvasWidth > 0f && canvasHeight > 0f) {
             val configWithDimensions = when (layoutConfig) {
                 is LayoutConfig.Hierarchical -> layoutConfig.copy(
@@ -232,10 +257,10 @@ private fun setupLayout(state: KuiverViewerState, layoutConfig: LayoutConfig) {
                 // The layout loop never suspends, so a superseded layout would otherwise
                 // run to completion before its replacement starts
                 val layoutContext = coroutineContext
-                layout(kuiver, configWithDimensions) { layoutContext.ensureActive() }
+                layout(sizedKuiver, configWithDimensions) { layoutContext.ensureActive() }
             }
         } else {
-            kuiver
+            sizedKuiver
         }
         state.layoutedKuiver = laid
         state.applyInitialFit(canvasWidth, canvasHeight)
