@@ -10,7 +10,14 @@ import kuiver.sample.composeapp.generated.resources.kuiver_icon
 import org.jetbrains.compose.resources.painterResource
 import java.awt.Dimension
 
-fun main() = application {
+fun main() {
+    // TODO remove after 1.12.x: avoids the NPE in desktop a11y when a focused node is removed
+    // (CMP-10363, https://github.com/JetBrains/compose-multiplatform-core/pull/3158)
+    System.setProperty("compose.accessibility.enable", "false")
+    runApplication()
+}
+
+private fun runApplication() = application {
     Window(
         onCloseRequest = ::exitApplication,
         title = "Kuiver Sample",
