@@ -17,6 +17,9 @@ import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
 import com.dk.kuiver.model.NodeDimensions
+import com.dk.kuiver.ui.DefaultArrowDrawer
+import com.dk.kuiver.ui.EdgeStyle
+import com.dk.kuiver.ui.StyledEdgeContent
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -25,7 +28,22 @@ import kotlin.random.Random
 internal const val NODE_WIDTH_DP = 80f
 internal const val NODE_HEIGHT_DP = 40f
 
-internal class ViewerScene(initial: Kuiver) {
+/** How a scene renders its edges, one benchmark scenario each. */
+internal enum class EdgeMode {
+    /** A full viewport canvas per edge. */
+    CUSTOM_CANVAS,
+
+    /** The built-in composable per edge. */
+    BUILT_IN,
+
+    /** All edges from one canvas. */
+    BATCHED
+}
+
+internal class ViewerScene(
+    initial: Kuiver,
+    private val edgeMode: EdgeMode = EdgeMode.CUSTOM_CANVAS
+) {
     val state = KuiverViewerState(initial).apply {
         layoutedKuiver = initial
         hasFittedInitially = true
@@ -42,6 +60,12 @@ internal class ViewerScene(initial: Kuiver) {
     // Start point each edge was last drawn from in root coordinates
     val edgeStarts = mutableMapOf<String, Offset>()
 
+    // End point each edge was last drawn to in root coordinates
+    val edgeEnds = mutableMapOf<String, Offset>()
+
+    // Arrow tip the batched layer drew, in root coordinates
+    val edgeArrowTips = mutableMapOf<String, Offset>()
+
     // Half the placed size of a node in px
     var nodeHalfExtent = Offset.Zero
         private set
@@ -49,6 +73,13 @@ internal class ViewerScene(initial: Kuiver) {
     fun resetCounters() {
         nodeCompositions = 0
         edgeCompositions = 0
+    }
+
+    private fun recordEdge(edge: KuiverEdge, from: Offset, to: Offset) {
+        edgeCompositions++
+        val key = "${edge.fromId}->${edge.toId}"
+        edgeStarts[key] = from
+        edgeEnds[key] = to
     }
 
     @Composable
@@ -72,10 +103,25 @@ internal class ViewerScene(initial: Kuiver) {
                         .background(Color.Gray)
                 )
             },
-            edgeContent = { edge, from, to ->
-                edgeCompositions++
-                edgeStarts["${edge.fromId}->${edge.toId}"] = from
-                Canvas(Modifier.fillMaxSize()) { drawLine(Color.Black, from, to) }
+            edges = when (edgeMode) {
+                EdgeMode.BATCHED -> EdgeRendering.Batched { edge ->
+                    EdgeStyle(
+                        arrowDrawer = { arrowTip, direction, color ->
+                            edgeArrowTips["${edge.fromId}->${edge.toId}"] = arrowTip
+                            DefaultArrowDrawer(arrowTip, direction, color)
+                        }
+                    )
+                }
+
+                EdgeMode.BUILT_IN -> EdgeRendering.PerEdge { edge, from, to ->
+                    recordEdge(edge, from, to)
+                    StyledEdgeContent(edge = edge, from = from, to = to)
+                }
+
+                EdgeMode.CUSTOM_CANVAS -> EdgeRendering.PerEdge { edge, from, to ->
+                    recordEdge(edge, from, to)
+                    Canvas(Modifier.fillMaxSize()) { drawLine(Color.Black, from, to) }
+                }
             }
         )
     }

@@ -65,6 +65,7 @@ import com.dk.kuiver.model.layout.LayoutDirection
 import com.dk.kuiver.rememberSaveableKuiverViewerState
 import com.dk.kuiver.renderer.KuiverViewer
 import com.dk.kuiver.renderer.KuiverViewerConfig
+import com.dk.kuiver.ui.EdgeStyle
 import com.dk.kuiver.ui.StyledEdgeContent
 import kotlin.random.Random
 
@@ -181,6 +182,8 @@ private fun StressTestControlsCard(
     edgeCount: Int,
     showDebugBounds: Boolean,
     onToggleDebugBounds: () -> Unit,
+    batchedEdges: Boolean,
+    onToggleBatchedEdges: () -> Unit,
     onRegenerate: () -> Unit,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -211,6 +214,8 @@ private fun StressTestControlsCard(
             StressTestLayoutRow(
                 selectedLayoutAlgorithm = selectedLayoutAlgorithm,
                 onLayoutAlgorithmSelected = onLayoutAlgorithmSelected,
+                batchedEdges = batchedEdges,
+                onToggleBatchedEdges = onToggleBatchedEdges,
             )
         }
     }
@@ -298,6 +303,8 @@ private fun StressTestPresetRow(
 private fun StressTestLayoutRow(
     selectedLayoutAlgorithm: LayoutAlgorithm,
     onLayoutAlgorithmSelected: (LayoutAlgorithm) -> Unit,
+    batchedEdges: Boolean,
+    onToggleBatchedEdges: () -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -334,6 +341,13 @@ private fun StressTestLayoutRow(
                     )
                 }
             }
+        }
+        Spacer(Modifier.width(12.dp))
+        ToggleButton(
+            checked = batchedEdges,
+            onCheckedChange = { onToggleBatchedEdges() },
+        ) {
+            Text("Batched edges", fontSize = 12.sp)
         }
     }
 }
@@ -407,6 +421,7 @@ fun StressTestScreen(onNavigateBack: () -> Unit) {
     var selectedLayoutAlgorithm by rememberSaveable { mutableStateOf(LayoutAlgorithm.FORCE_DIRECTED) }
     var seed by rememberSaveable { mutableStateOf(0L) }
     var showDebugBounds by rememberSaveable { mutableStateOf(false) }
+    var batchedEdges by rememberSaveable { mutableStateOf(false) }
     var toolbarExpanded by rememberSaveable { mutableStateOf(false) }
     var overlayContentHeight by rememberSaveable { mutableStateOf(0) }
 
@@ -439,29 +454,44 @@ fun StressTestScreen(onNavigateBack: () -> Unit) {
             .background(MaterialTheme.colorScheme.background)
             .systemBarsPadding()
     ) {
-        KuiverViewer(
-            state = kuiverViewerState,
-            config = KuiverViewerConfig(
-                showDebugBounds = showDebugBounds,
-                animateInitialPlacement = false,
-            ),
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface),
-            nodeContent = { node ->
-                val data = nodeDataMap[node.id] ?: return@KuiverViewer
-                StressNodeContent(data)
-            },
-            edgeContent = { edge, from, to ->
-                StyledEdgeContent(
-                    edge = edge,
-                    from = from,
-                    to = to,
-                    baseColor = MaterialTheme.colorScheme.outline,
-                    backEdgeColor = MaterialTheme.colorScheme.error,
-                )
-            },
+        val viewerConfig = KuiverViewerConfig(
+            showDebugBounds = showDebugBounds,
+            animateInitialPlacement = false,
         )
+        val viewerModifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surface)
+        val nodeContent: @Composable (KuiverNode) -> Unit = { node ->
+            nodeDataMap[node.id]?.let { StressNodeContent(it) }
+        }
+        val baseColor = MaterialTheme.colorScheme.outline
+        val backEdgeColor = MaterialTheme.colorScheme.error
+
+        if (batchedEdges) {
+            KuiverViewer(
+                state = kuiverViewerState,
+                config = viewerConfig,
+                modifier = viewerModifier,
+                nodeContent = nodeContent,
+                edgeStyle = { edge -> EdgeStyle.styled(edge, baseColor, backEdgeColor) },
+            )
+        } else {
+            KuiverViewer(
+                state = kuiverViewerState,
+                config = viewerConfig,
+                modifier = viewerModifier,
+                nodeContent = nodeContent,
+                edgeContent = { edge, from, to ->
+                    StyledEdgeContent(
+                        edge = edge,
+                        from = from,
+                        to = to,
+                        baseColor = baseColor,
+                        backEdgeColor = backEdgeColor,
+                    )
+                },
+            )
+        }
 
         Column(modifier = Modifier.onSizeChanged { overlayContentHeight = it.height }) {
             StressTestControlsCard(
@@ -473,6 +503,8 @@ fun StressTestScreen(onNavigateBack: () -> Unit) {
                 edgeCount = kuiverViewerState.kuiver.edges.size,
                 showDebugBounds = showDebugBounds,
                 onToggleDebugBounds = { showDebugBounds = !showDebugBounds },
+                batchedEdges = batchedEdges,
+                onToggleBatchedEdges = { batchedEdges = !batchedEdges },
                 onRegenerate = { seed++ },
                 onNavigateBack = onNavigateBack,
             )

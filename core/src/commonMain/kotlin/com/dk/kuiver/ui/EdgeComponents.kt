@@ -1,16 +1,14 @@
 package com.dk.kuiver.ui
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import com.dk.kuiver.model.EdgeType
 import com.dk.kuiver.model.KuiverEdge
 
+/** An edge drawn on a canvas bounded to its geometry, see [EdgeCanvas]. */
 @Composable
 fun EdgeContent(
     from: Offset,
@@ -26,34 +24,42 @@ fun EdgeContent(
     enableCurve: Boolean = false,
     arrowDrawer: ArrowDrawer = DefaultArrowDrawer
 ) {
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        if (isSelfLoop) {
-            drawSelfLoopEdge(
-                from = from,
-                to = to,
-                color = color,
-                strokeWidth = strokeWidth,
-                showArrow = showArrow,
-                dashed = dashed,
-                dashLength = dashLength,
-                gapLength = gapLength,
-                loopRadius = loopRadius,
-                arrowDrawer = arrowDrawer
-            )
-        } else {
-            drawEdge(
-                from = from,
-                to = to,
-                color = color,
-                strokeWidth = strokeWidth,
-                showArrow = showArrow,
-                dashed = dashed,
-                dashLength = dashLength,
-                gapLength = gapLength,
-                enableCurve = enableCurve,
-                arrowDrawer = arrowDrawer
-            )
-        }
+    val edgePath =
+        rememberEdgePath(from, to, isSelfLoop, enableCurve, loopRadius, showArrow, strokeWidth)
+
+    EdgePathCanvas(
+        path = edgePath,
+        color = color,
+        strokeWidth = strokeWidth,
+        showArrow = showArrow,
+        dashed = dashed,
+        dashLength = dashLength,
+        gapLength = gapLength,
+        arrowDrawer = arrowDrawer
+    )
+}
+
+@Composable
+private fun rememberEdgePath(
+    from: Offset,
+    to: Offset,
+    isSelfLoop: Boolean,
+    enableCurve: Boolean,
+    loopRadius: Float,
+    showArrow: Boolean,
+    strokeWidth: Float
+): EdgePath = remember(from, to, isSelfLoop, enableCurve, loopRadius, showArrow, strokeWidth) {
+    when {
+        isSelfLoop -> EdgePathFactory.createSelfLoopPath(
+            from,
+            to,
+            loopRadius,
+            showArrow,
+            strokeWidth
+        )
+
+        enableCurve -> EdgePathFactory.createCurvedPath(from, to, showArrow, strokeWidth)
+        else -> EdgePathFactory.createStraightPath(from, to, showArrow, strokeWidth)
     }
 }
 
@@ -116,39 +122,72 @@ fun EdgeContentWithLabel(
 
     val offset = labelPlacement?.offset ?: labelOffset ?: 0.5f
 
-    val edgePath = remember(from, to, isSelfLoop, enableCurve, loopRadius, showArrow, strokeWidth) {
-        when {
-            isSelfLoop -> EdgePathFactory.createSelfLoopPath(from, to, loopRadius, showArrow, strokeWidth)
-            enableCurve -> EdgePathFactory.createCurvedPath(from, to, showArrow, strokeWidth)
-            else -> EdgePathFactory.createStraightPath(from, to, showArrow, strokeWidth)
-        }
-    }
+    val edgePath =
+        rememberEdgePath(from, to, isSelfLoop, enableCurve, loopRadius, showArrow, strokeWidth)
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        EdgeContent(
-            from = from,
-            to = to,
+    LabeledEdge(
+        path = edgePath,
+        color = color,
+        strokeWidth = strokeWidth,
+        showArrow = showArrow,
+        dashed = dashed,
+        dashLength = dashLength,
+        gapLength = gapLength,
+        arrowDrawer = arrowDrawer,
+        label = label,
+        labelOffset = offset,
+        labelStyle = labelStyle,
+        labelContent = labelContent,
+        minEdgeLengthForLabel = minEdgeLengthForLabel
+    )
+}
+
+@Composable
+internal fun LabeledEdge(
+    path: EdgePath,
+    color: Color,
+    strokeWidth: Float,
+    showArrow: Boolean,
+    dashed: Boolean,
+    dashLength: Float,
+    gapLength: Float,
+    arrowDrawer: ArrowDrawer,
+    label: String?,
+    labelOffset: Float,
+    labelStyle: EdgeLabelStyle,
+    labelContent: (@Composable (String) -> Unit)?,
+    minEdgeLengthForLabel: Float
+) {
+    val edge = @Composable {
+        EdgePathCanvas(
+            path = path,
             color = color,
             strokeWidth = strokeWidth,
             showArrow = showArrow,
             dashed = dashed,
             dashLength = dashLength,
             gapLength = gapLength,
-            isSelfLoop = isSelfLoop,
-            loopRadius = loopRadius,
-            enableCurve = enableCurve,
             arrowDrawer = arrowDrawer
         )
+    }
 
-        if (label != null && label.isNotBlank()) {
-            val labelPosition = remember(edgePath, offset, minEdgeLengthForLabel) {
-                edgePath.calculateLabelPosition(offset, minEdgeLengthForLabel)
-            }
+    if (label.isNullOrBlank()) {
+        edge()
+        return
+    }
 
-            labelPosition?.let { pos ->
-                EdgeLabel(label, pos, labelStyle, labelContent)
-            }
-        }
+    val labelPosition = remember(path, labelOffset, minEdgeLengthForLabel) {
+        path.calculateLabelPosition(labelOffset, minEdgeLengthForLabel)
+    }
+
+    if (labelPosition == null) {
+        edge()
+        return
+    }
+
+    Box {
+        edge()
+        EdgeLabel(label, labelPosition, labelStyle, labelContent)
     }
 }
 

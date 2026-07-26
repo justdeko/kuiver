@@ -28,47 +28,70 @@ internal fun RenderEdge(
     skipAnimation: Boolean,
     edgeContent: @Composable (KuiverEdge, Offset, Offset) -> Unit
 ) {
-    val density = LocalDensity.current
-    val isSelfLoop = edge.fromId == edge.toId
+    // edgeContent takes endpoints by value so a moving edge has to resolve them in composition
+    val (edgeStart, edgeEnd) = LocalDensity.current.resolveEdgeEndpoints(
+        edge = edge,
+        fromNode = fromNode,
+        toNode = toNode,
+        centerX = centerX,
+        centerY = centerY,
+        targets = targets,
+        transition = transition,
+        anchorRegistry = anchorRegistry,
+        skipAnimation = skipAnimation
+    )
 
-    with(density) {
-        // edgeContent takes endpoints by value so a moving edge has to resolve them in composition
-        val fromPosition = transition.positionOf(edge.fromId, targets, skipAnimation)
-        val toPosition = transition.positionOf(edge.toId, targets, skipAnimation)
+    edgeContent(edge, edgeStart, edgeEnd)
+}
 
-        val fromCenter = Offset(
-            centerX.toPx() + fromPosition.x.dp.toPx(),
-            centerY.toPx() + fromPosition.y.dp.toPx()
-        )
-        val toCenter = Offset(
-            centerX.toPx() + toPosition.x.dp.toPx(),
-            centerY.toPx() + toPosition.y.dp.toPx()
-        )
+/**
+ * Reads node positions from [transition], so a caller in the draw or layout phase keeps a moving
+ * edge out of composition.
+ */
+internal fun Density.resolveEdgeEndpoints(
+    edge: KuiverEdge,
+    fromNode: KuiverNode,
+    toNode: KuiverNode,
+    centerX: Dp,
+    centerY: Dp,
+    targets: NodePositions,
+    transition: LayoutTransition,
+    anchorRegistry: AnchorPositionRegistry,
+    skipAnimation: Boolean
+): Pair<Offset, Offset> {
+    val fromPosition = transition.positionOf(edge.fromId, targets, skipAnimation)
+    val toPosition = transition.positionOf(edge.toId, targets, skipAnimation)
 
-        // Get node dimensions (convert from DP to pixels, use default if dimensions not set)
-        val defaultSize = DEFAULT_NODE_SIZE_DP.toPx()
-        val fromNodeWidth = fromNode.dimensions?.width?.toPx() ?: defaultSize
-        val fromNodeHeight = fromNode.dimensions?.height?.toPx() ?: defaultSize
-        val toNodeWidth = toNode.dimensions?.width?.toPx() ?: defaultSize
-        val toNodeHeight = toNode.dimensions?.height?.toPx() ?: defaultSize
+    val fromCenter = Offset(
+        centerX.toPx() + fromPosition.x.dp.toPx(),
+        centerY.toPx() + fromPosition.y.dp.toPx()
+    )
+    val toCenter = Offset(
+        centerX.toPx() + toPosition.x.dp.toPx(),
+        centerY.toPx() + toPosition.y.dp.toPx()
+    )
 
-        val (edgeStart, edgeEnd) = calculateEdgeEndpointsWithAnchors(
-            edge = edge,
-            fromNode = fromNode,
-            toNode = toNode,
-            fromCenter = fromCenter,
-            toCenter = toCenter,
-            fromNodeWidth = fromNodeWidth,
-            fromNodeHeight = fromNodeHeight,
-            toNodeWidth = toNodeWidth,
-            toNodeHeight = toNodeHeight,
-            anchorRegistry = anchorRegistry,
-            isSelfLoop = isSelfLoop,
-            density = this@with
-        )
+    // Get node dimensions (convert from DP to pixels, use default if dimensions not set)
+    val defaultSize = DEFAULT_NODE_SIZE_DP.toPx()
+    val fromNodeWidth = fromNode.dimensions?.width?.toPx() ?: defaultSize
+    val fromNodeHeight = fromNode.dimensions?.height?.toPx() ?: defaultSize
+    val toNodeWidth = toNode.dimensions?.width?.toPx() ?: defaultSize
+    val toNodeHeight = toNode.dimensions?.height?.toPx() ?: defaultSize
 
-        edgeContent(edge, edgeStart, edgeEnd)
-    }
+    return calculateEdgeEndpointsWithAnchors(
+        edge = edge,
+        fromNode = fromNode,
+        toNode = toNode,
+        fromCenter = fromCenter,
+        toCenter = toCenter,
+        fromNodeWidth = fromNodeWidth,
+        fromNodeHeight = fromNodeHeight,
+        toNodeWidth = toNodeWidth,
+        toNodeHeight = toNodeHeight,
+        anchorRegistry = anchorRegistry,
+        isSelfLoop = edge.fromId == edge.toId,
+        density = this
+    )
 }
 
 /**

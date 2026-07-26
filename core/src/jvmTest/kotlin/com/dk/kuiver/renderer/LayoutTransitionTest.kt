@@ -1,5 +1,6 @@
 package com.dk.kuiver.renderer
 
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.v2.runComposeUiTest
@@ -96,6 +97,40 @@ class LayoutTransitionTest {
             },
             "expected the interrupted transition to keep animating"
         )
+    }
+
+    @Test
+    fun batchedEdgesDrawWhereTheEdgeComposablesDo() {
+        // Endpoints resolved in the draw phase against the same math run in composition
+        val graph = ringGraph(NODE_COUNT, withEdges = true, seed = 1)
+
+        val composed = mutableMapOf<String, Offset>()
+        runComposeUiTest {
+            val scene = ViewerScene(graph, EdgeMode.BUILT_IN)
+            mainClock.autoAdvance = false
+            setContent { scene.Content() }
+            settle(scene)
+            composed.putAll(scene.edgeEnds)
+        }
+
+        val drawn = mutableMapOf<String, Offset>()
+        runComposeUiTest {
+            val scene = ViewerScene(graph, EdgeMode.BATCHED)
+            mainClock.autoAdvance = false
+            setContent { scene.Content() }
+            settle(scene)
+            drawn.putAll(scene.edgeArrowTips)
+        }
+
+        assertTrue(composed.isNotEmpty(), "no edges were composed")
+        assertEquals(composed.keys, drawn.keys, "batched layer drew a different set of edges")
+        composed.forEach { (edgeKey, end) ->
+            val distance = (drawn.getValue(edgeKey) - end).getDistance()
+            assertTrue(
+                distance <= TOLERANCE_PX,
+                "batched edge $edgeKey ended $distance px away from the composed edge"
+            )
+        }
     }
 
     private fun ComposeUiTest.settle(scene: ViewerScene) {

@@ -154,11 +154,12 @@ edgeContent = { edge, from, to ->
 
 // Custom edge rendering
 edgeContent = { edge, from, to ->
-    Canvas(modifier = Modifier.fillMaxSize()) {
+    val path = remember(from, to) { EdgePathFactory.createStraightPath(from, to) }
+    EdgeCanvas(remember(path) { path.boundingRect() }) {
         drawLine(
             color = Color.Blue,
-            start = from,
-            end = to,
+            start = path.from,
+            end = path.pathEndpoint,
             strokeWidth = 2.dp.toPx()
         )
         // Draw custom arrows, labels, etc.
@@ -203,6 +204,40 @@ edgeContent = { edge, from, to ->
 
 `StyledEdgeContent` also accepts the same label parameters, so you can combine automatic
 edge styling with labels in one call.
+
+### Batched Edges (Large Graphs)
+
+Each edge composable is a layout node to compose, measure and draw, and every edge recomposes on
+every frame of a layout animation to pick up its new end points.
+
+Pass `edgeStyle` instead of `edgeContent` to draw the whole edge set from one canvas, with
+end points resolved in the draw phase:
+
+```kotlin
+KuiverViewer(
+    state = viewerState,
+    nodeContent = { node -> /* ... */ },
+    edgeStyle = { edge ->
+        EdgeStyle.styled(edge, baseColor = Color.Gray)      // the StyledEdgeContent look
+    }
+)
+```
+
+`EdgeStyle` has the same parameters as the edge composables:
+
+```kotlin
+edgeStyle = { edge ->
+    EdgeStyle(
+        color = if (edge.type == EdgeType.BACK) Color.Red else Color.Gray,
+        strokeWidth = 2f,
+        dashed = edge.type == EdgeType.BACK,
+        shape = EdgeShape.ORTHOGONAL // AUTO, STRAIGHT, CURVED, ORTHOGONAL, RIGHT_ANGLE
+    )
+}
+```
+
+Edges are values rather than composables here, so they cannot hold composable content. No edge
+labels in this mode.
 
 ### Custom Arrow Drawing
 
@@ -537,7 +572,8 @@ The library implements several web-specific adjustments to handle browser limita
 
 - **Multiple Edges**: The library does not currently support multiple edges between the same pair of
   nodes
-- **Large Graphs**: Performance with graphs >100 nodes has not been extensively tested
+- **Large Graphs**: Performance with graphs >100 nodes has not been extensively tested. See
+  [Batched Edges](#batched-edges-large-graphs) for the edge rendering mode meant for them
 
 ### API Stability
 

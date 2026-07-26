@@ -49,7 +49,12 @@ internal fun DrawScope.drawCurvedEdgePath(
 ) {
     val curvePath = Path().apply {
         moveTo(path.from.x, path.from.y)
-        quadraticTo(path.controlPoint.x, path.controlPoint.y, path.pathEndpoint.x, path.pathEndpoint.y)
+        quadraticTo(
+            path.controlPoint.x,
+            path.controlPoint.y,
+            path.pathEndpoint.x,
+            path.pathEndpoint.y
+        )
     }
 
     drawPath(
@@ -86,7 +91,12 @@ internal fun DrawScope.drawSelfLoopEdgePath(
 ) {
     val loopPath = Path().apply {
         moveTo(path.from.x, path.from.y)
-        quadraticTo(path.controlPoint.x, path.controlPoint.y, path.pathEndpoint.x, path.pathEndpoint.y)
+        quadraticTo(
+            path.controlPoint.x,
+            path.controlPoint.y,
+            path.pathEndpoint.x,
+            path.pathEndpoint.y
+        )
     }
 
     drawPath(
@@ -188,71 +198,75 @@ internal fun DrawScope.drawRightAngleEdgePath(
     }
 }
 
-internal fun DrawScope.drawEdge(
-    from: Offset,
-    to: Offset,
+internal fun DrawScope.drawEdgePath(
+    path: EdgePath,
     color: Color,
     strokeWidth: Float,
     showArrow: Boolean,
     dashed: Boolean,
     dashLength: Float,
     gapLength: Float,
-    enableCurve: Boolean,
     arrowDrawer: ArrowDrawer
 ) {
-    if (enableCurve) {
-        val edgePath = EdgePathFactory.createCurvedPath(from, to, showArrow, strokeWidth)
-        drawCurvedEdgePath(edgePath, color, strokeWidth, showArrow, dashed, dashLength, gapLength, arrowDrawer)
-    } else {
-        val edgePath = EdgePathFactory.createStraightPath(from, to, showArrow, strokeWidth)
-        drawStraightEdgePath(edgePath, color, strokeWidth, showArrow, dashed, dashLength, gapLength, arrowDrawer)
+    when (path) {
+        is EdgePath.Straight ->
+            drawStraightEdgePath(
+                path = path,
+                color = color,
+                strokeWidth = strokeWidth,
+                showArrow = showArrow,
+                dashed = dashed,
+                dashLength = dashLength,
+                gapLength = gapLength,
+                arrowDrawer = arrowDrawer
+            )
+
+        is EdgePath.Curved ->
+            drawCurvedEdgePath(
+                path = path,
+                color = color,
+                strokeWidth = strokeWidth,
+                showArrow = showArrow,
+                dashed = dashed,
+                dashLength = dashLength,
+                gapLength = gapLength,
+                arrowDrawer = arrowDrawer
+            )
+
+        is EdgePath.SelfLoop ->
+            drawSelfLoopEdgePath(
+                path = path,
+                color = color,
+                strokeWidth = strokeWidth,
+                showArrow = showArrow,
+                dashed = dashed,
+                dashLength = dashLength,
+                gapLength = gapLength,
+                arrowDrawer = arrowDrawer
+            )
+
+        is EdgePath.Orthogonal ->
+            drawOrthogonalEdgePath(
+                path = path,
+                color = color,
+                strokeWidth = strokeWidth,
+                showArrow = showArrow,
+                dashed = dashed,
+                dashLength = dashLength,
+                gapLength = gapLength,
+                arrowDrawer = arrowDrawer
+            )
+
+        is EdgePath.RightAngle ->
+            drawRightAngleEdgePath(
+                path = path,
+                color = color,
+                strokeWidth = strokeWidth,
+                showArrow = showArrow,
+                dashed = dashed,
+                dashLength = dashLength,
+                gapLength = gapLength,
+                arrowDrawer = arrowDrawer
+            )
     }
-}
-
-internal fun DrawScope.drawSelfLoopEdge(
-    from: Offset,
-    to: Offset,
-    color: Color,
-    strokeWidth: Float,
-    showArrow: Boolean,
-    dashed: Boolean,
-    dashLength: Float,
-    gapLength: Float,
-    loopRadius: Float,
-    arrowDrawer: ArrowDrawer
-) {
-    val path = EdgePathFactory.createSelfLoopPath(from, to, loopRadius, showArrow, strokeWidth)
-    drawSelfLoopEdgePath(path, color, strokeWidth, showArrow, dashed, dashLength, gapLength, arrowDrawer)
-}
-
-internal fun DrawScope.drawOrthogonalEdge(
-    from: Offset,
-    to: Offset,
-    color: Color,
-    strokeWidth: Float,
-    showArrow: Boolean,
-    dashed: Boolean,
-    dashLength: Float,
-    gapLength: Float,
-    curveFactor: Float,
-    arrowDrawer: ArrowDrawer
-) {
-    val path = EdgePathFactory.createOrthogonalPath(from, to, curveFactor, showArrow, strokeWidth)
-    drawOrthogonalEdgePath(path, color, strokeWidth, showArrow, dashed, dashLength, gapLength, arrowDrawer)
-}
-
-internal fun DrawScope.drawRightAngleEdge(
-    from: Offset,
-    to: Offset,
-    color: Color,
-    strokeWidth: Float,
-    showArrow: Boolean,
-    dashed: Boolean,
-    dashLength: Float,
-    gapLength: Float,
-    routing: RightAngleRouting,
-    arrowDrawer: ArrowDrawer
-) {
-    val path = EdgePathFactory.createRightAnglePath(from, to, routing, showArrow, strokeWidth)
-    drawRightAngleEdgePath(path, color, strokeWidth, showArrow, dashed, dashLength, gapLength, arrowDrawer)
 }

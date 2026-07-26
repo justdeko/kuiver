@@ -17,18 +17,40 @@ class LayoutTransitionBenchmark {
     @Test
     fun nodesOnly() = benchmark("nodes only", nodeCount = 300, withEdges = false)
 
+    @Test
+    fun builtInEdges() = benchmark(
+        scenario = "nodes and built-in edges",
+        nodeCount = 300,
+        withEdges = true,
+        edgeMode = EdgeMode.BUILT_IN
+    )
+
+    @Test
+    fun batchedEdges() = benchmark(
+        scenario = "nodes and batched edges",
+        nodeCount = 300,
+        withEdges = true,
+        edgeMode = EdgeMode.BATCHED
+    )
+
     /**
      * Renders a graph, moves every node to a second layout and times the frames it animates for.
      *
      * @param scenario label for the printed report
      * @param nodeCount how many nodes to render
      * @param withEdges whether to render edges between them
+     * @param edgeMode how the scene renders those edges
      */
     @OptIn(ExperimentalTestApi::class)
-    private fun benchmark(scenario: String, nodeCount: Int, withEdges: Boolean) = runComposeUiTest {
+    private fun benchmark(
+        scenario: String,
+        nodeCount: Int,
+        withEdges: Boolean,
+        edgeMode: EdgeMode = EdgeMode.CUSTOM_CANVAS
+    ) = runComposeUiTest {
         val generationA = ringGraph(nodeCount, withEdges, seed = 1)
         val generationB = ringGraph(nodeCount, withEdges, seed = 2)
-        val scene = ViewerScene(generationA)
+        val scene = ViewerScene(generationA, edgeMode)
 
         mainClock.autoAdvance = false
         setContent { scene.Content() }

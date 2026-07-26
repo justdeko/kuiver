@@ -36,6 +36,7 @@ import androidx.compose.ui.platform.LocalDensity
 import com.dk.kuiver.KuiverViewerState
 import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
+import com.dk.kuiver.ui.EdgeStyle
 import com.dk.kuiver.util.calculatePositionBounds
 import kotlinx.coroutines.delay
 import kotlin.math.exp
@@ -69,6 +70,18 @@ data class KuiverViewerConfig(
     val enterAnimationSpec: AnimationSpec<Float>? = null
 )
 
+/** How the viewer renders edges, one per [KuiverViewer] overload. */
+@Immutable
+internal sealed interface EdgeRendering {
+    /** One composable per edge. */
+    @Immutable
+    class PerEdge(val content: @Composable (KuiverEdge, Offset, Offset) -> Unit) : EdgeRendering
+
+    /** All edges from one canvas. */
+    @Immutable
+    class Batched(val style: (KuiverEdge) -> EdgeStyle) : EdgeRendering
+}
+
 /**
  * Kuiver viewer - Interactive viewer for directed graphs.
  *
@@ -88,6 +101,60 @@ fun KuiverViewer(
     config: KuiverViewerConfig = KuiverViewerConfig(),
     nodeContent: @Composable (KuiverNode) -> Unit,
     edgeContent: @Composable (KuiverEdge, Offset, Offset) -> Unit
+) {
+    KuiverViewer(
+        state = state,
+        modifier = modifier,
+        config = config,
+        nodeContent = nodeContent,
+        edges = remember(edgeContent) { EdgeRendering.PerEdge(edgeContent) }
+    )
+}
+
+/**
+ * Kuiver viewer that draws all edges from a single canvas.
+ *
+ * Edges are [EdgeStyle] values instead of a composable each: one layout node and one draw pass
+ * for the whole edge set, no edge labels. For graphs of several hundred nodes and up.
+ *
+ * ```kotlin
+ * KuiverViewer(
+ *     state = state,
+ *     nodeContent = { node -> Text(node.id) },
+ *     edgeStyle = { edge -> EdgeStyle.styled(edge, baseColor = Color.Gray) }
+ * )
+ * ```
+ *
+ * @param state kuiver viewer state
+ * @param modifier generic modifier for the viewer
+ * @param config viewer configuration
+ * @param nodeContent composable content for rendering nodes
+ * @param edgeStyle how each edge is drawn
+ */
+@Composable
+fun KuiverViewer(
+    state: KuiverViewerState,
+    modifier: Modifier = Modifier,
+    config: KuiverViewerConfig = KuiverViewerConfig(),
+    nodeContent: @Composable (KuiverNode) -> Unit,
+    edgeStyle: (KuiverEdge) -> EdgeStyle
+) {
+    KuiverViewer(
+        state = state,
+        modifier = modifier,
+        config = config,
+        nodeContent = nodeContent,
+        edges = remember(edgeStyle) { EdgeRendering.Batched(edgeStyle) }
+    )
+}
+
+@Composable
+private fun KuiverViewer(
+    state: KuiverViewerState,
+    modifier: Modifier,
+    config: KuiverViewerConfig,
+    nodeContent: @Composable (KuiverNode) -> Unit,
+    edges: EdgeRendering
 ) {
     val anchorRegistry = remember { AnchorPositionRegistry() }
 
@@ -122,7 +189,7 @@ fun KuiverViewer(
         config = config,
         anchorRegistry = anchorRegistry,
         nodeContent = nodeContent,
-        edgeContent = edgeContent
+        edges = edges
     )
 }
 
@@ -133,7 +200,7 @@ internal fun ViewerRenderer(
     config: KuiverViewerConfig = KuiverViewerConfig(),
     anchorRegistry: AnchorPositionRegistry,
     nodeContent: @Composable (KuiverNode) -> Unit,
-    edgeContent: @Composable (KuiverEdge, Offset, Offset) -> Unit
+    edges: EdgeRendering
 ) {
     val density = LocalDensity.current
     // Single progress animatable for both scale and offset in the same frame
@@ -310,24 +377,37 @@ internal fun ViewerRenderer(
                         }
                 ) {
                     // Draw edges first so they are behind nodes
-                    kuiver.edges.forEach { edge ->
-                        val fromNode = kuiver.nodes[edge.fromId]
-                        val toNode = kuiver.nodes[edge.toId]
+                    when (edges) {
+                        is EdgeRendering.Batched -> EdgeLayer(
+                            kuiver = kuiver,
+                            centerX = centerX,
+                            centerY = centerY,
+                            targets = nodeTargets,
+                            transition = layoutTransition,
+                            anchorRegistry = anchorRegistry,
+                            skipAnimation = skipInitialAnimation,
+                            edgeStyle = edges.style
+                        )
 
-                        if (fromNode != null && toNode != null) {
-                            key(edge.fromId, edge.toId, edge.fromAnchor, edge.toAnchor) {
-                                RenderEdge(
-                                    edge = edge,
-                                    fromNode = fromNode,
-                                    toNode = toNode,
-                                    centerX = centerX,
-                                    centerY = centerY,
-                                    targets = nodeTargets,
-                                    transition = layoutTransition,
-                                    anchorRegistry = anchorRegistry,
-                                    skipAnimation = skipInitialAnimation,
-                                    edgeContent = edgeContent
-                                )
+                        is EdgeRendering.PerEdge -> kuiver.edges.forEach { edge ->
+                            val fromNode = kuiver.nodes[edge.fromId]
+                            val toNode = kuiver.nodes[edge.toId]
+
+                            if (fromNode != null && toNode != null) {
+                                key(edge.fromId, edge.toId, edge.fromAnchor, edge.toAnchor) {
+                                    RenderEdge(
+                                        edge = edge,
+                                        fromNode = fromNode,
+                                        toNode = toNode,
+                                        centerX = centerX,
+                                        centerY = centerY,
+                                        targets = nodeTargets,
+                                        transition = layoutTransition,
+                                        anchorRegistry = anchorRegistry,
+                                        skipAnimation = skipInitialAnimation,
+                                        edgeContent = edges.content
+                                    )
+                                }
                             }
                         }
                     }
