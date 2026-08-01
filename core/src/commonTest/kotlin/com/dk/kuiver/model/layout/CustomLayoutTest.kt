@@ -1,6 +1,7 @@
 package com.dk.kuiver.model.layout
 
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.dp
 import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
@@ -51,15 +52,15 @@ class CustomLayoutTest {
 
         val config = LayoutConfig.Custom(
             provider = customLayout,
-            width = 800f,
-            height = 600f
+            width = 800.dp,
+            height = 600.dp
         )
 
         layout(kuiver, config)
 
         assertEquals(kuiver, receivedKuiver)
-        assertEquals(800f, receivedConfig?.width)
-        assertEquals(600f, receivedConfig?.height)
+        assertEquals(800.dp, receivedConfig?.width)
+        assertEquals(600.dp, receivedConfig?.height)
     }
 
     @Test
@@ -71,7 +72,7 @@ class CustomLayoutTest {
 
         val customLayout: LayoutProvider = { k, _ ->
             val updatedNodes = k.nodes.values.map { node ->
-                node.copy(position = Offset(100f, 200f))
+                node.copy(position = DpOffset(100.dp, 200.dp))
             }
             buildKuiverWithClassifiedEdges(updatedNodes, k.edges)
         }
@@ -83,7 +84,7 @@ class CustomLayoutTest {
         val result = layout(kuiver, config)
 
         result.nodes.values.forEach { node ->
-            assertEquals(Offset(100f, 200f), node.position)
+            assertEquals(DpOffset(100.dp, 200.dp), node.position)
         }
     }
 
@@ -95,12 +96,12 @@ class CustomLayoutTest {
         }
 
         // Simple grid layout using width from config
-        val spacing = 150f
+        val spacing = 150.dp
         val gridLayout: LayoutProvider = { k, c ->
             val updatedNodes = k.nodes.values.mapIndexed { index, node ->
                 node.copy(
-                    position = Offset(
-                        x = index * spacing,
+                    position = DpOffset(
+                        x = spacing * index,
                         y = c.height / 2f
                     )
                 )
@@ -110,18 +111,18 @@ class CustomLayoutTest {
 
         val config = LayoutConfig.Custom(
             provider = gridLayout,
-            width = 600f,
-            height = 400f
+            width = 600.dp,
+            height = 400.dp
         )
 
         val result = layout(kuiver, config)
 
         // Nodes should be spaced 150 units apart horizontally, centered vertically
         val nodesList = result.nodes.values.toList()
-        assertEquals(0f, nodesList[0].position.x)
-        assertEquals(150f, nodesList[1].position.x)
-        assertEquals(200f, nodesList[0].position.y) // height/2
-        assertEquals(200f, nodesList[1].position.y)
+        assertEquals(0.dp, nodesList[0].position.x)
+        assertEquals(150.dp, nodesList[1].position.x)
+        assertEquals(200.dp, nodesList[0].position.y) // height/2
+        assertEquals(200.dp, nodesList[1].position.y)
     }
 
     @Test
@@ -135,14 +136,14 @@ class CustomLayoutTest {
 
         val circularLayout: LayoutProvider = { k, c ->
             val nodesList = k.nodes.values.toList()
-            val radius = 100f
+            val radius = 100.dp
             val centerX = c.width / 2f
             val centerY = c.height / 2f
 
             val updatedNodes = nodesList.mapIndexed { index, node ->
                 val angle = (index.toFloat() / nodesList.size) * 2f * kotlin.math.PI.toFloat()
                 node.copy(
-                    position = Offset(
+                    position = DpOffset(
                         x = centerX + radius * kotlin.math.cos(angle),
                         y = centerY + radius * kotlin.math.sin(angle)
                     )
@@ -153,8 +154,8 @@ class CustomLayoutTest {
 
         val config = LayoutConfig.Custom(
             provider = circularLayout,
-            width = 400f,
-            height = 400f
+            width = 400.dp,
+            height = 400.dp
         )
 
         val result = layout(kuiver, config)
@@ -162,8 +163,8 @@ class CustomLayoutTest {
         // Verify all nodes have positions (basic sanity check)
         assertEquals(4, result.nodes.size)
         result.nodes.values.forEach { node ->
-            assertTrue(node.position.x > 0f, "Node should have positive X position")
-            assertTrue(node.position.y != 0f, "Node should have non-zero Y position")
+            assertTrue(node.position.x > 0.dp, "Node should have positive X position")
+            assertTrue(node.position.y != 0.dp, "Node should have non-zero Y position")
         }
     }
 
@@ -179,7 +180,7 @@ class CustomLayoutTest {
 
         val customLayout: LayoutProvider = { k, _ ->
             val updatedNodes = k.nodes.values.map { node ->
-                node.copy(position = Offset(100f, 100f))
+                node.copy(position = DpOffset(100.dp, 100.dp))
             }
             buildKuiverWithClassifiedEdges(updatedNodes, k.edges)
         }
@@ -227,9 +228,9 @@ class CustomLayoutTest {
                 val row = index / columns
                 val col = index % columns
                 node.copy(
-                    position = Offset(
-                        x = col * cellWidth + cellWidth / 2,
-                        y = row * cellHeight + cellHeight / 2
+                    position = DpOffset(
+                        x = cellWidth * col + cellWidth / 2,
+                        y = cellHeight * row + cellHeight / 2
                     )
                 )
             }
@@ -238,8 +239,8 @@ class CustomLayoutTest {
 
         val config = LayoutConfig.Custom(
             provider = gridLayout,
-            width = 600f,
-            height = 600f
+            width = 600.dp,
+            height = 600.dp
         )
 
         val result = layout(kuiver, config)

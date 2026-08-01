@@ -39,10 +39,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dk.kuiver.model.Kuiver
@@ -63,9 +64,9 @@ import com.dk.kuiver.sample.components.GraphControlMenu
 import com.dk.kuiver.sample.components.NodeCreationForm
 import com.dk.kuiver.sample.theme.AppTheme
 import com.dk.kuiver.ui.DefaultNodeContent
-import com.dk.kuiver.ui.EdgeLabelStyle
 import com.dk.kuiver.ui.StyledEdgeContent
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.milliseconds
 
 enum class Screen {
     GRAPH_BUILDER,
@@ -175,15 +176,16 @@ private fun GraphBuilderScreen(
     // Track overlay content height for centering offset
     var overlayContentHeight by rememberSaveable { mutableStateOf(0) }
 
-    LaunchedEffect(overlayContentHeight) {
-        val offset = Offset(0f, overlayContentHeight.toFloat())
-        kuiverViewerState.updateContentOffset(offset)
+    val density = LocalDensity.current
+    LaunchedEffect(overlayContentHeight, density) {
+        val reserved = with(density) { overlayContentHeight.toDp() }
+        kuiverViewerState.updateContentOffset(DpOffset(0.dp, reserved))
     }
 
     // Auto-generation logic
     LaunchedEffect(isAutoGenerating, kuiverViewerState) {
         while (isAutoGenerating) {
-            delay(1000)
+            delay(1000.milliseconds)
             val currentKuiver = kuiverViewerState.kuiver
             val created = if (shouldGenerateNode) {
                 val label = "Node $nextNodeId"
@@ -195,12 +197,7 @@ private fun GraphBuilderScreen(
 
                 // Add node to the graph (structure only)
                 val newNode = KuiverNode(id = generatedId)
-                val newKuiver = buildKuiver {
-                    currentKuiver.nodes.values.forEach { addNode(it) }
-                    currentKuiver.edges.forEach { addEdge(it) }
-                    addNode(newNode)
-                }
-                kuiverViewerState.updateKuiver(newKuiver)
+                kuiverViewerState.updateKuiver(currentKuiver.withNode(newNode))
                 nextNodeId++
                 true
             } else {
@@ -222,14 +219,8 @@ private fun GraphBuilderScreen(
 
                         if (!edgeExists) {
                             val newEdge = KuiverEdge(fromNode.id, toNode.id)
-                            val newKuiver = buildKuiver {
-                                currentKuiver.nodes.values.forEach { addNode(it) }
-                                currentKuiver.edges.forEach { addEdge(it) }
-                            }
-                            edgeAdded = newKuiver.addEdge(newEdge)
-                            if (edgeAdded) {
-                                kuiverViewerState.updateKuiver(newKuiver)
-                            }
+                            kuiverViewerState.updateKuiver(currentKuiver.withEdge(newEdge))
+                            edgeAdded = true
                         }
                         attempts++
                     }
@@ -281,16 +272,9 @@ private fun GraphBuilderScreen(
                                     val fromNode = connectionState.sourceNode
                                     if (fromNode != null) {
                                         val newEdge = KuiverEdge(fromNode.id, node.id)
-                                        val newKuiver = buildKuiver {
-                                            kuiverViewerState.kuiver.nodes.values.forEach {
-                                                addNode(
-                                                    it
-                                                )
-                                            }
-                                            kuiverViewerState.kuiver.edges.forEach { addEdge(it) }
-                                            addEdge(newEdge)
-                                        }
-                                        kuiverViewerState.updateKuiver(newKuiver)
+                                        kuiverViewerState.updateKuiver(
+                                            kuiverViewerState.kuiver.withEdge(newEdge)
+                                        )
                                     }
                                     // Reset connection state
                                     connectionState.reset()
@@ -308,15 +292,8 @@ private fun GraphBuilderScreen(
                         edge = edge,
                         from = from,
                         to = to,
-                        baseColor = MaterialTheme.colorScheme.outline,
-                        backEdgeColor = MaterialTheme.colorScheme.error,
                         label = data?.label,
-                        labelOffset = data?.labelOffset ?: 0.5f,
-                        labelStyle = EdgeLabelStyle(
-                            textColor = MaterialTheme.colorScheme.onSurface,
-                            backgroundColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                            borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-                        )
+                        labelOffset = data?.labelOffset ?: 0.5f
                     )
                 }
             )
@@ -471,12 +448,9 @@ private fun GraphBuilderScreen(
 
                             // Add node to the graph (structure only)
                             val newNode = KuiverNode(id = generatedId)
-                            val newKuiver = buildKuiver {
-                                kuiverViewerState.kuiver.nodes.values.forEach { addNode(it) }
-                                kuiverViewerState.kuiver.edges.forEach { addEdge(it) }
-                                addNode(newNode)
-                            }
-                            kuiverViewerState.updateKuiver(newKuiver)
+                            kuiverViewerState.updateKuiver(
+                                kuiverViewerState.kuiver.withNode(newNode)
+                            )
                             nextNodeId++
                             newNodeData = ""
                         }
@@ -504,12 +478,9 @@ private fun GraphBuilderScreen(
 
                                 if (fromNodeEntry != null && toNodeEntry != null) {
                                     val newEdge = KuiverEdge(fromNodeEntry.key, toNodeEntry.key)
-                                    val newKuiver = buildKuiver {
-                                        kuiverViewerState.kuiver.nodes.values.forEach { addNode(it) }
-                                        kuiverViewerState.kuiver.edges.forEach { addEdge(it) }
-                                        addEdge(newEdge)
-                                    }
-                                    kuiverViewerState.updateKuiver(newKuiver)
+                                    kuiverViewerState.updateKuiver(
+                                        kuiverViewerState.kuiver.withEdge(newEdge)
+                                    )
 
                                     if (newEdgeLabel.isNotBlank()) {
                                         edgeData = edgeData + (

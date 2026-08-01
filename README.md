@@ -204,31 +204,6 @@ edgeContent = { edge, from, to ->
 `StyledEdgeContent` also accepts the same label parameters, so you can combine automatic
 edge styling with labels in one call.
 
-### Theming
-
-Kuiver depends on compose `runtime` + `foundation` + `ui` only, so it can't read `MaterialTheme`
-directly (`foundation` has no `LocalContentColor`). Edge and label colors that aren't passed
-explicitly instead come from `LocalKuiverColors`, a foundation-only seam. Its defaults reproduce
-kuiver's original hardcoded colors, so providing nothing here is backward compatible.
-
-Provide `LocalKuiverColors` once instead of overriding colors in every `edgeContent` lambda:
-
-```kotlin
-CompositionLocalProvider(
-    LocalKuiverColors provides KuiverColors(
-        edge = MaterialTheme.colorScheme.onSurface,
-        backEdge = MaterialTheme.colorScheme.tertiary,
-        labelText = MaterialTheme.colorScheme.onSurface,
-        labelBackground = MaterialTheme.colorScheme.surface,
-    ),
-) {
-    KuiverViewer(state = viewerState)
-}
-```
-
-Explicit `color`, `baseColor`, `backEdgeColor`, and `labelStyle` arguments on the edge
-composables still take precedence over `LocalKuiverColors`.
-
 ### Custom Arrow Drawing
 
 Replace the default filled-triangle arrow with any `DrawScope` lambda via the `arrowDrawer`
@@ -552,11 +527,11 @@ The library implements several web-specific adjustments to handle browser limita
 
 - **Reduced Pan Velocity**: Default pan velocity is `4f` (vs `30f` on native platforms) to
   compensate for higher scroll sensitivity in browsers
-    - See: `core/src/wasmJsMain/kotlin/com/dk/kuiver/renderer/PlatformDefaults.wasmJs.kt:4`
+  - See: `core/src/wasmJsMain/kotlin/com/dk/kuiver/renderer/PlatformDefaults.wasmJs.kt:4`
 - **Font Loading Delay**: 100ms delay on initial node measurement to prevent text wrapping issues
   when browser fonts haven't finished loading
-    - See: `core/src/wasmJsMain/kotlin/com/dk/kuiver/renderer/PlatformDefaults.wasmJs.kt:5`
-    - This delay only occurs once on initial render
+  - See: `core/src/wasmJsMain/kotlin/com/dk/kuiver/renderer/PlatformDefaults.wasmJs.kt:5`
+  - This delay only occurs once on initial render
 
 ### General Limitations
 

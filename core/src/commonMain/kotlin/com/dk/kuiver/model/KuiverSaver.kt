@@ -1,20 +1,39 @@
 package com.dk.kuiver.model
 
 import androidx.compose.runtime.saveable.Saver
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+
+/**
+ * Saver for the node positions a user has set by hand, which are otherwise lost on the next layout
+ * pass after the state is restored. Flattened to a list of primitives, which every platform's
+ * saveable bundle takes.
+ */
+internal fun manualPositionsSaver(): Saver<Map<String, DpOffset>, Any> = Saver(
+    save = { positions ->
+        positions.flatMap { (id, position) -> listOf(id, position.x.value, position.y.value) }
+    },
+    restore = { savedValue ->
+        @Suppress("UNCHECKED_CAST")
+        val flat = savedValue as List<Any>
+        flat.chunked(3).associate { (id, x, y) ->
+            id as String to DpOffset((x as Float).dp, (y as Float).dp)
+        }
+    }
+)
 
 /**
  * Saver for Kuiver objects to enable saving and restoring state in composables.
  */
+@Suppress("UNCHECKED_CAST")
 fun kuiverSaver(): Saver<Kuiver, Any> = Saver(
     save = { kuiver ->
         mapOf(
             "nodes" to kuiver.nodes.map { (id, node) ->
                 mapOf(
                     "id" to id,
-                    "posX" to node.position.x,
-                    "posY" to node.position.y,
+                    "posX" to node.position.x.value,
+                    "posY" to node.position.y.value,
                     "dimWidth" to node.dimensions?.width?.value,
                     "dimHeight" to node.dimensions?.height?.value
                 )
@@ -31,12 +50,11 @@ fun kuiverSaver(): Saver<Kuiver, Any> = Saver(
         )
     },
     restore = { savedValue ->
-        @Suppress("UNCHECKED_CAST")
         val map = savedValue as Map<String, Any>
         val nodesData = map["nodes"] as List<Map<String, Any?>>
         val edgesData = map["edges"] as List<Map<String, Any?>>
 
-        Kuiver().apply {
+        buildKuiver {
             // Restore nodes
             nodesData.forEach { nodeMap ->
                 val id = nodeMap["id"] as String
@@ -55,7 +73,7 @@ fun kuiverSaver(): Saver<Kuiver, Any> = Saver(
                     KuiverNode(
                         id = id,
                         dimensions = dimensions,
-                        position = Offset(posX, posY)
+                        position = DpOffset(posX.dp, posY.dp)
                     )
                 )
             }

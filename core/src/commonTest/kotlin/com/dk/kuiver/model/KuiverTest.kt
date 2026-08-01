@@ -9,7 +9,7 @@ class KuiverTest {
 
     @Test
     fun `hasCycles detects simple cycle`() {
-        val kuiver = Kuiver().apply {
+        val kuiver = buildKuiver {
             addNode(KuiverNode(id = "A"))
             addNode(KuiverNode(id = "B"))
             addNode(KuiverNode(id = "C"))
@@ -23,7 +23,7 @@ class KuiverTest {
 
     @Test
     fun `hasCycles returns false for DAG`() {
-        val kuiver = Kuiver().apply {
+        val kuiver = buildKuiver {
             addNode(KuiverNode(id = "A"))
             addNode(KuiverNode(id = "B"))
             addNode(KuiverNode(id = "C"))
@@ -36,7 +36,7 @@ class KuiverTest {
 
     @Test
     fun `hasCycles detects self loop`() {
-        val kuiver = Kuiver().apply {
+        val kuiver = buildKuiver {
             addNode(KuiverNode(id = "A"))
             addEdge(KuiverEdge(fromId = "A", toId = "A"))
         }
@@ -46,7 +46,7 @@ class KuiverTest {
 
     @Test
     fun `classifyEdge identifies forward edges`() {
-        val kuiver = Kuiver().apply {
+        val kuiver = buildKuiver {
             addNode(KuiverNode(id = "A"))
             addNode(KuiverNode(id = "B"))
             addEdge(KuiverEdge(fromId = "A", toId = "B"))
@@ -58,7 +58,7 @@ class KuiverTest {
 
     @Test
     fun `classifyEdge identifies back edges in cycle`() {
-        val kuiver = Kuiver().apply {
+        val kuiver = buildKuiver {
             addNode(KuiverNode(id = "A"))
             addNode(KuiverNode(id = "B"))
             addEdge(KuiverEdge(fromId = "A", toId = "B"))
@@ -74,7 +74,7 @@ class KuiverTest {
 
     @Test
     fun `classifyEdge identifies self loop`() {
-        val kuiver = Kuiver().apply {
+        val kuiver = buildKuiver {
             addNode(KuiverNode(id = "A"))
             addEdge(KuiverEdge(fromId = "A", toId = "A"))
         }
@@ -96,9 +96,9 @@ class KuiverTest {
         assertFalse(kuiver.wouldCreateCycle("D", "A"), "D is disconnected from the chain")
 
         // Traversal must terminate even when the graph already contains a cycle
-        kuiver.addEdge(KuiverEdge(fromId = "C", toId = "A"))
-        assertTrue(kuiver.wouldCreateCycle("C", "B"))
-        assertFalse(kuiver.wouldCreateCycle("C", "D"))
+        val cyclic = kuiver.withEdge(KuiverEdge(fromId = "C", toId = "A"))
+        assertTrue(cyclic.wouldCreateCycle("C", "B"))
+        assertFalse(cyclic.wouldCreateCycle("C", "D"))
     }
 
     @Test
@@ -116,9 +116,9 @@ class KuiverTest {
         assertFalse(kuiver.wouldCreateCycle(head, tail))
         assertEquals(length, kuiver.findStronglyConnectedComponents().size)
 
-        kuiver.addEdge(KuiverEdge(fromId = tail, toId = head))
+        val ring = kuiver.withEdge(KuiverEdge(fromId = tail, toId = head))
 
-        assertTrue(kuiver.hasCycles())
-        assertEquals(length, kuiver.findStronglyConnectedComponents().single().size)
+        assertTrue(ring.hasCycles())
+        assertEquals(length, ring.findStronglyConnectedComponents().single().size)
     }
 }

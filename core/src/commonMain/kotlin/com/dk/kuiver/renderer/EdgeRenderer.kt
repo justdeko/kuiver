@@ -1,16 +1,13 @@
 package com.dk.kuiver.renderer
 
-import androidx.compose.animation.core.AnimationSpec
-import androidx.compose.animation.core.animateOffsetAsState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
+import com.dk.kuiver.KuiverInteractionState
 import com.dk.kuiver.model.AnchorOffset
-import com.dk.kuiver.model.DEFAULT_NODE_SIZE_DP
+import com.dk.kuiver.model.DEFAULT_NODE_SIZE
 import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
 import kotlin.math.abs
@@ -25,65 +22,81 @@ internal fun RenderEdge(
     toNode: KuiverNode,
     centerX: Dp,
     centerY: Dp,
-    graphCenterX: Float,
-    graphCenterY: Float,
+    targets: NodePositions,
+    transition: LayoutTransition,
+    interaction: KuiverInteractionState,
     anchorRegistry: AnchorPositionRegistry,
-    animationSpec: AnimationSpec<Offset>,
     skipAnimation: Boolean,
     edgeContent: @Composable (KuiverEdge, Offset, Offset) -> Unit
 ) {
-    val density = LocalDensity.current
-    val isSelfLoop = edge.fromId == edge.toId
+    // edgeContent takes endpoints by value so a moving edge has to resolve them in composition
+    val (edgeStart, edgeEnd) = LocalDensity.current.resolveEdgeEndpoints(
+        edge = edge,
+        fromNode = fromNode,
+        toNode = toNode,
+        centerX = centerX,
+        centerY = centerY,
+        targets = targets,
+        transition = transition,
+        interaction = interaction,
+        anchorRegistry = anchorRegistry,
+        skipAnimation = skipAnimation
+    )
 
-    with(density) {
-        val targetFromCenter = Offset(
-            centerX.toPx() + (fromNode.position.x - graphCenterX).dp.toPx(),
-            centerY.toPx() + (fromNode.position.y - graphCenterY).dp.toPx()
-        )
-        val targetToCenter = Offset(
-            centerX.toPx() + (toNode.position.x - graphCenterX).dp.toPx(),
-            centerY.toPx() + (toNode.position.y - graphCenterY).dp.toPx()
-        )
+    edgeContent(edge, edgeStart, edgeEnd)
+}
 
-        val animatedFromCenter by animateOffsetAsState(
-            targetValue = targetFromCenter,
-            animationSpec = animationSpec,
-            label = "edge_from_${edge.fromId}_${edge.toId}"
-        )
+/**
+ * Reads node positions from [transition] and the live drag from [interaction], so a caller in the
+ * draw or layout phase keeps a moving edge out of composition.
+ */
+internal fun Density.resolveEdgeEndpoints(
+    edge: KuiverEdge,
+    fromNode: KuiverNode,
+    toNode: KuiverNode,
+    centerX: Dp,
+    centerY: Dp,
+    targets: NodePositions,
+    transition: LayoutTransition,
+    interaction: KuiverInteractionState,
+    anchorRegistry: AnchorPositionRegistry,
+    skipAnimation: Boolean
+): Pair<Offset, Offset> {
+    val fromPosition = transition.positionOf(edge.fromId, targets, skipAnimation) +
+            interaction.dragOffsetOf(edge.fromId)
+    val toPosition = transition.positionOf(edge.toId, targets, skipAnimation) +
+            interaction.dragOffsetOf(edge.toId)
 
-        val animatedToCenter by animateOffsetAsState(
-            targetValue = targetToCenter,
-            animationSpec = animationSpec,
-            label = "edge_to_${edge.fromId}_${edge.toId}"
-        )
+    val fromCenter = Offset(
+        centerX.toPx() + fromPosition.x.toPx(),
+        centerY.toPx() + fromPosition.y.toPx()
+    )
+    val toCenter = Offset(
+        centerX.toPx() + toPosition.x.toPx(),
+        centerY.toPx() + toPosition.y.toPx()
+    )
 
-        val fromCenter = if (skipAnimation) targetFromCenter else animatedFromCenter
-        val toCenter = if (skipAnimation) targetToCenter else animatedToCenter
+    // Get node dimensions (convert from DP to pixels, use default if dimensions not set)
+    val defaultSize = DEFAULT_NODE_SIZE.toPx()
+    val fromNodeWidth = fromNode.dimensions?.width?.toPx() ?: defaultSize
+    val fromNodeHeight = fromNode.dimensions?.height?.toPx() ?: defaultSize
+    val toNodeWidth = toNode.dimensions?.width?.toPx() ?: defaultSize
+    val toNodeHeight = toNode.dimensions?.height?.toPx() ?: defaultSize
 
-        // Get node dimensions (convert from DP to pixels, use default if dimensions not set)
-        val defaultSize = DEFAULT_NODE_SIZE_DP.toPx()
-        val fromNodeWidth = fromNode.dimensions?.width?.toPx() ?: defaultSize
-        val fromNodeHeight = fromNode.dimensions?.height?.toPx() ?: defaultSize
-        val toNodeWidth = toNode.dimensions?.width?.toPx() ?: defaultSize
-        val toNodeHeight = toNode.dimensions?.height?.toPx() ?: defaultSize
-
-        val (edgeStart, edgeEnd) = calculateEdgeEndpointsWithAnchors(
-            edge = edge,
-            fromNode = fromNode,
-            toNode = toNode,
-            fromCenter = fromCenter,
-            toCenter = toCenter,
-            fromNodeWidth = fromNodeWidth,
-            fromNodeHeight = fromNodeHeight,
-            toNodeWidth = toNodeWidth,
-            toNodeHeight = toNodeHeight,
-            anchorRegistry = anchorRegistry,
-            isSelfLoop = isSelfLoop,
-            density = this@with
-        )
-
-        edgeContent(edge, edgeStart, edgeEnd)
-    }
+    return calculateEdgeEndpointsWithAnchors(
+        edge = edge,
+        fromNode = fromNode,
+        toNode = toNode,
+        fromCenter = fromCenter,
+        toCenter = toCenter,
+        fromNodeWidth = fromNodeWidth,
+        fromNodeHeight = fromNodeHeight,
+        toNodeWidth = toNodeWidth,
+        toNodeHeight = toNodeHeight,
+        anchorRegistry = anchorRegistry,
+        isSelfLoop = edge.fromId == edge.toId,
+        density = this
+    )
 }
 
 /**

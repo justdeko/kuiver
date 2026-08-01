@@ -53,7 +53,37 @@ kotlin {
             implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutines.test)
         }
+        jvmTest.dependencies {
+            implementation(libs.ui.test)
+            // needed to render in ui tests
+            implementation(compose.desktop.currentOs)
+        }
     }
+}
+
+private val benchmarkFilter = "com.dk.kuiver.renderer.LayoutTransitionBenchmark"
+private val benchmarkReport = layout.buildDirectory.file("reports/benchmarks/layout-transition.txt")
+
+// Timings are meaningless on a shared CI runner, so keep them out of the regular test run
+tasks.named<Test>("jvmTest") {
+    filter.excludeTestsMatching(benchmarkFilter)
+}
+
+tasks.register<Test>("benchmark") {
+    group = "verification"
+    description = "Renderer frame cost report, see docs/benchmarks/layout-transition.md"
+
+    val testCompilation = kotlin.jvm().compilations.getByName("test")
+    testClassesDirs = testCompilation.output.classesDirs
+    classpath = testCompilation.output.allOutputs + testCompilation.runtimeDependencyFiles
+
+    val reportFile = benchmarkReport.get().asFile
+    filter.includeTestsMatching(benchmarkFilter)
+    systemProperty("kuiver.benchmark.report", reportFile.absolutePath)
+    testLogging.showStandardStreams = true
+    outputs.upToDateWhen { false }
+
+    doFirst { reportFile.delete() }
 }
 
 mavenPublishing {

@@ -1,5 +1,7 @@
 package com.dk.kuiver.model.layout
 
+import androidx.compose.ui.unit.dp
+import com.dk.kuiver.assertDpEquals
 import com.dk.kuiver.model.buildKuiver
 import com.dk.kuiver.model.edges
 import com.dk.kuiver.model.nodes
@@ -20,17 +22,17 @@ class ForceDirectedLayoutTest {
         }
 
         val config = LayoutConfig.ForceDirected(
-            width = 600f,
-            height = 400f,
+            width = 600.dp,
+            height = 400.dp,
             iterations = 100
         )
 
         val result = layout(kuiver, config)
 
         result.nodes.values.forEach { node ->
-            assertTrue(node.position.x >= 0f, "Node ${node.id} x position should be >= 0")
+            assertTrue(node.position.x >= 0.dp, "Node ${node.id} x position should be >= 0")
             assertTrue(node.position.x <= config.width, "Node ${node.id} x position should be <= width")
-            assertTrue(node.position.y >= 0f, "Node ${node.id} y position should be >= 0")
+            assertTrue(node.position.y >= 0.dp, "Node ${node.id} y position should be >= 0")
             assertTrue(node.position.y <= config.height, "Node ${node.id} y position should be <= height")
         }
     }
@@ -42,8 +44,8 @@ class ForceDirectedLayoutTest {
         }
 
         val config = LayoutConfig.ForceDirected(
-            width = 600f,
-            height = 400f,
+            width = 600.dp,
+            height = 400.dp,
             iterations = 100
         )
 
@@ -53,8 +55,8 @@ class ForceDirectedLayoutTest {
         val expectedX = config.width / 2f
         val expectedY = config.height / 2f
 
-        assertEquals(expectedX, nodeA.position.x, absoluteTolerance = 50f)
-        assertEquals(expectedY, nodeA.position.y, absoluteTolerance = 50f)
+        assertDpEquals(expectedX, nodeA.position.x, absoluteTolerance = 50.dp)
+        assertDpEquals(expectedY, nodeA.position.y, absoluteTolerance = 50.dp)
     }
 
     @Test
@@ -69,8 +71,8 @@ class ForceDirectedLayoutTest {
         }
 
         val config = LayoutConfig.ForceDirected(
-            width = 600f,
-            height = 400f
+            width = 600.dp,
+            height = 400.dp
         )
 
         val result = layout(kuiver, config)

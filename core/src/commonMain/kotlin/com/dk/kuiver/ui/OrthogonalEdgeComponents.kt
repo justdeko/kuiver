@@ -1,11 +1,7 @@
 package com.dk.kuiver.ui
 
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import com.dk.kuiver.model.KuiverEdge
@@ -32,20 +28,20 @@ fun OrthogonalEdgeContent(
     curveFactor: Float = 0.5f,
     arrowDrawer: ArrowDrawer = DefaultArrowDrawer
 ) {
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        drawOrthogonalEdge(
-            from = from,
-            to = to,
-            color = color,
-            strokeWidth = strokeWidth,
-            showArrow = showArrow,
-            dashed = dashed,
-            dashLength = dashLength,
-            gapLength = gapLength,
-            curveFactor = curveFactor,
-            arrowDrawer = arrowDrawer
-        )
+    val edgePath = remember(from, to, curveFactor, showArrow, strokeWidth) {
+        EdgePathFactory.createOrthogonalPath(from, to, curveFactor, showArrow, strokeWidth)
     }
+
+    EdgePathCanvas(
+        path = edgePath,
+        color = color,
+        strokeWidth = strokeWidth,
+        showArrow = showArrow,
+        dashed = dashed,
+        dashLength = dashLength,
+        gapLength = gapLength,
+        arrowDrawer = arrowDrawer
+    )
 }
 
 /**
@@ -109,30 +105,21 @@ fun OrthogonalEdgeContentWithLabel(
         EdgePathFactory.createOrthogonalPath(from, to, curveFactor, showArrow, strokeWidth)
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        OrthogonalEdgeContent(
-            from = from,
-            to = to,
-            color = color,
-            strokeWidth = strokeWidth,
-            showArrow = showArrow,
-            dashed = dashed,
-            dashLength = dashLength,
-            gapLength = gapLength,
-            curveFactor = curveFactor,
-            arrowDrawer = arrowDrawer
-        )
-
-        if (label != null && label.isNotBlank()) {
-            val labelPosition = remember(edgePath, offset, minEdgeLengthForLabel) {
-                edgePath.calculateLabelPosition(offset, minEdgeLengthForLabel)
-            }
-
-            labelPosition?.let { pos ->
-                EdgeLabel(label, pos, labelStyle, labelContent)
-            }
-        }
-    }
+    LabeledEdge(
+        path = edgePath,
+        color = color,
+        strokeWidth = strokeWidth,
+        showArrow = showArrow,
+        dashed = dashed,
+        dashLength = dashLength,
+        gapLength = gapLength,
+        arrowDrawer = arrowDrawer,
+        label = label,
+        labelOffset = offset,
+        labelStyle = labelStyle,
+        labelContent = labelContent,
+        minEdgeLengthForLabel = minEdgeLengthForLabel
+    )
 }
 
 /**
@@ -179,10 +166,13 @@ enum class AnchorSide {
 enum class RightAngleRouting {
     /** Go horizontal first, then vertical */
     HORIZONTAL_FIRST,
+
     /** Go vertical first, then horizontal */
     VERTICAL_FIRST,
+
     /** Use a middle waypoint for 3-segment routing (horizontal-vertical-horizontal) */
     HORIZONTAL_VERTICAL_HORIZONTAL,
+
     /** Use a middle waypoint for 3-segment routing (vertical-horizontal-vertical) */
     VERTICAL_HORIZONTAL_VERTICAL;
 
@@ -273,20 +263,20 @@ fun RightAngleEdgeContent(
     routing: RightAngleRouting,
     arrowDrawer: ArrowDrawer = DefaultArrowDrawer
 ) {
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        drawRightAngleEdge(
-            from = from,
-            to = to,
-            color = color,
-            strokeWidth = strokeWidth,
-            showArrow = showArrow,
-            dashed = dashed,
-            dashLength = dashLength,
-            gapLength = gapLength,
-            routing = routing,
-            arrowDrawer = arrowDrawer
-        )
+    val edgePath = remember(from, to, routing, showArrow, strokeWidth) {
+        EdgePathFactory.createRightAnglePath(from, to, routing, showArrow, strokeWidth)
     }
+
+    EdgePathCanvas(
+        path = edgePath,
+        color = color,
+        strokeWidth = strokeWidth,
+        showArrow = showArrow,
+        dashed = dashed,
+        dashLength = dashLength,
+        gapLength = gapLength,
+        arrowDrawer = arrowDrawer
+    )
 }
 
 /**
@@ -348,30 +338,21 @@ fun RightAngleEdgeContentWithLabel(
         EdgePathFactory.createRightAnglePath(from, to, routing, showArrow, strokeWidth)
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        RightAngleEdgeContent(
-            from = from,
-            to = to,
-            color = color,
-            strokeWidth = strokeWidth,
-            showArrow = showArrow,
-            dashed = dashed,
-            dashLength = dashLength,
-            gapLength = gapLength,
-            routing = routing,
-            arrowDrawer = arrowDrawer
-        )
-
-        if (label != null && label.isNotBlank()) {
-            val labelPosition = remember(edgePath, offset, minEdgeLengthForLabel) {
-                edgePath.calculateLabelPosition(offset, minEdgeLengthForLabel)
-            }
-
-            labelPosition?.let { pos ->
-                EdgeLabel(label, pos, labelStyle, labelContent)
-            }
-        }
-    }
+    LabeledEdge(
+        path = edgePath,
+        color = color,
+        strokeWidth = strokeWidth,
+        showArrow = showArrow,
+        dashed = dashed,
+        dashLength = dashLength,
+        gapLength = gapLength,
+        arrowDrawer = arrowDrawer,
+        label = label,
+        labelOffset = offset,
+        labelStyle = labelStyle,
+        labelContent = labelContent,
+        minEdgeLengthForLabel = minEdgeLengthForLabel
+    )
 }
 
 /**

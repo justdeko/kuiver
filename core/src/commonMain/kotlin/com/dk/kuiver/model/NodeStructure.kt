@@ -1,8 +1,8 @@
 package com.dk.kuiver.model
 
 import androidx.compose.runtime.Immutable
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 
 /**
  * Represents the physical dimensions of a node for layout calculations.
@@ -28,13 +28,13 @@ data class AnchorOffset(
  *
  * @property id unique identifier
  * @property dimensions optional physical dimensions, will be measured if null
- * @property position position in the graph coordinate space
+ * @property position position in the graph coordinate space, which is dp throughout
  */
 @Immutable
 data class KuiverNode(
     val id: String,
     val dimensions: NodeDimensions? = null,
-    val position: Offset = Offset.Zero
+    val position: DpOffset = DpOffset.Zero
 )
 
 /**

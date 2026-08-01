@@ -3,8 +3,10 @@ package com.dk.kuiver.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ProvidableCompositionLocal
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import com.dk.kuiver.model.KuiverEdge
 
 /**
  * Color palette for graph elements rendered without an explicit color override.
@@ -44,7 +46,11 @@ data class KuiverColors(
  *         labelBackground = MaterialTheme.colorScheme.surface,
  *     ),
  * ) {
- *     KuiverViewer(state = viewerState)
+ *     KuiverViewer(
+ *         state = viewerState,
+ *         nodeContent = { node -> Text(node.id) },
+ *         edgeContent = { edge, from, to -> StyledEdgeContent(edge, from, to) }
+ *     )
  * }
  * ```
  */
@@ -62,5 +68,30 @@ object KuiverDefaults {
             backgroundColor = colors.labelBackground,
             borderColor = colors.labelBorder
         )
+    }
+
+    /**
+     * Per-edge [EdgeStyle] built from the current [LocalKuiverColors], for the batched
+     * `KuiverViewer` overload.
+     *
+     * The batched viewer takes a plain `(KuiverEdge) -> EdgeStyle` lambda that runs while drawing,
+     * not while composing, so it can't read [LocalKuiverColors] itself. This reads the colors in
+     * composition and closes over them.
+     *
+     * @param strokeWidth width of the edge line
+     */
+    @Composable
+    fun edgeStyle(strokeWidth: Float = 3f): (KuiverEdge) -> EdgeStyle {
+        val colors = LocalKuiverColors.current
+        return remember(colors, strokeWidth) {
+            { edge ->
+                EdgeStyle.styled(
+                    edge = edge,
+                    baseColor = colors.edge,
+                    backEdgeColor = colors.backEdge,
+                    strokeWidth = strokeWidth
+                )
+            }
+        }
     }
 }

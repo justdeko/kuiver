@@ -1,6 +1,7 @@
 package com.dk.kuiver.model.layout
 
 import androidx.compose.ui.unit.dp
+import com.dk.kuiver.assertDpEquals
 import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
 import com.dk.kuiver.model.NodeDimensions
@@ -27,8 +28,8 @@ class HierarchicalLayoutTest {
 
         val config = LayoutConfig.Hierarchical(
             direction = LayoutDirection.HORIZONTAL,
-            width = 600f,
-            height = 400f
+            width = 600.dp,
+            height = 400.dp
         )
 
         val result = layout(kuiver, config)
@@ -57,8 +58,8 @@ class HierarchicalLayoutTest {
 
         val config = LayoutConfig.Hierarchical(
             direction = LayoutDirection.HORIZONTAL,
-            width = 600f,
-            height = 400f
+            width = 600.dp,
+            height = 400.dp
         )
 
         val result = layout(kuiver, config)
@@ -73,7 +74,7 @@ class HierarchicalLayoutTest {
         assertTrue(nodeA.position.x < nodeC.position.x)
 
         // B and C should be at same level
-        assertEquals(nodeB.position.x, nodeC.position.x, absoluteTolerance = 1f)
+        assertDpEquals(nodeB.position.x, nodeC.position.x, absoluteTolerance = 1.dp)
 
         // D should be rightmost
         assertTrue(nodeD.position.x > nodeB.position.x)
@@ -88,8 +89,8 @@ class HierarchicalLayoutTest {
 
         val config = LayoutConfig.Hierarchical(
             direction = LayoutDirection.VERTICAL,
-            width = 400f,
-            height = 600f
+            width = 400.dp,
+            height = 600.dp
         )
 
         val result = layout(kuiver, config)
@@ -114,8 +115,8 @@ class HierarchicalLayoutTest {
         }
 
         val config = LayoutConfig.Hierarchical(
-            width = 600f,
-            height = 400f
+            width = 600.dp,
+            height = 400.dp
         )
 
         val result = layout(kuiver, config)
@@ -145,8 +146,8 @@ class HierarchicalLayoutTest {
 
         val config = LayoutConfig.Hierarchical(
             direction = LayoutDirection.HORIZONTAL,
-            width = 800f,
-            height = 600f
+            width = 800.dp,
+            height = 600.dp
         )
 
         val result = layout(kuiver, config)
@@ -199,8 +200,8 @@ class HierarchicalLayoutTest {
 
         val config = LayoutConfig.Hierarchical(
             direction = LayoutDirection.HORIZONTAL,
-            width = 800f,
-            height = 600f
+            width = 800.dp,
+            height = 600.dp
         )
 
         val result = layout(kuiver, config)
@@ -253,8 +254,8 @@ class HierarchicalLayoutTest {
 
         val config = LayoutConfig.Hierarchical(
             direction = LayoutDirection.HORIZONTAL,
-            width = 800f,
-            height = 600f
+            width = 800.dp,
+            height = 600.dp
         )
 
         val result = layout(kuiver, config)
@@ -275,7 +276,7 @@ class HierarchicalLayoutTest {
         println("\nLevel spacing: $spacing")
 
         // Spacing should be at least largestWidth + padding (200 + 60 = 260)
-        assertTrue(spacing >= 260f, "Spacing should accommodate largest node (200) + padding (60)")
+        assertTrue(spacing >= 260.dp, "Spacing should accommodate largest node (200) + padding (60)")
 
         // Verify no overlap (nodes at different levels shouldn't overlap)
         assertTrue(small.position.x < large.position.x, "Nodes should be at different X positions")
@@ -300,7 +301,7 @@ class HierarchicalLayoutTest {
         }
 
         // additional test for back edge
-        kuiver.addEdge(KuiverEdge(fromId = "n${length - 1}", toId = "n0"))
-        assertEquals(length, layout(kuiver, LayoutConfig.Hierarchical()).nodes.size)
+        val withBackEdge = kuiver.withEdge(KuiverEdge(fromId = "n${length - 1}", toId = "n0"))
+        assertEquals(length, layout(withBackEdge, LayoutConfig.Hierarchical()).nodes.size)
     }
 }

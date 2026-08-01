@@ -60,7 +60,7 @@ data class EdgeLabelStyle(
 fun DefaultEdgeLabel(
     label: String,
     modifier: Modifier = Modifier,
-    style: EdgeLabelStyle = EdgeLabelStyle()
+    style: EdgeLabelStyle = KuiverDefaults.edgeLabelStyle()
 ) {
     val shape = RoundedCornerShape(style.cornerRadius)
 

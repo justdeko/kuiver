@@ -1,8 +1,13 @@
 package com.dk.kuiver.sample
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -46,15 +51,29 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.utf16CodePoint
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dk.kuiver.KuiverViewerState
+import com.dk.kuiver.SelectionMode
 import com.dk.kuiver.model.EdgeType
 import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.buildKuiver
@@ -65,8 +84,8 @@ import com.dk.kuiver.model.nodes
 import com.dk.kuiver.rememberSaveableKuiverViewerState
 import com.dk.kuiver.renderer.KuiverViewer
 import com.dk.kuiver.renderer.KuiverViewerConfig
-import com.dk.kuiver.ui.EdgeLabelStyle
 import com.dk.kuiver.ui.KuiverAnchor
+import com.dk.kuiver.ui.KuiverDefaults
 import com.dk.kuiver.ui.OrthogonalEdgeContentWithLabel
 import com.dk.kuiver.ui.StyledEdgeContent
 import com.dk.kuiver.ui.StyledRightAngleEdgeContent
@@ -439,6 +458,14 @@ fun ProcessDiagramDemo(
                         onClick = { showAnchors = !showAnchors },
                         label = { Text("Anchors") }
                     )
+
+                    // Nodes stay where they are dropped until the layout gets them back
+                    FilterChip(
+                        selected = false,
+                        enabled = kuiverViewerState.manualPositions.isNotEmpty(),
+                        onClick = kuiverViewerState::clearManualPositions,
+                        label = { Text("Reset positions") }
+                    )
                 }
             }
         }
@@ -450,28 +477,31 @@ fun ProcessDiagramDemo(
         ) {
             KuiverViewer(
                 state = kuiverViewerState,
-                config = KuiverViewerConfig(enterAnimationSpec = tween(durationMillis = 400)),
+                config = KuiverViewerConfig(
+                    enterAnimationSpec = tween(durationMillis = 400),
+                    selectionMode = SelectionMode.SINGLE,
+                    nodeDragEnabled = true,
+                    hoverEnabled = true
+                ),
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surface),
+                    .background(MaterialTheme.colorScheme.surface)
+                    .graphKeyboardControls(kuiverViewerState),
                 nodeContent = { node ->
                     processNodeData[node.id]?.let {
                         ProcessNodeContent(
                             data = it,
                             nodeId = node.id,
                             showAnchors = showAnchors,
-                            kuiver = kuiverViewerState.layoutedKuiver
+                            kuiver = kuiverViewerState.layoutedKuiver,
+                            isSelected = isSelected,
+                            isHighlighted = isHovered || isDragging
                         )
                     }
                 },
                 edgeContent = { edge, from, to ->
                     val edgeLabel = edgeLabels[edge.fromId to edge.toId]
-                    val labelStyle = EdgeLabelStyle(
-                        textColor = MaterialTheme.colorScheme.onSurface,
-                        backgroundColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
-                        borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                        fontSize = 11.sp
-                    )
+                    val labelStyle = KuiverDefaults.edgeLabelStyle().copy(fontSize = 11.sp)
 
                     val isBackOrSelfLoop =
                         edge.type == EdgeType.BACK || edge.type == EdgeType.SELF_LOOP
@@ -481,7 +511,6 @@ fun ProcessDiagramDemo(
                             OrthogonalEdgeContentWithLabel(
                                 from = from,
                                 to = to,
-                                color = MaterialTheme.colorScheme.outline,
                                 strokeWidth = 2.5f,
                                 label = edgeLabel,
                                 labelStyle = labelStyle.copy(rotateWithEdge = true)
@@ -492,7 +521,6 @@ fun ProcessDiagramDemo(
                                 edge = edge,
                                 from = from,
                                 to = to,
-                                color = MaterialTheme.colorScheme.outline,
                                 strokeWidth = 2.5f,
                                 label = edgeLabel,
                                 labelStyle = labelStyle
@@ -502,8 +530,6 @@ fun ProcessDiagramDemo(
                             edge = edge,
                             from = from,
                             to = to,
-                            baseColor = MaterialTheme.colorScheme.outline,
-                            backEdgeColor = MaterialTheme.colorScheme.error,
                             strokeWidth = 2.5f,
                             label = edgeLabel,
                             labelStyle = labelStyle
@@ -550,7 +576,9 @@ private fun ProcessNodeContent(
     data: ProcessNode,
     nodeId: String,
     showAnchors: Boolean,
-    kuiver: Kuiver
+    kuiver: Kuiver,
+    isSelected: Boolean,
+    isHighlighted: Boolean
 ) {
     val (backgroundColor, shape) = when (data.type) {
         ProcessNodeType.START -> Color(0xFF4CAF50) to CircleShape
@@ -561,11 +589,22 @@ private fun ProcessNodeContent(
         ProcessNodeType.DATA -> Color(0xFF00BCD4) to RoundedCornerShape(8.dp)
     }
 
+    // Selection and hover are viewer state, the look of them is entirely up to here
+    val borderWidth by animateDpAsState(if (isSelected) 4.dp else 3.dp, label = "node_border")
+    val borderColor by animateColorAsState(
+        when {
+            isSelected -> MaterialTheme.colorScheme.onSurface
+            isHighlighted -> Color.White.copy(alpha = 0.8f)
+            else -> Color.White.copy(alpha = 0.3f)
+        },
+        label = "node_border_color"
+    )
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(backgroundColor, shape)
-            .border(3.dp, Color.White.copy(alpha = 0.3f), shape),
+            .border(borderWidth, borderColor, shape),
         contentAlignment = Alignment.Center
     ) {
         // Anchor points when enabled - positioned at the borders
@@ -710,4 +749,64 @@ private enum class EdgeStyle {
     REGULAR,
     ORTHOGONAL,
     RIGHT_ANGLE
+}
+
+@Composable
+private fun Modifier.graphKeyboardControls(state: KuiverViewerState): Modifier {
+    val focusRequester = remember { FocusRequester() }
+    return this
+        .focusRequester(focusRequester)
+        .onKeyEvent { event -> handleGraphKey(event, state, panStep = 48.dp) }
+        .focusable()
+        .pointerInput(Unit) {
+            awaitEachGesture {
+                awaitFirstDown(requireUnconsumed = false)
+                focusRequester.requestFocus()
+            }
+        }
+}
+
+private fun handleGraphKey(event: KeyEvent, state: KuiverViewerState, panStep: Dp): Boolean {
+    if (event.type != KeyEventType.KeyDown) return false
+
+    // The offset moves the content, so panning the view one way moves the graph the other
+    val pan = when (event.key) {
+        Key.DirectionLeft -> DpOffset(panStep, 0.dp)
+        Key.DirectionRight -> DpOffset(-panStep, 0.dp)
+        Key.DirectionUp -> DpOffset(0.dp, panStep)
+        Key.DirectionDown -> DpOffset(0.dp, -panStep)
+        else -> null
+    }
+    if (pan != null) {
+        state.updateTransform(state.scale, state.offset + pan)
+        return true
+    }
+
+    when (event.key) {
+        Key.Plus, Key.Equals, Key.NumPadAdd -> {
+            state.zoomIn()
+            return true
+        }
+
+        Key.Minus, Key.NumPadSubtract -> {
+            state.zoomOut()
+            return true
+        }
+    }
+
+    // Punctuation key codes are layout dependent on some platforms (macOS reports them by
+    // US-layout position), so fall back to the character the press produces
+    return when (event.utf16CodePoint.toChar()) {
+        '+', '=' -> {
+            state.zoomIn()
+            true
+        }
+
+        '-' -> {
+            state.zoomOut()
+            true
+        }
+
+        else -> false
+    }
 }

@@ -5,9 +5,12 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
+import com.dk.kuiver.ui.KuiverColors
+import com.dk.kuiver.ui.LocalKuiverColors
 
 // Base theme colors - neutral and professional
 private val md_theme_light_primary = Color(0xFF2C2C3E) // Deep charcoal
@@ -185,7 +188,20 @@ fun AppTheme(
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
     val extendedColors = if (darkTheme) darkExtendedColors else lightExtendedColors
 
-    CompositionLocalProvider(LocalExtendedColors provides extendedColors) {
+    val kuiverColors = remember(colorScheme) {
+        KuiverColors(
+            edge = colorScheme.outline,
+            backEdge = colorScheme.error,
+            labelText = colorScheme.onSurface,
+            labelBackground = colorScheme.surface.copy(alpha = 0.9f),
+            labelBorder = colorScheme.outline.copy(alpha = 0.3f)
+        )
+    }
+
+    CompositionLocalProvider(
+        LocalExtendedColors provides extendedColors,
+        LocalKuiverColors provides kuiverColors
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             content = content
