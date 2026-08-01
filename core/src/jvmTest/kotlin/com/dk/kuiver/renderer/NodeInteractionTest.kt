@@ -7,15 +7,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performMouseInput
-import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
@@ -312,43 +309,6 @@ class NodeInteractionTest {
         assertEquals(true, selected["A"], "the content was not told that A is selected")
         assertEquals(false, selected["B"], "the content was told that B is selected")
         assertEquals(true, hovered["A"], "the content was not told that A is hovered")
-    }
-
-    @Test
-    fun arrowKeysPanAndPlusMinusZoom() = runComposeUiTest {
-        val state = twoNodeState()
-        setContent {
-            Scene(
-                state = state,
-                config = KuiverViewerConfig(
-                    fitToContent = false,
-                    keyboardEnabled = true,
-                    keyboardPanStep = 40.dp
-                )
-            )
-        }
-        waitForIdle()
-
-        // The viewer takes focus on the first press, the same way clicking into one does
-        clickAt(Offset(0f, 250f))
-        waitForIdle()
-
-        onRoot().performKeyInput { pressKey(Key.DirectionRight) }
-        waitForIdle()
-        assertEquals(-40f, state.offset.x, 0.5f, "right arrow did not pan the view right")
-
-        onRoot().performKeyInput { pressKey(Key.DirectionUp) }
-        waitForIdle()
-        assertEquals(40f, state.offset.y, 0.5f, "up arrow did not pan the view up")
-
-        onRoot().performKeyInput { pressKey(Key.Equals) }
-        waitForIdle()
-        assertTrue(state.scale > 1f, "+ did not zoom in, scale is ${state.scale}")
-
-        val zoomedIn = state.scale
-        onRoot().performKeyInput { pressKey(Key.Minus) }
-        waitForIdle()
-        assertTrue(state.scale < zoomedIn, "- did not zoom out, scale is ${state.scale}")
     }
 
     private fun config(

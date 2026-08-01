@@ -33,7 +33,6 @@
 - Edge labels
 - Zooming and panning
 - Node selection, hover and drag to reposition
-- Keyboard pan and zoom
 - Resizable canvas
 - Layout animations
 
@@ -443,8 +442,6 @@ KuiverViewer(
         selectionMode = SelectionMode.NONE,          // NONE, SINGLE or MULTIPLE
         nodeDragEnabled = false,           // Drag nodes to reposition them
         hoverEnabled = false,              // Track the node under the pointer
-        keyboardEnabled = false,           // Arrow keys pan, + and - zoom
-        keyboardPanStep = 48.dp,           // How far one arrow key press pans
         relayoutPolicy = RelayoutPolicy.KEEP_MANUAL, // What layout does to dragged nodes
 
         // Animations

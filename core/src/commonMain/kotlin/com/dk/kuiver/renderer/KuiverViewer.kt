@@ -1,12 +1,12 @@
 package com.dk.kuiver.renderer
 
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculateCentroid
@@ -29,25 +29,14 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEvent
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.isCtrlPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import com.dk.kuiver.KuiverViewerState
 import com.dk.kuiver.RelayoutPolicy
 import com.dk.kuiver.SelectionMode
@@ -55,24 +44,35 @@ import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
 import com.dk.kuiver.ui.EdgeStyle
 import com.dk.kuiver.util.calculatePositionBounds
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.exp
 
 /**
  * How a [KuiverViewer] looks and what it lets the user do.
  *
- * Every interaction beyond pan and zoom is off by default, so a viewer behaves the same as before
- * these knobs existed until one of them is turned on: [selectionMode], [nodeDragEnabled],
- * [hoverEnabled] and [keyboardEnabled] each add their gesture handling only when enabled.
+ * Every interaction beyond pan and zoom is off by default: [selectionMode], [nodeDragEnabled] and
+ * [hoverEnabled] each add their gesture handling only when enabled.
  *
+ * @property showDebugBounds whether to draw the graph and viewport bounds, for debugging
+ * @property fitToContent whether the graph is scaled to fit the viewport once it is first laid out
+ * @property contentPadding fraction of the viewport the graph fills when fitted
+ * @property minScale lowest zoom level
+ * @property maxScale highest zoom level
+ * @property zoomStep zoom factor applied per [KuiverViewerState.zoomIn], [KuiverViewerState.zoomOut]
+ * or keyboard zoom step
+ * @property panVelocity scroll pan sensitivity, with a platform-specific default
  * @property selectionMode whether and how tapping a node selects it
  * @property nodeDragEnabled whether nodes can be dragged to a new position
  * @property hoverEnabled whether the pointer entering a node updates
  * [com.dk.kuiver.KuiverInteractionState.hoveredNodeId]
- * @property keyboardEnabled whether the viewer takes focus and pans with the arrow keys and zooms
- * with `+` and `-`. Adds one focus stop to the surrounding layout
- * @property keyboardPanStep how far one arrow key press pans
  * @property relayoutPolicy what happens to dragged nodes when the graph is laid out again
+ * @property zoomConditionDesktop when a scroll event zooms instead of pans, Ctrl+scroll by default
+ * @property scaleAnimationSpec spec for animated zoom
+ * @property offsetAnimationSpec spec for animated pan
+ * @property layoutAnimationSpec spec for node movement when the layout changes
+ * @property animateInitialPlacement whether the very first placement animates too
+ * @property enterAnimationSpec fade-in of the graph once it is ready, or none when `null`
  */
 @Immutable
 data class KuiverViewerConfig(
@@ -86,11 +86,9 @@ data class KuiverViewerConfig(
     val selectionMode: SelectionMode = SelectionMode.NONE,
     val nodeDragEnabled: Boolean = false,
     val hoverEnabled: Boolean = false,
-    val keyboardEnabled: Boolean = false,
-    val keyboardPanStep: Dp = 48.dp,
     val relayoutPolicy: RelayoutPolicy = RelayoutPolicy.KEEP_MANUAL,
-    val zoomConditionDesktop: (PointerEvent) -> Boolean = { eventType ->
-        eventType.keyboardModifiers.isCtrlPressed
+    val zoomConditionDesktop: (PointerEvent) -> Boolean = { event ->
+        event.keyboardModifiers.isCtrlPressed
     },
     val scaleAnimationSpec: AnimationSpec<Float> = spring(
         dampingRatio = Spring.DampingRatioMediumBouncy,
@@ -156,8 +154,8 @@ fun KuiverViewer(
 /**
  * Kuiver viewer that draws all edges from a single canvas.
  *
- * Edges are [EdgeStyle] values instead of a composable each: one layout node and one draw pass
- * for the whole edge set, no edge labels. For graphs of several hundred nodes and up.
+ * Edges are described by [EdgeStyle] values instead of composables, which renders large edge sets
+ * much cheaper but supports no edge labels. Suited to graphs of several hundred nodes and up.
  *
  * ```kotlin
  * KuiverViewer(
@@ -228,12 +226,9 @@ internal fun ViewerRenderer(
 ) {
     val density = LocalDensity.current
     val interaction = state.interaction
-    val focusRequester = remember { FocusRequester() }
     // Read from the gesture loops, which must not restart when a callback changes
     val currentConfig by rememberUpdatedState(config)
     val currentCallbacks by rememberUpdatedState(callbacks)
-    // Single progress animatable for both scale and offset in the same frame
-    val progressAnim = remember { Animatable(1f) }
     // Single progress animation for all node positions, see LayoutTransition
     val layoutTransition = remember { LayoutTransition() }
     // Stable, so a new generation of node targets does not re-measure the node layer
@@ -247,24 +242,34 @@ internal fun ViewerRenderer(
 
     LaunchedEffect(state.pendingAnimation) {
         val request = state.pendingAnimation ?: return@LaunchedEffect
-        val startScale = state.scale
-        val startOffset = state.offset
-        progressAnim.snapTo(0f)
-        progressAnim.animateTo(1f, config.scaleAnimationSpec) {
-            state.scale = startScale + (request.scale - startScale) * value
-            state.offset = Offset(
-                startOffset.x + (request.offset.x - startOffset.x) * value,
-                startOffset.y + (request.offset.y - startOffset.y) * value
-            )
+        launch {
+            animate(
+                initialValue = state.scale,
+                targetValue = request.scale,
+                animationSpec = config.scaleAnimationSpec
+            ) { value, _ ->
+                state.scale = value
+            }
+        }
+        launch {
+            animate(
+                typeConverter = Offset.VectorConverter,
+                initialValue = state.offset,
+                targetValue = request.offset,
+                animationSpec = config.offsetAnimationSpec
+            ) { value, _ ->
+                state.offset = value
+            }
         }
     }
 
     // Remove anchors and interaction state for nodes that no longer exist
     LaunchedEffect(state.layoutedKuiver.nodes.keys) {
         val currentNodeIds = state.layoutedKuiver.nodes.keys
-        anchorRegistry.anchorPositions.keys.forEach { nodeId ->
-            if (nodeId !in currentNodeIds) anchorRegistry.clearNode(nodeId)
-        }
+        // Collect first: removing while iterating the state map's keys throws
+        anchorRegistry.anchorPositions.keys
+            .filter { it !in currentNodeIds }
+            .forEach { anchorRegistry.clearNode(it) }
         (interaction.selectedNodeIds + listOfNotNull(
             interaction.hoveredNodeId,
             interaction.draggedNodeId
@@ -321,18 +326,6 @@ internal fun ViewerRenderer(
                 .fillMaxSize()
                 .clipToBounds()
                 .graphicsLayer { alpha = contentAlpha }
-                .then(
-                    if (config.keyboardEnabled) {
-                        Modifier
-                            .focusRequester(focusRequester)
-                            .onKeyEvent { event ->
-                                handleViewerKey(event, state, config.keyboardPanStep, density)
-                            }
-                            .focusable()
-                    } else {
-                        Modifier
-                    }
-                )
                 .onSizeChanged { size ->
                     // dp, the space the graph is laid out and positioned in
                     with(density) {
@@ -346,8 +339,6 @@ internal fun ViewerRenderer(
                 .pointerInput(state) {
                     awaitEachGesture {
                         awaitFirstDown(requireUnconsumed = false)
-
-                        if (currentConfig.keyboardEnabled) focusRequester.requestFocus()
 
                         // A press is only a pan/zoom past touch slop. Consuming earlier would
                         // cancel taps on nodes, which check the final pass for consumption,
@@ -520,11 +511,7 @@ internal fun ViewerRenderer(
                             centerX = centerX,
                             centerY = centerY,
                             graphCenterX = graphCenterX,
-                            graphCenterY = graphCenterY,
-                            showDebugBounds = config.showDebugBounds,
-                            onCanvasSize = { _, _ -> },
-                            onRedBoxCenter = { _ -> },
-                            onBoundsChange = { _ -> }
+                            graphCenterY = graphCenterY
                         )
                     }
 
@@ -548,44 +535,3 @@ internal fun ViewerRenderer(
     }
 }
 
-/**
- * Arrow keys pan the view, `+` and `-` zoom it around the center.
- *
- * @return whether the key was one of those, so the event stops here
- */
-private fun handleViewerKey(
-    event: KeyEvent,
-    state: KuiverViewerState,
-    panStep: Dp,
-    density: Density
-): Boolean {
-    if (event.type != KeyEventType.KeyDown) return false
-
-    val step = with(density) { panStep.toPx() }
-    // The offset moves the content, so panning the view one way moves the graph the other
-    val pan = when (event.key) {
-        Key.DirectionLeft -> Offset(step, 0f)
-        Key.DirectionRight -> Offset(-step, 0f)
-        Key.DirectionUp -> Offset(0f, step)
-        Key.DirectionDown -> Offset(0f, -step)
-        else -> null
-    }
-    if (pan != null) {
-        state.updateTransform(state.scale, state.offset + pan)
-        return true
-    }
-
-    return when (event.key) {
-        Key.Plus, Key.Equals, Key.NumPadAdd -> {
-            state.zoomIn()
-            true
-        }
-
-        Key.Minus, Key.NumPadSubtract -> {
-            state.zoomOut()
-            true
-        }
-
-        else -> false
-    }
-}

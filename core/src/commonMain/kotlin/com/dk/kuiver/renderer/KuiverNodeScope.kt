@@ -16,8 +16,7 @@ import com.dk.kuiver.KuiverInteractionState
  * ```
  *
  * Each flag is read where it is used, so a node recomposes only when a flag it actually reads
- * changes. Being a receiver rather than parameters keeps the lambda signature stable as more
- * per-node state arrives.
+ * changes.
  */
 @Stable
 interface KuiverNodeScope {

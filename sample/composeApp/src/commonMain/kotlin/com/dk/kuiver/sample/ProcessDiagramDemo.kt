@@ -5,6 +5,9 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -48,7 +51,19 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.utf16CodePoint
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -57,6 +72,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dk.kuiver.KuiverViewerState
 import com.dk.kuiver.SelectionMode
 import com.dk.kuiver.model.EdgeType
 import com.dk.kuiver.model.Kuiver
@@ -465,12 +481,12 @@ fun ProcessDiagramDemo(
                     enterAnimationSpec = tween(durationMillis = 400),
                     selectionMode = SelectionMode.SINGLE,
                     nodeDragEnabled = true,
-                    hoverEnabled = true,
-                    keyboardEnabled = true
+                    hoverEnabled = true
                 ),
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surface),
+                    .background(MaterialTheme.colorScheme.surface)
+                    .graphKeyboardControls(kuiverViewerState),
                 nodeContent = { node ->
                     processNodeData[node.id]?.let {
                         ProcessNodeContent(
@@ -742,4 +758,65 @@ private enum class EdgeStyle {
     REGULAR,
     ORTHOGONAL,
     RIGHT_ANGLE
+}
+
+@Composable
+private fun Modifier.graphKeyboardControls(state: KuiverViewerState): Modifier {
+    val focusRequester = remember { FocusRequester() }
+    val panStep = with(LocalDensity.current) { 48.dp.toPx() }
+    return this
+        .focusRequester(focusRequester)
+        .onKeyEvent { event -> handleGraphKey(event, state, panStep) }
+        .focusable()
+        .pointerInput(Unit) {
+            awaitEachGesture {
+                awaitFirstDown(requireUnconsumed = false)
+                focusRequester.requestFocus()
+            }
+        }
+}
+
+private fun handleGraphKey(event: KeyEvent, state: KuiverViewerState, panStep: Float): Boolean {
+    if (event.type != KeyEventType.KeyDown) return false
+
+    // The offset moves the content, so panning the view one way moves the graph the other
+    val pan = when (event.key) {
+        Key.DirectionLeft -> Offset(panStep, 0f)
+        Key.DirectionRight -> Offset(-panStep, 0f)
+        Key.DirectionUp -> Offset(0f, panStep)
+        Key.DirectionDown -> Offset(0f, -panStep)
+        else -> null
+    }
+    if (pan != null) {
+        state.updateTransform(state.scale, state.offset + pan)
+        return true
+    }
+
+    when (event.key) {
+        Key.Plus, Key.Equals, Key.NumPadAdd -> {
+            state.zoomIn()
+            return true
+        }
+
+        Key.Minus, Key.NumPadSubtract -> {
+            state.zoomOut()
+            return true
+        }
+    }
+
+    // Punctuation key codes are layout dependent on some platforms (macOS reports them by
+    // US-layout position), so fall back to the character the press produces
+    return when (event.utf16CodePoint.toChar()) {
+        '+', '=' -> {
+            state.zoomIn()
+            true
+        }
+
+        '-' -> {
+            state.zoomOut()
+            true
+        }
+
+        else -> false
+    }
 }

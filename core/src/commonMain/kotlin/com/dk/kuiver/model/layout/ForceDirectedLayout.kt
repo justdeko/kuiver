@@ -66,9 +66,7 @@ internal fun forceDirectedBoundsScale(
  * The algorithm iteratively applies forces until the system reaches equilibrium,
  * producing an organic layout that reveals graph structure.
  *
- * Every distance is dp. The simulation unwraps them to bare floats on the way in and wraps the
- * result back on the way out, so the hot loops keep working on flat [FloatArray]s, and the forces
- * and velocities are tuned against the dp scale, giving the same layout on every screen density.
+ * Every distance is a dp value, so the same graph lays out the same on every screen density.
  *
  * The canvas sets the aspect ratio and the minimum size of the simulation bounds. A graph with
  * more nodes than the canvas has room for is laid out over proportionally larger bounds, see

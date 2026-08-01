@@ -137,6 +137,11 @@ class KuiverViewerState internal constructor(
         if (dimensions != measuredDimensions) measuredDimensions = dimensions
     }
 
+    /**
+     * Reserves room for overlay UI, which [centerGraph] then compensates for.
+     *
+     * @param newOffset offset in pixels taken up by the overlay
+     */
     fun updateContentOffset(newOffset: Offset) {
         contentOffset = newOffset
     }
@@ -231,6 +236,11 @@ class KuiverViewerState internal constructor(
      */
     internal fun isManualLayout(candidate: Kuiver): Boolean = manualLayout === candidate
 
+    /**
+     * Centers the graph in the viewport and scales it to fit.
+     *
+     * @param animated whether to animate to the new transform
+     */
     fun centerGraph(animated: Boolean = true) {
         val centeringOffset = Offset(contentOffset.x / 2f, contentOffset.y / 2f)
         if (layoutedKuiver.nodes.isEmpty() || canvasWidth == 0.dp || canvasHeight == 0.dp) {
@@ -245,20 +255,24 @@ class KuiverViewerState internal constructor(
         updateTransform(clampScale(min(targetScaleX, targetScaleY)), centeringOffset, animated)
     }
 
+    /** Zooms in one [KuiverViewerConfig.zoomStep], animated. */
     fun zoomIn() {
         val newScale = clampScale(scale * config.zoomStep)
         requestAnimation(newScale, offset * (newScale / scale))
     }
 
+    /** Zooms out one [KuiverViewerConfig.zoomStep], animated. */
     fun zoomOut() {
         val newScale = clampScale(scale / config.zoomStep)
         requestAnimation(newScale, offset * (newScale / scale))
     }
 
     /**
-     * Sets the view transform outright, which is also how gestures apply themselves: dropping the
-     * pending animation cancels an animated zoom or pan that is still running, so a gesture takes
-     * the transform over from it without a suspension of its own.
+     * Sets the view transform, cancelling any zoom or pan animation still running.
+     *
+     * @param scale zoom level to set, unclamped
+     * @param offset pan offset to set, in pixels
+     * @param animated whether to animate to the new transform
      */
     fun updateTransform(scale: Float, offset: Offset, animated: Boolean = false) {
         if (animated) {

@@ -147,11 +147,11 @@ class Kuiver internal constructor(
         KuiverBuilder().also { it.addAll(this) }.apply(block).build()
 
     /**
-     * Utility method to check if adding an edge would create a cycle.
+     * Checks whether adding an edge from [from] to [to] would create a cycle.
      *
-     * @param from starting node ID
-     * @param to ending node ID
-     * @return `true` if the condition holds, `false` otherwise
+     * @param from id of the edge's start node
+     * @param to id of the edge's end node
+     * @return `true` if the edge would close a cycle
      */
     fun wouldCreateCycle(from: String, to: String): Boolean {
         return hasPath(to, from)
@@ -169,17 +169,19 @@ class Kuiver internal constructor(
     private fun hasPath(from: String, to: String): Boolean = adjacency.hasPath(from, to)
 
     /**
-     * Classifies an edge based on DFS tree structure.
-     * Returns the EdgeType for the given edge.
-     * Note: For better performance when classifying multiple edges, use classifyAllEdges().
+     * Classifies a single edge. Classifies the whole graph to do so, so prefer
+     * [classifyAllEdges] when more than one edge is needed.
+     *
+     * @return the [EdgeType] of [edge]
      */
     fun classifyEdge(edge: KuiverEdge): EdgeType {
         return classifyAllEdges()[edge] ?: EdgeType.CROSS
     }
 
     /**
-     * Classifies all edges in the graph and returns a map of edges to their types.
-     * Uses a single DFS pass for optimal O(V + E) performance.
+     * Classifies every edge of the graph in a single O(V + E) pass.
+     *
+     * @return the [EdgeType] of each edge
      */
     fun classifyAllEdges(): Map<KuiverEdge, EdgeType> {
         val result = mutableMapOf<KuiverEdge, EdgeType>()
@@ -264,9 +266,10 @@ class Kuiver internal constructor(
     }
 
     /**
-     * Finds all strongly connected components (SCCs) using Tarjan's algorithm.
-     * Returns a list of sets, where each set contains node IDs in the same SCC.
-     * SCCs with size > 1 indicate cycles in the graph.
+     * Finds all strongly connected components of the graph. A component with more than one node
+     * indicates a cycle.
+     *
+     * @return sets of node ids, one per component
      */
     fun findStronglyConnectedComponents(): List<Set<String>> {
         val index = mutableMapOf<String, Int>()
@@ -334,8 +337,7 @@ class Kuiver internal constructor(
     }
 
     /**
-     * Checks if the graph contains any cycles.
-     * A cycle exists if there's any SCC with more than one node, or any self-loop.
+     * Checks whether the graph contains a cycle, self-loops included.
      */
     fun hasCycles(): Boolean {
         // Check for self-loops first (quick check)
@@ -346,6 +348,10 @@ class Kuiver internal constructor(
         return findStronglyConnectedComponents().any { it.size > 1 }
     }
 
+    /**
+     * Returns the node ids in topological order. Nodes on a cycle are left out, so the result
+     * contains every node only for acyclic graphs.
+     */
     fun getTopologicalOrder(): List<String> {
         val inDegree = mutableMapOf<String, Int>()
         val queue = ArrayDeque<String>()
@@ -379,8 +385,8 @@ class Kuiver internal constructor(
     }
 
     /**
-     * Creates a new Kuiver with updated node dimensions while preserving structure.
-     * Used after measuring node content to update dimensions before layout calculation.
+     * Returns a copy of this graph with node dimensions replaced by [measuredDimensions] where
+     * present. Nodes without an entry keep the dimensions they have.
      */
     fun withMeasuredDimensions(measuredDimensions: Map<String, NodeDimensions>): Kuiver {
         if (measuredDimensions.isEmpty()) return this
@@ -434,12 +440,8 @@ class KuiverBuilder {
 
     /**
      * Adds [edge], ignoring it when either endpoint is missing from the graph or when the two
-     * nodes are already connected in that direction.
-     *
-     * A builder holds at most one edge per `(fromId, toId)` pair, so a second edge over the same
-     * pair is dropped whatever its anchors or type are: the first one added wins. Until parallel
-     * edges are supported, connecting the same two nodes twice is a caller mistake, and the
-     * `false` return is where it shows up.
+     * nodes are already connected in that direction. A builder holds at most one edge per
+     * `(fromId, toId)` pair, and the first one added wins, anchors and type included.
      *
      * @return `true` if the edge was added
      */
@@ -457,12 +459,12 @@ class KuiverBuilder {
     }
 
     /**
-     * Checks whether an edge would close a loop over what the builder holds so far, so it can be
-     * skipped while the graph is still being assembled.
+     * Checks whether an edge from [from] to [to] would close a cycle over the nodes and edges
+     * added so far.
      *
-     * @param from starting node ID
-     * @param to ending node ID
-     * @return `true` if the condition holds, `false` otherwise
+     * @param from id of the edge's start node
+     * @param to id of the edge's end node
+     * @return `true` if the edge would close a cycle
      */
     fun wouldCreateCycle(from: String, to: String): Boolean = adjacency.hasPath(to, from)
 

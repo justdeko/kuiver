@@ -89,6 +89,7 @@ class KuiverInteractionState internal constructor() {
         if (selectedNodeIds.isNotEmpty()) selectedNodeIds = emptySet()
     }
 
+    /** Whether [nodeId] is part of the selection. */
     fun isSelected(nodeId: String): Boolean = nodeId in selectedNodeIds
 
     /** Applies a tap on [nodeId] under [mode]. */
