@@ -23,6 +23,7 @@ jobs:
     environment: maven-central-publishing  # Requires approval in Settings → Environments
     permissions:
       contents: write
+      pull-requests: write
 
     steps:
       - name: Checkout code
@@ -114,6 +115,34 @@ jobs:
             echo "Tag $VERSION created and pushed"
           fi
 
+      - name: Create README update PR
+        if: github.event.inputs.release-type == 'release'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          BRANCH_NAME="docs/update-readme-$VERSION"
+
+          if [ ! -f README.next.md ]; then
+            echo "README.next.md not found, skipping README update"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git checkout -b "$BRANCH_NAME"
+          mv README.next.md README.md
+          git add README.md README.next.md
+          git commit -m "docs: update README for release $VERSION"
+          git push origin "$BRANCH_NAME"
+
+          gh pr create \
+            --title "docs: update README for release $VERSION" \
+            --body "Promotes README.next.md to README.md following the $VERSION release." \
+            --base "${{ github.ref_name }}" \
+            --head "$BRANCH_NAME"
+
       - name: Summary
         run: |
           VERSION="${{ steps.version.outputs.VERSION }}"
@@ -145,7 +174,8 @@ jobs:
             echo "3. Find your deployment" >> $GITHUB_STEP_SUMMARY
             echo "4. If needed, review and click 'Publish' to release to Maven Central" >> $GITHUB_STEP_SUMMARY
             echo "5. Wait ~10-30 minutes for sync to Maven Central" >> $GITHUB_STEP_SUMMARY
-            echo "6. Update \`gradle.properties\` to next SNAPSHOT version" >> $GITHUB_STEP_SUMMARY
+            echo "6. Review and merge the README update PR" >> $GITHUB_STEP_SUMMARY
+            echo "7. Update \`gradle.properties\` to next SNAPSHOT version" >> $GITHUB_STEP_SUMMARY
           else
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### Snapshot Published" >> $GITHUB_STEP_SUMMARY

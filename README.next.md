@@ -32,6 +32,7 @@
 - Customizable nodes and edges
 - Edge labels
 - Zooming and panning
+- Node selection, hover and drag to reposition
 - Resizable canvas
 - Layout animations
 
@@ -45,7 +46,7 @@ For multiplatform projects, add to your common source set:
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.justdeko:kuiver:0.3.1")
+            implementation("io.github.justdeko:kuiver:0.4.0")
         }
     }
 }
@@ -57,10 +58,10 @@ Or for a specific platform only:
 kotlin {
     sourceSets {
         androidMain.dependencies {
-            implementation("io.github.justdeko:kuiver-android:0.3.1")
+            implementation("io.github.justdeko:kuiver-android:0.4.0")
         }
         iosMain.dependencies {
-            implementation("io.github.justdeko:kuiver-iosarm64:0.3.1")
+            implementation("io.github.justdeko:kuiver-iosarm64:0.4.0")
         }
         // etc.
     }
@@ -154,11 +155,12 @@ edgeContent = { edge, from, to ->
 
 // Custom edge rendering
 edgeContent = { edge, from, to ->
-    Canvas(modifier = Modifier.fillMaxSize()) {
+    val path = remember(from, to) { EdgePathFactory.createStraightPath(from, to) }
+    EdgeCanvas(remember(path) { path.boundingRect() }) {
         drawLine(
             color = Color.Blue,
-            start = from,
-            end = to,
+            start = path.from,
+            end = path.pathEndpoint,
             strokeWidth = 2.dp.toPx()
         )
         // Draw custom arrows, labels, etc.
@@ -204,6 +206,40 @@ edgeContent = { edge, from, to ->
 `StyledEdgeContent` also accepts the same label parameters, so you can combine automatic
 edge styling with labels in one call.
 
+### Batched Edges (Large Graphs)
+
+Each edge composable is a layout node to compose, measure and draw, and every edge recomposes on
+every frame of a layout animation to pick up its new end points.
+
+Pass `edgeStyle` instead of `edgeContent` to draw the whole edge set from one canvas, with
+end points resolved in the draw phase:
+
+```kotlin
+KuiverViewer(
+    state = viewerState,
+    nodeContent = { node -> /* ... */ },
+    edgeStyle = { edge ->
+        EdgeStyle.styled(edge, baseColor = Color.Gray)      // the StyledEdgeContent look
+    }
+)
+```
+
+`EdgeStyle` has the same parameters as the edge composables:
+
+```kotlin
+edgeStyle = { edge ->
+    EdgeStyle(
+        color = if (edge.type == EdgeType.BACK) Color.Red else Color.Gray,
+        strokeWidth = 2f,
+        dashed = edge.type == EdgeType.BACK,
+        shape = EdgeShape.ORTHOGONAL // AUTO, STRAIGHT, CURVED, ORTHOGONAL, RIGHT_ANGLE
+    )
+}
+```
+
+Edges are values rather than composables here, so they cannot hold composable content. No edge
+labels in this mode.
+
 ### Custom Arrow Drawing
 
 Replace the default filled-triangle arrow with any `DrawScope` lambda via the `arrowDrawer`
@@ -238,6 +274,11 @@ buildKuiver {
     )
 }
 ```
+
+Auto-measured nodes are measured while they render, with unbounded constraints, so a node is as
+large as its content wants to be. The measurement is repeated whenever the content changes size, and
+the graph is laid out again with the new sizes, so nodes that grow or shrink at runtime keep their
+spacing. Nodes with explicit dimensions are held to them, and their content is given that much room.
 
 ### Edge Anchor Points
 
@@ -294,6 +335,11 @@ See `ProcessDiagramDemo.kt` for a complete example with multiple anchors per sid
 > techniques. While inspired by academic research, they are not direct ports of published
 > implementations. Expect flaws and suboptimal layouts on complex graphs.
 
+Every length a layout deals with is a `Dp`: the canvas size in `LayoutConfig`, the spacing options,
+node dimensions, and the `DpOffset` positions a layout writes to each node. `150.dp` of spacing is
+therefore the same physical distance on a 1x desktop screen and a 3x phone, and there is no pixel
+value anywhere in the graph coordinate space to mix it up with.
+
 ### Hierarchical Layout
 
 Best for directed acyclic graphs (DAGs) and tree structures. Automatically handles cycles by
@@ -302,8 +348,8 @@ classifying back edges.
 ```kotlin
 val layoutConfig = LayoutConfig.Hierarchical(
     direction = LayoutDirection.HORIZONTAL,  // or VERTICAL
-    levelSpacing = 150f,      // Distance between hierarchy levels
-    nodeSpacing = 100f        // Distance between nodes in same level
+    levelSpacing = 150.dp,    // Distance between hierarchy levels
+    nodeSpacing = 100.dp      // Distance between nodes in same level
 )
 ```
 
@@ -344,7 +390,7 @@ val circularLayout: LayoutProvider = { kuiver, config ->
     val updatedNodes = nodesList.mapIndexed { index, node ->
         val angle = (index.toFloat() / nodesList.size) * 2f * PI.toFloat()
         node.copy(
-            position = Offset(
+            position = DpOffset(
                 x = centerX + radius * cos(angle),
                 y = centerY + radius * sin(angle)
             )
@@ -363,7 +409,8 @@ val layoutConfig = LayoutConfig.Custom(
 **Custom Layout Tips:**
 
 - Your layout function receives the `Kuiver` graph and `LayoutConfig` (use `LayoutConfig.Custom`)
-- Access canvas dimensions via `config.width` and `config.height`
+- Access canvas dimensions via `config.width` and `config.height`, both `Dp`
+- Write each node a `DpOffset` position. `Dp` multiplies as `spacing * count`, never `count * spacing`
 - Always use `buildKuiverWithClassifiedEdges(updatedNodes, kuiver.edges)` to construct the result
 - Handle zero dimensions gracefully (canvas might not be measured yet on first layout)
 - Use `remember` to stabilize your layout function in Compose to avoid unnecessary recompositions
@@ -389,7 +436,13 @@ KuiverViewer(
         zoomStep = 1.2f,                   // Multiplier applied by zoomIn()/zoomOut()
 
         // Pan
-        panVelocity = 1.0f,                // Scroll sensitivity (platform-specific default)
+        panVelocity = 1.0f,                // Scroll sensitivity, dp per scroll unit
+
+        // Interaction, all off by default
+        selectionMode = SelectionMode.NONE,          // NONE, SINGLE or MULTIPLE
+        nodeDragEnabled = false,           // Drag nodes to reposition them
+        hoverEnabled = false,              // Track the node under the pointer
+        relayoutPolicy = RelayoutPolicy.KEEP_MANUAL, // What layout does to dragged nodes
 
         // Animations
         scaleAnimationSpec = spring(       // Zoom animation
@@ -397,7 +450,7 @@ KuiverViewer(
             stiffness = Spring.StiffnessLow
         ),
         offsetAnimationSpec = spring(), // Pan animation
-        nodeAnimationSpec = spring(),   // Node position animation (during layout)
+        layoutAnimationSpec = spring(), // Progress of a layout change, shared by nodes and edges
 
         // Desktop-specific
         zoomConditionDesktop = { event ->  // When to zoom vs pan on desktop
@@ -420,9 +473,9 @@ viewerState.zoomOut()                      // Zoom out by config.zoomStep
 viewerState.centerGraph()                  // Center and fit graph in viewport
 viewerState.centerGraph(animated = false)  // Snap without animation
 
-// Direct control
-viewerState.updateTransform(scale = 1.5f, offset = Offset(100f, 100f))
-viewerState.updateTransform(scale = 1.5f, offset = Offset(100f, 100f), animated = true)
+// Direct control, panning in graph dp
+viewerState.updateTransform(scale = 1.5f, offset = DpOffset(100.dp, 100.dp))
+viewerState.updateTransform(scale = 1.5f, offset = DpOffset(100.dp, 100.dp), animated = true)
 
 // Access current state
 val currentScale = viewerState.scale
@@ -438,6 +491,86 @@ in sync with gestures. `updateTransform` is unclamped by design — it sets exac
 
 - **Touch/Mobile:** Drag to pan, pinch to zoom
 - **Mouse/Desktop:** Drag to pan, scroll to pan, Ctrl+Scroll to zoom
+- **Keyboard:** Arrow keys pan, `+` and `-` zoom, once `keyboardEnabled = true`
+
+## Selecting, Hovering and Dragging Nodes
+
+Everything past pan and zoom is off until you turn it on, so a viewer that worked before these
+knobs existed still behaves the same way.
+
+```kotlin
+KuiverViewer(
+    state = viewerState,
+    config = KuiverViewerConfig(
+        selectionMode = SelectionMode.SINGLE,
+        nodeDragEnabled = true,
+        hoverEnabled = true
+    ),
+    callbacks = KuiverInteractionCallbacks(
+        onNodeClick = { node -> println("clicked ${node.id}") },
+        onNodeLongPress = { node -> showMenuFor(node) },
+        onNodeDragEnd = { node, travelled -> println("${node.id} moved by $travelled") },
+        onCanvasClick = { println("deselected") }
+    ),
+    nodeContent = { node -> /* ... */ },
+    edgeStyle = { EdgeStyle() }
+)
+```
+
+The viewer tracks *what* a node is, your `nodeContent` decides what that looks like. It runs with a
+`KuiverNodeScope` receiver holding `isSelected`, `isHovered` and `isDragging`:
+
+```kotlin
+nodeContent = { node ->
+    Box(
+        Modifier
+            .size(120.dp, 60.dp)
+            .border(
+                width = if (isSelected) 3.dp else 1.dp,
+                color = if (isHovered) MaterialTheme.colorScheme.primary else Color.Gray
+            )
+    ) { Text(node.id) }
+}
+```
+
+Each flag is read where you use it, so a node recomposes only for the ones its content touches.
+`isHovered` is always false on touch, which has no hover.
+
+The same state is readable and writable from `viewerState.interaction`:
+
+```kotlin
+val selected = viewerState.interaction.selectedNodeIds   // Set<String>
+val hovered = viewerState.interaction.hoveredNodeId      // String?
+val dragging = viewerState.interaction.isDragging
+
+viewerState.interaction.select("A")
+viewerState.interaction.toggleSelection("B")
+viewerState.interaction.clearSelection()
+```
+
+### Where Dragged Nodes End Up
+
+A drag writes the node's new position into the graph and remembers it as a manual position.
+`relayoutPolicy` decides what the next layout pass does with it:
+
+- `RelayoutPolicy.KEEP_MANUAL` (default) puts dragged nodes back where the user left them and lays
+  out the rest as usual
+- `RelayoutPolicy.RELAYOUT_ALL` gives every position back to the algorithm, so a drag survives only
+  until the graph, the node sizes or the canvas next change
+
+Positions are equally settable from code, which is the same path a drag takes:
+
+```kotlin
+viewerState.moveNode("A", DpOffset(120.dp, 40.dp))  // absolute, in graph dp
+viewerState.moveNodeBy("A", DpOffset(10.dp, 0.dp))  // relative
+
+viewerState.manualPositions        // Map<String, DpOffset> of everything moved by hand
+viewerState.clearManualPositions() // hand them all back to the layout and lay out again
+viewerState.relayout()             // lay out again without changing anything else
+```
+
+Moving a node never shifts the others: the graph renders around the center of its bounds, and the
+viewer takes the re-centering back out of the view transform.
 
 ### State Persistence
 
@@ -445,8 +578,36 @@ Use `rememberSaveableKuiverViewerState` to preserve zoom/pan across process deat
 
 ### Updating the Graph
 
-Update the graph structure by passing an updated or new `Kuiver` instance with
-`viewerState.updateKuiver(newKuiver)`.
+A `Kuiver` is immutable. `buildKuiver { }` collects nodes and edges in a `KuiverBuilder` and freezes
+them, and every change afterwards hands back a new graph instead of touching the old one. Two graphs
+with the same nodes and edges are equal, so they work as snapshot state and as `remember` keys.
+
+Derive the new graph and hand it to `viewerState.updateKuiver(newKuiver)`:
+
+```kotlin
+val graph = buildKuiver {
+    nodes("A", "B")
+    edge("A", "B")
+}
+
+// Single changes
+val withNode = graph.withNode(KuiverNode("C"))
+val withEdge = withNode.withEdge(KuiverEdge("B", "C"))
+val trimmed = withEdge.withoutNode("A")     // also drops the edges touching A
+val unlinked = withEdge.withoutEdge(KuiverEdge("A", "B"))
+
+// Batches, back in the builder
+val extended = graph.rebuild {
+    nodes("C", "D")
+    edges("B" to "C", "C" to "D")
+}
+
+viewerState.updateKuiver(extended)
+```
+
+`withNode` replaces a node that already carries the same id and leaves its edges alone, which is how
+you move a node or give it explicit dimensions. `withEdge` throws if either endpoint is missing from
+the graph.
 
 ## Advanced Features
 
@@ -527,17 +688,21 @@ The library implements several web-specific adjustments to handle browser limita
 
 - **Reduced Pan Velocity**: Default pan velocity is `4f` (vs `30f` on native platforms) to
   compensate for higher scroll sensitivity in browsers
-  - See: `core/src/wasmJsMain/kotlin/com/dk/kuiver/renderer/PlatformDefaults.wasmJs.kt:4`
-- **Font Loading Delay**: 100ms delay on initial node measurement to prevent text wrapping issues
-  when browser fonts haven't finished loading
-  - See: `core/src/wasmJsMain/kotlin/com/dk/kuiver/renderer/PlatformDefaults.wasmJs.kt:5`
-  - This delay only occurs once on initial render
+    - See: `core/src/wasmJsMain/kotlin/com/dk/kuiver/renderer/PlatformDefaults.wasmJs.kt:4`
+- **Late Fonts**: a font that finishes loading after the first frame re-measures the text in your
+  nodes. Kuiver measures nodes as it renders them and lays the graph out again when those
+  measurements change, so the nodes end up correctly sized either way. This only arises if you
+  bundle your own font: the default font family is compiled into the Skia binary and needs no fetch.
+  To avoid the one-time reflow when you do bundle one, preload it before showing the viewer, with
+  `preloadFont` from `compose.components.resources` (web only) and a
+  `<link rel="preload" as="fetch">` in your `index.html`
 
 ### General Limitations
 
 - **Multiple Edges**: The library does not currently support multiple edges between the same pair of
   nodes
-- **Large Graphs**: Performance with graphs >100 nodes has not been extensively tested
+- **Large Graphs**: Performance with graphs >100 nodes has not been extensively tested. See
+  [Batched Edges](#batched-edges-large-graphs) for the edge rendering mode meant for them
 
 ### API Stability
 
