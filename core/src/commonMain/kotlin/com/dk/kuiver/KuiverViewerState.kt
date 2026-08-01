@@ -12,8 +12,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
@@ -26,29 +24,32 @@ import com.dk.kuiver.model.manualPositionsSaver
 import com.dk.kuiver.renderer.KuiverViewerConfig
 import com.dk.kuiver.util.calculateNodeBounds
 import com.dk.kuiver.util.calculatePositionBounds
+import com.dk.kuiver.util.div
+import com.dk.kuiver.util.times
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.min
 
-internal data class AnimationRequest(val scale: Float, val offset: Offset, val version: Int)
+internal data class AnimationRequest(val scale: Float, val offset: DpOffset, val version: Int)
 
 /**
  * State holder for the KuiverViewer component.
  *
- * The graph coordinate space is [Dp] end to end: node positions, layout spacing, node dimensions
- * and [canvasWidth]/[canvasHeight], which makes a graph look the same on every screen density.
- * [scale] and [offset] are the view transform on top of it and stay in pixels, the space gestures
- * and `graphicsLayer` work in.
+ * The graph coordinate space is [Dp] end to end: node positions, layout spacing, node dimensions,
+ * [canvasWidth]/[canvasHeight] and the [offset] half of the view transform, which makes a graph
+ * look the same on every screen density. [scale] is a ratio, so it needs no unit. Pixels appear
+ * only where the platform hands them over, in gestures and in `graphicsLayer`, and are converted
+ * at that boundary.
  *
  * @property kuiver The original graph structure (before layout)
  * @property layoutedKuiver The graph after layout positioning has been applied
  * @property scale Current zoom level, updated live during gestures and animations
- * @property offset Current pan offset in pixels, updated live during gestures and animations
+ * @property offset Current pan offset in graph dp, updated live during gestures and animations
  * @property canvasWidth Canvas width
  * @property canvasHeight Canvas height
- * @property contentOffset Offset in pixels reserved for UI overlay content
+ * @property contentOffset Space reserved for UI overlay content
  * @property hasFittedInitially True once the graph has been laid out and auto-centered for the
  * first time. Useful when you have loading UI that should disappear once the graph is ready.
  * @property interaction Selection, hover and drag of the nodes
@@ -59,7 +60,7 @@ internal data class AnimationRequest(val scale: Float, val offset: Offset, val v
 class KuiverViewerState internal constructor(
     initialKuiver: Kuiver,
     initialScale: Float = 1f,
-    initialOffset: Offset = Offset.Zero
+    initialOffset: DpOffset = DpOffset.Zero
 ) {
     val interaction: KuiverInteractionState = KuiverInteractionState()
 
@@ -72,7 +73,7 @@ class KuiverViewerState internal constructor(
     var scale: Float by mutableFloatStateOf(initialScale)
         internal set
 
-    var offset: Offset by mutableStateOf(initialOffset)
+    var offset: DpOffset by mutableStateOf(initialOffset)
         internal set
 
     var canvasWidth: Dp by mutableStateOf(0.dp)
@@ -81,7 +82,7 @@ class KuiverViewerState internal constructor(
     var canvasHeight: Dp by mutableStateOf(0.dp)
         internal set
 
-    var contentOffset: Offset by mutableStateOf(Offset.Zero)
+    var contentOffset: DpOffset by mutableStateOf(DpOffset.Zero)
         internal set
 
     /**
@@ -95,9 +96,6 @@ class KuiverViewerState internal constructor(
         private set
 
     internal var config: KuiverViewerConfig = KuiverViewerConfig()
-
-    // The renderer's density, so moving a node can compensate the view transform in pixels
-    internal var density: Density = Density(1f)
 
     // The layout generation a by-hand move produced, held by identity. Read during composition, so
     // the frame that adopts the move already places the nodes rather than animating them there
@@ -140,9 +138,9 @@ class KuiverViewerState internal constructor(
     /**
      * Reserves room for overlay UI, which [centerGraph] then compensates for.
      *
-     * @param newOffset offset in pixels taken up by the overlay
+     * @param newOffset space taken up by the overlay
      */
-    fun updateContentOffset(newOffset: Offset) {
+    fun updateContentOffset(newOffset: DpOffset) {
         contentOffset = newOffset
     }
 
@@ -171,12 +169,10 @@ class KuiverViewerState internal constructor(
 
         // Nodes are placed around the center of the graph bounds, so moving one shifts every other
         // node on screen. Take that shift back out of the view transform, so only the node moves.
-        with(density) {
-            offset += Offset(
-                (after.centerX - before.centerX).toPx() * scale,
-                (after.centerY - before.centerY).toPx() * scale
-            )
-        }
+        offset += DpOffset(
+            after.centerX - before.centerX,
+            after.centerY - before.centerY
+        ) * scale
     }
 
     /** Moves [nodeId] by [delta] from where it currently is. See [moveNode]. */
@@ -242,7 +238,7 @@ class KuiverViewerState internal constructor(
      * @param animated whether to animate to the new transform
      */
     fun centerGraph(animated: Boolean = true) {
-        val centeringOffset = Offset(contentOffset.x / 2f, contentOffset.y / 2f)
+        val centeringOffset = contentOffset / 2f
         if (layoutedKuiver.nodes.isEmpty() || canvasWidth == 0.dp || canvasHeight == 0.dp) {
             updateTransform(clampScale(1f), centeringOffset, animated)
             return
@@ -271,10 +267,10 @@ class KuiverViewerState internal constructor(
      * Sets the view transform, cancelling any zoom or pan animation still running.
      *
      * @param scale zoom level to set, unclamped
-     * @param offset pan offset to set, in pixels
+     * @param offset pan offset to set, in graph dp
      * @param animated whether to animate to the new transform
      */
-    fun updateTransform(scale: Float, offset: Offset, animated: Boolean = false) {
+    fun updateTransform(scale: Float, offset: DpOffset, animated: Boolean = false) {
         if (animated) {
             requestAnimation(scale, offset)
         } else {
@@ -284,7 +280,7 @@ class KuiverViewerState internal constructor(
         }
     }
 
-    private fun requestAnimation(targetScale: Float, targetOffset: Offset) {
+    private fun requestAnimation(targetScale: Float, targetOffset: DpOffset) {
         pendingAnimation = AnimationRequest(targetScale, targetOffset, ++animationVersion)
     }
 
@@ -346,7 +342,7 @@ fun rememberSaveableKuiverViewerState(
     }
 
     val state = remember {
-        KuiverViewerState(savedKuiver, savedScale, Offset(savedOffsetX, savedOffsetY)).also {
+        KuiverViewerState(savedKuiver, savedScale, DpOffset(savedOffsetX.dp, savedOffsetY.dp)).also {
             it.hasFittedInitially = savedHasFitted
             it.restoreManualPositions(savedManualPositions)
         }
@@ -359,8 +355,10 @@ fun rememberSaveableKuiverViewerState(
         launch { snapshotFlow { state.hasFittedInitially }.collect { savedHasFitted = it } }
         launch { snapshotFlow { state.manualPositions }.collect { savedManualPositions = it } }
         launch {
+            // Stored as dp, so a density change across the restore leaves the pan where the
+            // user left it rather than drifting with the graph
             snapshotFlow { state.offset }.collect {
-                savedOffsetX = it.x; savedOffsetY = it.y
+                savedOffsetX = it.x.value; savedOffsetY = it.y.value
             }
         }
     }

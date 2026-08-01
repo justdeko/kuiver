@@ -39,10 +39,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dk.kuiver.model.Kuiver
@@ -66,6 +67,7 @@ import com.dk.kuiver.ui.DefaultNodeContent
 import com.dk.kuiver.ui.EdgeLabelStyle
 import com.dk.kuiver.ui.StyledEdgeContent
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.milliseconds
 
 enum class Screen {
     GRAPH_BUILDER,
@@ -175,15 +177,16 @@ private fun GraphBuilderScreen(
     // Track overlay content height for centering offset
     var overlayContentHeight by rememberSaveable { mutableStateOf(0) }
 
-    LaunchedEffect(overlayContentHeight) {
-        val offset = Offset(0f, overlayContentHeight.toFloat())
-        kuiverViewerState.updateContentOffset(offset)
+    val density = LocalDensity.current
+    LaunchedEffect(overlayContentHeight, density) {
+        val reserved = with(density) { overlayContentHeight.toDp() }
+        kuiverViewerState.updateContentOffset(DpOffset(0.dp, reserved))
     }
 
     // Auto-generation logic
     LaunchedEffect(isAutoGenerating, kuiverViewerState) {
         while (isAutoGenerating) {
-            delay(1000)
+            delay(1000.milliseconds)
             val currentKuiver = kuiverViewerState.kuiver
             val created = if (shouldGenerateNode) {
                 val label = "Node $nextNodeId"

@@ -53,7 +53,6 @@ import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
@@ -63,13 +62,14 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.utf16CodePoint
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dk.kuiver.KuiverViewerState
@@ -763,10 +763,9 @@ private enum class EdgeStyle {
 @Composable
 private fun Modifier.graphKeyboardControls(state: KuiverViewerState): Modifier {
     val focusRequester = remember { FocusRequester() }
-    val panStep = with(LocalDensity.current) { 48.dp.toPx() }
     return this
         .focusRequester(focusRequester)
-        .onKeyEvent { event -> handleGraphKey(event, state, panStep) }
+        .onKeyEvent { event -> handleGraphKey(event, state, panStep = 48.dp) }
         .focusable()
         .pointerInput(Unit) {
             awaitEachGesture {
@@ -776,15 +775,15 @@ private fun Modifier.graphKeyboardControls(state: KuiverViewerState): Modifier {
         }
 }
 
-private fun handleGraphKey(event: KeyEvent, state: KuiverViewerState, panStep: Float): Boolean {
+private fun handleGraphKey(event: KeyEvent, state: KuiverViewerState, panStep: Dp): Boolean {
     if (event.type != KeyEventType.KeyDown) return false
 
     // The offset moves the content, so panning the view one way moves the graph the other
     val pan = when (event.key) {
-        Key.DirectionLeft -> Offset(panStep, 0f)
-        Key.DirectionRight -> Offset(-panStep, 0f)
-        Key.DirectionUp -> Offset(0f, panStep)
-        Key.DirectionDown -> Offset(0f, -panStep)
+        Key.DirectionLeft -> DpOffset(panStep, 0.dp)
+        Key.DirectionRight -> DpOffset(-panStep, 0.dp)
+        Key.DirectionUp -> DpOffset(0.dp, panStep)
+        Key.DirectionDown -> DpOffset(0.dp, -panStep)
         else -> null
     }
     if (pan != null) {

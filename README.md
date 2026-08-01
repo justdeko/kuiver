@@ -436,7 +436,7 @@ KuiverViewer(
         zoomStep = 1.2f,                   // Multiplier applied by zoomIn()/zoomOut()
 
         // Pan
-        panVelocity = 1.0f,                // Scroll sensitivity (platform-specific default)
+        panVelocity = 1.0f,                // Scroll sensitivity, dp per scroll unit
 
         // Interaction, all off by default
         selectionMode = SelectionMode.NONE,          // NONE, SINGLE or MULTIPLE
@@ -473,9 +473,9 @@ viewerState.zoomOut()                      // Zoom out by config.zoomStep
 viewerState.centerGraph()                  // Center and fit graph in viewport
 viewerState.centerGraph(animated = false)  // Snap without animation
 
-// Direct control
-viewerState.updateTransform(scale = 1.5f, offset = Offset(100f, 100f))
-viewerState.updateTransform(scale = 1.5f, offset = Offset(100f, 100f), animated = true)
+// Direct control, panning in graph dp
+viewerState.updateTransform(scale = 1.5f, offset = DpOffset(100.dp, 100.dp))
+viewerState.updateTransform(scale = 1.5f, offset = DpOffset(100.dp, 100.dp), animated = true)
 
 // Access current state
 val currentScale = viewerState.scale

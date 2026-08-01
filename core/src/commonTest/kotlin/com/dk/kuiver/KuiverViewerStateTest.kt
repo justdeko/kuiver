@@ -1,6 +1,5 @@
 package com.dk.kuiver
 
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.dk.kuiver.model.Kuiver
@@ -109,13 +108,13 @@ class KuiverViewerStateTest {
     @Test
     fun `applyInitialFit leaves the transform alone when fitToContent is disabled`() {
         val state = stateWith(KuiverViewerConfig(fitToContent = false))
-        state.updateTransform(scale = 1.75f, offset = Offset(30f, 40f))
+        state.updateTransform(scale = 1.75f, offset = DpOffset(30.dp, 40.dp))
 
         state.applyInitialFit(state.canvasWidth, state.canvasHeight)
 
         assertTrue(state.hasFittedInitially, "content must still become visible")
         assertEquals(1.75f, state.scale, 0.001f)
-        assertEquals(Offset(30f, 40f), state.offset)
+        assertEquals(DpOffset(30.dp, 40.dp), state.offset)
         assertNull(state.pendingAnimation)
     }
 

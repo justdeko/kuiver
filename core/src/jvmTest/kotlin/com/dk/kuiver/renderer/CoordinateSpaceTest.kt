@@ -9,6 +9,8 @@ import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
@@ -69,19 +71,43 @@ class CoordinateSpaceTest {
         }
     }
 
+    @Test
+    fun `a drag of the same physical distance pans the view the same way at every density`() {
+        val atOne = renderAt(density = 1f, dragBy = DRAG)
+        val atThree = renderAt(density = 3f, dragBy = DRAG)
+
+        // The transform is dp, so the same drag in dp has to land on the same pan in dp. In pixels
+        // the two would come out three times apart, which is what put a restored pan in the wrong
+        // place when the density changed underneath it
+        assertDpOffsetEquals(
+            atOne.offset,
+            atThree.offset,
+            PLACEMENT_TOLERANCE,
+            "the same drag panned the view by a different amount"
+        )
+        assertDpOffsetEquals(
+            DRAG,
+            atOne.offset,
+            PLACEMENT_TOLERANCE,
+            "the drag did not pan by what it travelled"
+        )
+    }
+
     /**
      * Renders the graph in a viewport of a fixed size in dp at the given density, and reports what
      * the layout and the renderer made of it.
      *
      * @param density screen density to render at
+     * @param dragBy how far to drag the canvas once the graph has been fitted, in dp
      * @return the laid out positions and the placements, both in dp
      */
-    private fun renderAt(density: Float): Rendered {
+    private fun renderAt(density: Float, dragBy: DpOffset = DpOffset.Zero): Rendered {
         val nodeCenters = mutableMapOf<String, DpOffset>()
         lateinit var state: KuiverViewerState
         var layoutPositions: Map<String, DpOffset> = emptyMap()
         var canvasSize = DpSize.Zero
         var scale = 0f
+        var offset = DpOffset.Zero
 
         runComposeUiTest {
             setContent {
@@ -115,12 +141,27 @@ class CoordinateSpaceTest {
             }
             waitUntil { state.hasFittedInitially }
             waitForIdle()
+
+            if (dragBy != DpOffset.Zero) {
+                // The viewport sits at the root's top left, so drag from the middle of it. One
+                // move past the slop, which the handler replays in full rather than swallowing
+                val start = Offset(VIEWPORT / 2f * density, VIEWPORT / 2f * density)
+                onRoot().performMouseInput {
+                    moveTo(start)
+                    press()
+                    moveBy(Offset(dragBy.x.value * density, dragBy.y.value * density))
+                    release()
+                }
+                waitForIdle()
+            }
+
             layoutPositions = state.layoutedKuiver.nodes.mapValues { (_, node) -> node.position }
             canvasSize = DpSize(state.canvasWidth, state.canvasHeight)
             scale = state.scale
+            offset = state.offset
         }
 
-        return Rendered(layoutPositions, nodeCenters.toMap(), canvasSize, scale)
+        return Rendered(layoutPositions, nodeCenters.toMap(), canvasSize, scale, offset)
     }
 
     /** What one render produced, all in dp. */
@@ -128,7 +169,8 @@ class CoordinateSpaceTest {
         val layoutPositions: Map<String, DpOffset>,
         val nodeCenters: Map<String, DpOffset>,
         val canvasSize: DpSize,
-        val scale: Float
+        val scale: Float,
+        val offset: DpOffset
     )
 
     private fun chainGraph() = buildKuiver {
@@ -146,6 +188,9 @@ class CoordinateSpaceTest {
 
         /** Viewport the viewer is given, in dp. Small enough to fit the test window at 3x too */
         const val VIEWPORT = 200f
+
+        /** Drag applied to the canvas, in dp. Well past the touch slop at either density */
+        val DRAG = DpOffset(40.dp, 20.dp)
 
         /** Layout arithmetic is the same at both densities, so only float error is allowed for */
         val POSITION_TOLERANCE: Dp = 0.01f.dp

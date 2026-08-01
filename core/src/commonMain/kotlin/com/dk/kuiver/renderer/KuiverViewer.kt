@@ -3,6 +3,7 @@ package com.dk.kuiver.renderer
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
@@ -37,6 +38,8 @@ import androidx.compose.ui.input.pointer.isCtrlPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.dp
 import com.dk.kuiver.KuiverViewerState
 import com.dk.kuiver.RelayoutPolicy
 import com.dk.kuiver.SelectionMode
@@ -44,6 +47,7 @@ import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
 import com.dk.kuiver.ui.EdgeStyle
 import com.dk.kuiver.util.calculatePositionBounds
+import com.dk.kuiver.util.times
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.exp
@@ -61,7 +65,8 @@ import kotlin.math.exp
  * @property maxScale highest zoom level
  * @property zoomStep zoom factor applied per [KuiverViewerState.zoomIn], [KuiverViewerState.zoomOut]
  * or keyboard zoom step
- * @property panVelocity scroll pan sensitivity, with a platform-specific default
+ * @property panVelocity scroll pan sensitivity in dp per scroll unit, with a platform-specific
+ * default
  * @property selectionMode whether and how tapping a node selects it
  * @property nodeDragEnabled whether nodes can be dragged to a new position
  * @property hoverEnabled whether the pointer entering a node updates
@@ -94,9 +99,10 @@ data class KuiverViewerConfig(
         dampingRatio = Spring.DampingRatioMediumBouncy,
         stiffness = Spring.StiffnessMedium
     ),
-    val offsetAnimationSpec: AnimationSpec<Offset> = spring(
+    val offsetAnimationSpec: AnimationSpec<DpOffset> = spring(
         dampingRatio = Spring.DampingRatioMediumBouncy,
-        stiffness = Spring.StiffnessMedium
+        stiffness = Spring.StiffnessMedium,
+        visibilityThreshold = DpOffset.VisibilityThreshold
     ),
     val layoutAnimationSpec: AnimationSpec<Float> = spring(
         dampingRatio = Spring.DampingRatioMediumBouncy,
@@ -237,7 +243,6 @@ internal fun ViewerRenderer(
     // run before LaunchedEffect so the initial auto-fit already has config
     SideEffect {
         state.config = config
-        state.density = density
     }
 
     LaunchedEffect(state.pendingAnimation) {
@@ -253,7 +258,7 @@ internal fun ViewerRenderer(
         }
         launch {
             animate(
-                typeConverter = Offset.VectorConverter,
+                typeConverter = DpOffset.VectorConverter,
                 initialValue = state.offset,
                 targetValue = request.offset,
                 animationSpec = config.offsetAnimationSpec
@@ -391,14 +396,17 @@ internal fun ViewerRenderer(
                                     currentConfig.maxScale
                                 )
                                 val actualZoom = newScale / state.scale
-                                val halfW = size.width / 2f
-                                val halfH = size.height / 2f
+                                // Pointer values arrive in pixels, the transform lives in dp:
+                                // convert the two inputs, then the whole expression is dp
+                                val pivot = DpOffset(
+                                    (centroid.x - size.width / 2f).toDp(),
+                                    (centroid.y - size.height / 2f).toDp()
+                                )
+                                val pan = DpOffset(panChange.x.toDp(), panChange.y.toDp())
                                 state.updateTransform(
                                     scale = newScale,
-                                    offset = Offset(
-                                        x = (centroid.x - halfW) * (1 - actualZoom) + state.offset.x * actualZoom + panChange.x,
-                                        y = (centroid.y - halfH) * (1 - actualZoom) + state.offset.y * actualZoom + panChange.y
-                                    )
+                                    offset = pivot * (1 - actualZoom) +
+                                            state.offset * actualZoom + pan
                                 )
                             }
 
@@ -434,21 +442,20 @@ internal fun ViewerRenderer(
                                 )
                                 val actualZoom = newScale / state.scale
                                 val focalPoint = change.position
-                                val halfW = size.width / 2f
-                                val halfH = size.height / 2f
+                                val pivot = DpOffset(
+                                    (focalPoint.x - size.width / 2f).toDp(),
+                                    (focalPoint.y - size.height / 2f).toDp()
+                                )
                                 state.updateTransform(
                                     scale = newScale,
-                                    offset = Offset(
-                                        x = (focalPoint.x - halfW) * (1 - actualZoom) + state.offset.x * actualZoom,
-                                        y = (focalPoint.y - halfH) * (1 - actualZoom) + state.offset.y * actualZoom
-                                    )
+                                    offset = pivot * (1 - actualZoom) + state.offset * actualZoom
                                 )
                             } else {
                                 state.updateTransform(
                                     scale = state.scale,
-                                    offset = state.offset + Offset(
-                                        x = -scrollDelta.x * currentConfig.panVelocity,
-                                        y = -scrollDelta.y * currentConfig.panVelocity
+                                    offset = state.offset + DpOffset(
+                                        x = (-scrollDelta.x * currentConfig.panVelocity).dp,
+                                        y = (-scrollDelta.y * currentConfig.panVelocity).dp
                                     )
                                 )
                             }
@@ -463,8 +470,8 @@ internal fun ViewerRenderer(
                         .graphicsLayer {
                             scaleX = state.scale
                             scaleY = state.scale
-                            translationX = state.offset.x
-                            translationY = state.offset.y
+                            translationX = state.offset.x.toPx()
+                            translationY = state.offset.y.toPx()
                         }
                 ) {
                     // Draw edges first so they are behind nodes

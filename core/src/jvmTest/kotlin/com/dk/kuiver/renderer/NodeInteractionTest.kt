@@ -159,7 +159,7 @@ class NodeInteractionTest {
         )
         assertEquals(
             moved.x.value / 2f,
-            state.offset.x,
+            state.offset.x.value,
             0.5f,
             "the re-centering after the move was not compensated"
         )
@@ -215,7 +215,7 @@ class NodeInteractionTest {
 
     @Test
     fun aDragIsReadInGraphSpaceRatherThanScreenSpace() = runComposeUiTest {
-        val state = twoNodeState().apply { updateTransform(2f, Offset.Zero) }
+        val state = twoNodeState().apply { updateTransform(2f, DpOffset.Zero) }
         var reported: DpOffset? = null
         setContent {
             Scene(
@@ -281,7 +281,7 @@ class NodeInteractionTest {
             state.layoutedKuiver.nodes.getValue("A").position,
             "a node moved with dragging disabled"
         )
-        assertTrue(state.offset.x > 0f, "the drag over a node did not pan the graph")
+        assertTrue(state.offset.x > 0.dp, "the drag over a node did not pan the graph")
     }
 
     @Test

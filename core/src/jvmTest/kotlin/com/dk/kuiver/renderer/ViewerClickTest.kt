@@ -11,6 +11,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.v2.runComposeUiTest
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.dk.kuiver.KuiverViewerState
 import com.dk.kuiver.model.KuiverNode
@@ -67,7 +68,7 @@ class ViewerClickTest {
         waitForIdle()
 
         assertEquals(1, clicks, "a click with sub-slop motion did not reach the node")
-        assertEquals(Offset.Zero, state.offset, "a sub-slop click panned the graph")
+        assertEquals(DpOffset.Zero, state.offset, "a sub-slop click panned the graph")
     }
 
     @Test
@@ -102,6 +103,6 @@ class ViewerClickTest {
         waitForIdle()
 
         assertEquals(0, clicks, "a drag counted as a click")
-        assertTrue(state.offset.x > 0f, "the drag did not pan, offset stayed ${state.offset}")
+        assertTrue(state.offset.x > 0.dp, "the drag did not pan, offset stayed ${state.offset}")
     }
 }
