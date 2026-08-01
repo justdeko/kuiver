@@ -204,6 +204,31 @@ edgeContent = { edge, from, to ->
 `StyledEdgeContent` also accepts the same label parameters, so you can combine automatic
 edge styling with labels in one call.
 
+### Theming
+
+Kuiver depends on compose `runtime` + `foundation` + `ui` only, so it can't read `MaterialTheme`
+directly (`foundation` has no `LocalContentColor`). Edge and label colors that aren't passed
+explicitly instead come from `LocalKuiverColors`, a foundation-only seam. Its defaults reproduce
+kuiver's original hardcoded colors, so providing nothing here is backward compatible.
+
+Provide `LocalKuiverColors` once instead of overriding colors in every `edgeContent` lambda:
+
+```kotlin
+CompositionLocalProvider(
+    LocalKuiverColors provides KuiverColors(
+        edge = MaterialTheme.colorScheme.onSurface,
+        backEdge = MaterialTheme.colorScheme.tertiary,
+        labelText = MaterialTheme.colorScheme.onSurface,
+        labelBackground = MaterialTheme.colorScheme.surface,
+    ),
+) {
+    KuiverViewer(state = viewerState)
+}
+```
+
+Explicit `color`, `baseColor`, `backEdgeColor`, and `labelStyle` arguments on the edge
+composables still take precedence over `LocalKuiverColors`.
+
 ### Custom Arrow Drawing
 
 Replace the default filled-triangle arrow with any `DrawScope` lambda via the `arrowDrawer`
