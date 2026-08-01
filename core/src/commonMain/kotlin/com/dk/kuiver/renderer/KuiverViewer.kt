@@ -8,6 +8,7 @@ import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculateCentroid
+import androidx.compose.foundation.gestures.calculateCentroidSize
 import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.layout.Box
@@ -38,6 +39,7 @@ import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
 import com.dk.kuiver.ui.EdgeStyle
 import com.dk.kuiver.util.calculatePositionBounds
+import kotlin.math.abs
 import kotlin.math.exp
 
 @Immutable
@@ -263,6 +265,13 @@ internal fun ViewerRenderer(
                     while (true) {
                         awaitPointerEventScope { awaitFirstDown(requireUnconsumed = false) }
 
+                        // A press is only a pan/zoom past touch slop. Consuming earlier would
+                        // cancel taps on nodes, which check the final pass for consumption,
+                        // and a physical click nearly always moves a pixel before release
+                        var pastSlop = false
+                        var slopPan = Offset.Zero
+                        var slopZoom = 1f
+
                         while (true) {
                             var panChange = Offset.Zero
                             var zoomChange = 1f
@@ -272,11 +281,28 @@ internal fun ViewerRenderer(
                             awaitPointerEventScope {
                                 val event = awaitPointerEvent()
                                 if (!event.changes.any { it.isConsumed }) {
-                                    panChange = event.calculatePan()
-                                    zoomChange = event.calculateZoom()
-                                    // useCurrent = false: pivot at where fingers were
-                                    centroid = event.calculateCentroid(useCurrent = false)
-                                    event.changes.forEach { it.consume() }
+                                    if (!pastSlop) {
+                                        slopPan += event.calculatePan()
+                                        slopZoom *= event.calculateZoom()
+                                        val zoomMotion = abs(1f - slopZoom) *
+                                                event.calculateCentroidSize(useCurrent = false)
+                                        pastSlop =
+                                            slopPan.getDistance() > viewConfiguration.touchSlop ||
+                                                    zoomMotion > viewConfiguration.touchSlop
+                                        if (pastSlop) {
+                                            // The motion accumulated while still under slop
+                                            panChange = slopPan
+                                            zoomChange = slopZoom
+                                        }
+                                    } else {
+                                        panChange = event.calculatePan()
+                                        zoomChange = event.calculateZoom()
+                                    }
+                                    if (pastSlop) {
+                                        // useCurrent = false: pivot at where fingers were
+                                        centroid = event.calculateCentroid(useCurrent = false)
+                                        event.changes.forEach { it.consume() }
+                                    }
                                 }
                                 anyPressed = event.changes.any { it.pressed }
                             }
