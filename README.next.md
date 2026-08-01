@@ -578,7 +578,7 @@ val graph = buildKuiver {
 val withNode = graph.withNode(KuiverNode("C"))
 val withEdge = withNode.withEdge(KuiverEdge("B", "C"))
 val trimmed = withEdge.withoutNode("A")     // also drops the edges touching A
-val unlinked = withEdge.withoutEdge(KuiverEdge("A", "B"))
+val unlinked = withEdge.withoutEdge("A", "B")
 
 // Batches, back in the builder
 val extended = graph.rebuild {
@@ -592,6 +592,13 @@ viewerState.updateKuiver(extended)
 `withNode` replaces a node that already carries the same id and leaves its edges alone, which is how
 you move a node or give it explicit dimensions. `withEdge` throws if either endpoint is missing from
 the graph.
+
+`withoutEdge` drops an edge from the graph. It takes either endpoints or an edge:
+
+```kotlin
+graph.withoutEdge("A", "B")                 // whatever edge connects them
+graph.withoutEdge(someEdgeFromTheGraph)     // that exact edge
+```
 
 ## Advanced Features
 

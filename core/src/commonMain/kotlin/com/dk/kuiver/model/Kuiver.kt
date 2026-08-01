@@ -119,7 +119,22 @@ class Kuiver internal constructor(
     }
 
     /**
+     * Returns a copy of this graph without the edge connecting the two nodes, whatever its anchors
+     * and type are. Nodes are left untouched.
+     *
+     * @param fromId id of the edge's start node
+     * @param toId id of the edge's end node
+     */
+    fun withoutEdge(fromId: String, toId: String): Kuiver {
+        val edge = edgeMap[fromId to toId] ?: return this
+        return withoutEdge(edge)
+    }
+
+    /**
      * Returns a copy of this graph without [edge]. Nodes are left untouched.
+     *
+     * @param edge the edge to drop, matched in full: anchors and [KuiverEdge.type] included. A
+     * rebuilt edge therefore drops nothing from a laid out graph, whose edges carry a type.
      */
     fun withoutEdge(edge: KuiverEdge): Kuiver {
         if (edge !in edges) return this

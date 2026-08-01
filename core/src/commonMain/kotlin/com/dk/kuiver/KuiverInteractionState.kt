@@ -53,9 +53,10 @@ class KuiverInteractionState internal constructor() {
 
     /**
      * How far the dragged node has travelled since the drag started, in the dp space the graph is
-     * laid out in. Read in the layout and draw phases only: it changes every frame of a drag and
-     * the node it belongs to is placed at its laid out position plus this, so nothing recomposes
-     * while a node moves.
+     * laid out in. It changes every frame of a drag, and the node it belongs to is placed at its
+     * laid out position plus this, so the node itself moves through placement alone and never
+     * recomposes. The batched edge layer reads it while drawing and holds still too; per-edge
+     * `edgeContent` takes its endpoints by value, so those do recompose once per frame.
      */
     internal var dragOffset: DpOffset by mutableStateOf(DpOffset.Zero)
         private set

@@ -178,6 +178,34 @@ class KuiverImmutabilityTest {
     }
 
     @Test
+    fun `withoutEdge by endpoints drops the edge whatever it carries`() {
+        val original = buildKuiver {
+            nodes("A", "B", "C")
+            addEdge(KuiverEdge("A", "B", type = EdgeType.FORWARD, fromAnchor = "right"))
+            edge("B", "C")
+        }
+
+        assertSame(
+            original,
+            original.withoutEdge(KuiverEdge("A", "B")),
+            "a rebuilt edge should not match one that carries a type and an anchor"
+        )
+
+        val trimmed = original.withoutEdge("A", "B")
+        assertEquals(original.nodes, trimmed.nodes)
+        assertEquals(setOf(KuiverEdge("B", "C")), trimmed.edges)
+    }
+
+    @Test
+    fun `withoutEdge by endpoints leaves a graph without that pair alone`() {
+        val original = chain()
+
+        assertSame(original, original.withoutEdge("A", "C"))
+        assertSame(original, original.withoutEdge("B", "A"), "the pair is directed")
+        assertSame(original, original.withoutEdge("Z", "A"))
+    }
+
+    @Test
     fun `rebuild starts from the current content`() {
         val original = chain()
         val extended = original.rebuild {

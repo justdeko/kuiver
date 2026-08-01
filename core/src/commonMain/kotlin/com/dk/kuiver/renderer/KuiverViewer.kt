@@ -63,8 +63,8 @@ import kotlin.math.exp
  * @property contentPadding fraction of the viewport the graph fills when fitted
  * @property minScale lowest zoom level
  * @property maxScale highest zoom level
- * @property zoomStep zoom factor applied per [KuiverViewerState.zoomIn], [KuiverViewerState.zoomOut]
- * or keyboard zoom step
+ * @property zoomStep zoom factor applied per [KuiverViewerState.zoomIn] and
+ * [KuiverViewerState.zoomOut]
  * @property panVelocity scroll pan sensitivity in dp per scroll unit, with a platform-specific
  * default
  * @property selectionMode whether and how tapping a node selects it
