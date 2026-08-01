@@ -96,6 +96,69 @@ class KuiverImmutabilityTest {
     }
 
     @Test
+    fun `withEdge keeps the edge already connecting the two nodes`() {
+        val original = chain()
+        val again = original.withEdge(KuiverEdge("A", "B", fromAnchor = "right", toAnchor = "left"))
+
+        assertSame(original, again, "a second A -> B edge was let in")
+        assertEquals(setOf(KuiverEdge("A", "B"), KuiverEdge("B", "C")), again.edges)
+    }
+
+    @Test
+    fun `withEdges skips the pairs that are already connected`() {
+        val original = chain()
+        val extended = original.withEdges(
+            listOf(
+                KuiverEdge("A", "B", fromAnchor = "right"),
+                KuiverEdge("A", "C"),
+                KuiverEdge("A", "C", toAnchor = "top")
+            )
+        )
+
+        assertEquals(
+            setOf(KuiverEdge("A", "B"), KuiverEdge("B", "C"), KuiverEdge("A", "C")),
+            extended.edges
+        )
+        assertSame(
+            extended,
+            extended.withEdges(listOf(KuiverEdge("A", "B"), KuiverEdge("A", "C"))),
+            "a batch that adds nothing should not produce a new graph"
+        )
+    }
+
+    @Test
+    fun `the builder takes one edge per node pair`() {
+        val builder = KuiverBuilder()
+        builder.addNode(KuiverNode("A"))
+        builder.addNode(KuiverNode("B"))
+
+        assertTrue(builder.addEdge(KuiverEdge("A", "B")))
+        assertFalse(
+            builder.addEdge(KuiverEdge("A", "B", fromAnchor = "right")),
+            "a second A -> B edge was accepted"
+        )
+        assertTrue(builder.addEdge(KuiverEdge("B", "A")), "the other direction is its own edge")
+
+        val graph = builder.build()
+        assertEquals(setOf(KuiverEdge("A", "B"), KuiverEdge("B", "A")), graph.edges)
+    }
+
+    @Test
+    fun `a rejected edge leaves no shadow in the classification`() {
+        val graph = buildKuiver {
+            nodes("A", "B", "C")
+            edges("A" to "B", "B" to "C", "C" to "A")
+            edge("A", "B", fromAnchor = "right", toAnchor = "left")
+        }
+        val types = graph.classifyAllEdges()
+
+        assertEquals(3, graph.edges.size, "the duplicate A -> B edge was kept")
+        assertEquals(graph.edges, types.keys, "an edge was kept but never reached by the traversal")
+        assertEquals(EdgeType.FORWARD, types.getValue(KuiverEdge("A", "B")))
+        assertEquals(EdgeType.BACK, types.getValue(KuiverEdge("C", "A")))
+    }
+
+    @Test
     fun `withoutNode drops the edges that touch it`() {
         val trimmed = chain().withoutNode("B")
 

@@ -70,7 +70,8 @@ fun KuiverBuilder.nodes(ids: Collection<String>) {
 }
 
 /**
- * Adds an edge between two nodes.
+ * Adds an edge between two nodes, unless they are already connected in that direction. See
+ * [KuiverBuilder.addEdge], which returns whether the edge was taken.
  *
  * Example:
  * ```kotlin
@@ -95,7 +96,7 @@ fun KuiverBuilder.edge(
 }
 
 /**
- * Adds multiple edges from pairs.
+ * Adds multiple edges from pairs, skipping the pairs that are already connected. See [edge].
  *
  * Example:
  * ```kotlin
@@ -115,7 +116,7 @@ fun KuiverBuilder.edges(vararg pairs: Pair<String, String>) {
 }
 
 /**
- * Adds multiple edges from a list of pairs.
+ * Adds multiple edges from a list of pairs, skipping the pairs that are already connected.
  * Automatically creates nodes if they don't exist.
  *
  * Example:

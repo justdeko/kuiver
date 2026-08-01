@@ -9,6 +9,10 @@ import androidx.compose.runtime.Immutable
  * [withEdges], [withoutNode], [withoutEdge] or [rebuild]. Instances compare structurally, so they
  * behave as snapshot state and as `remember` keys: a graph with the same nodes and edges is the
  * same value, and any change produces a new instance that triggers recomposition and re-layout.
+ *
+ * Nodes are unique by id and edges by their `(fromId, toId)` pair, so two nodes are connected at
+ * most once per direction. Parallel edges are not supported yet, and the ones that would create
+ * them are rejected rather than half-added.
  */
 @Immutable
 class Kuiver internal constructor(
@@ -60,11 +64,15 @@ class Kuiver internal constructor(
     /**
      * Returns a copy of this graph with [edge] added.
      *
+     * A graph holds at most one edge per `(fromId, toId)` pair. If one is already there, this
+     * returns the graph unchanged, anchors and type included: adding does not replace. Drop the
+     * existing edge with [withoutEdge] first to connect the same two nodes differently.
+     *
      * @throws IllegalArgumentException if either endpoint is not part of the graph
      */
     fun withEdge(edge: KuiverEdge): Kuiver {
         requireEndpoints(edge)
-        if (edge in edges) return this
+        if (edgeMap.containsKey(edge.fromId to edge.toId)) return this
         val neighbors = adjacency[edge.fromId].orEmpty() + edge.toId
         return Kuiver(
             nodes,
@@ -75,7 +83,8 @@ class Kuiver internal constructor(
     }
 
     /**
-     * Returns a copy of this graph with all of [newEdges] added. See [withEdge].
+     * Returns a copy of this graph with all of [newEdges] added, skipping the ones whose
+     * `(fromId, toId)` pair is already connected. See [withEdge].
      *
      * @throws IllegalArgumentException if any endpoint is not part of the graph
      */
@@ -86,10 +95,13 @@ class Kuiver internal constructor(
         val updatedAdjacency = adjacency.toMutableMap()
         val updatedEdgeMap = edgeMap.toMutableMap()
         newEdges.forEach { edge ->
+            val key = edge.fromId to edge.toId
+            if (updatedEdgeMap.containsKey(key)) return@forEach
             updatedEdges.add(edge)
             updatedAdjacency[edge.fromId] = updatedAdjacency[edge.fromId].orEmpty() + edge.toId
-            updatedEdgeMap[edge.fromId to edge.toId] = edge
+            updatedEdgeMap[key] = edge
         }
+        if (updatedEdges.size == edges.size) return this
         return Kuiver(nodes, updatedEdges, updatedAdjacency, updatedEdgeMap)
     }
 
@@ -421,7 +433,13 @@ class KuiverBuilder {
     }
 
     /**
-     * Adds [edge], ignoring it when either endpoint is missing from the graph.
+     * Adds [edge], ignoring it when either endpoint is missing from the graph or when the two
+     * nodes are already connected in that direction.
+     *
+     * A builder holds at most one edge per `(fromId, toId)` pair, so a second edge over the same
+     * pair is dropped whatever its anchors or type are: the first one added wins. Until parallel
+     * edges are supported, connecting the same two nodes twice is a caller mistake, and the
+     * `false` return is where it shows up.
      *
      * @return `true` if the edge was added
      */
@@ -429,10 +447,12 @@ class KuiverBuilder {
         if (!nodes.containsKey(edge.fromId) || !nodes.containsKey(edge.toId)) {
             return false
         }
+        val key = edge.fromId to edge.toId
+        if (edgeMap.containsKey(key)) return false
 
         edges.add(edge)
         adjacency[edge.fromId]?.add(edge.toId)
-        edgeMap[edge.fromId to edge.toId] = edge
+        edgeMap[key] = edge
         return true
     }
 
