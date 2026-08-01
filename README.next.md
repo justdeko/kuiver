@@ -240,6 +240,47 @@ edgeStyle = { edge ->
 Edges are values rather than composables here, so they cannot hold composable content. No edge
 labels in this mode.
 
+### Theming
+
+Kuiver depends on compose `runtime` + `foundation` + `ui` only, so it can't read `MaterialTheme`
+directly (`foundation` has no `LocalContentColor`). Edge and label colors that aren't passed
+explicitly instead come from `LocalKuiverColors`, a foundation-only seam. Its defaults reproduce
+kuiver's original hardcoded colors, so providing nothing here changes nothing.
+
+Provide `LocalKuiverColors` once instead of overriding colors in every `edgeContent` lambda:
+
+```kotlin
+CompositionLocalProvider(
+    LocalKuiverColors provides KuiverColors(
+        edge = MaterialTheme.colorScheme.onSurface,
+        backEdge = MaterialTheme.colorScheme.tertiary,
+        labelText = MaterialTheme.colorScheme.onSurface,
+        labelBackground = MaterialTheme.colorScheme.surface,
+    ),
+) {
+    KuiverViewer(
+        state = viewerState,
+        nodeContent = { node -> Text(node.id) },
+        edgeContent = { edge, from, to -> StyledEdgeContent(edge, from, to) }
+    )
+}
+```
+
+Explicit `color`, `baseColor`, `backEdgeColor`, and `labelStyle` arguments on the edge
+composables still take precedence over `LocalKuiverColors`.
+
+The batched `edgeStyle` lambda runs while drawing rather than while composing, so it cannot read
+`LocalKuiverColors` itself. `KuiverDefaults.edgeStyle()` reads the colors in composition and
+returns a lambda closing over them:
+
+```kotlin
+KuiverViewer(
+    state = viewerState,
+    nodeContent = { node -> Text(node.id) },
+    edgeStyle = KuiverDefaults.edgeStyle()
+)
+```
+
 ### Custom Arrow Drawing
 
 Replace the default filled-triangle arrow with any `DrawScope` lambda via the `arrowDrawer`
