@@ -5,6 +5,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import com.dk.kuiver.KuiverInteractionState
 import com.dk.kuiver.model.AnchorOffset
 import com.dk.kuiver.model.DEFAULT_NODE_SIZE
 import com.dk.kuiver.model.KuiverEdge
@@ -23,6 +24,7 @@ internal fun RenderEdge(
     centerY: Dp,
     targets: NodePositions,
     transition: LayoutTransition,
+    interaction: KuiverInteractionState,
     anchorRegistry: AnchorPositionRegistry,
     skipAnimation: Boolean,
     edgeContent: @Composable (KuiverEdge, Offset, Offset) -> Unit
@@ -36,6 +38,7 @@ internal fun RenderEdge(
         centerY = centerY,
         targets = targets,
         transition = transition,
+        interaction = interaction,
         anchorRegistry = anchorRegistry,
         skipAnimation = skipAnimation
     )
@@ -44,8 +47,8 @@ internal fun RenderEdge(
 }
 
 /**
- * Reads node positions from [transition], so a caller in the draw or layout phase keeps a moving
- * edge out of composition.
+ * Reads node positions from [transition] and the live drag from [interaction], so a caller in the
+ * draw or layout phase keeps a moving edge out of composition.
  */
 internal fun Density.resolveEdgeEndpoints(
     edge: KuiverEdge,
@@ -55,11 +58,14 @@ internal fun Density.resolveEdgeEndpoints(
     centerY: Dp,
     targets: NodePositions,
     transition: LayoutTransition,
+    interaction: KuiverInteractionState,
     anchorRegistry: AnchorPositionRegistry,
     skipAnimation: Boolean
 ): Pair<Offset, Offset> {
-    val fromPosition = transition.positionOf(edge.fromId, targets, skipAnimation)
-    val toPosition = transition.positionOf(edge.toId, targets, skipAnimation)
+    val fromPosition = transition.positionOf(edge.fromId, targets, skipAnimation) +
+            interaction.dragOffsetOf(edge.fromId)
+    val toPosition = transition.positionOf(edge.toId, targets, skipAnimation) +
+            interaction.dragOffsetOf(edge.toId)
 
     val fromCenter = Offset(
         centerX.toPx() + fromPosition.x.toPx(),

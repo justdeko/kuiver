@@ -10,6 +10,7 @@ import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
+import com.dk.kuiver.KuiverViewerState
 import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.KuiverNode
 import com.dk.kuiver.model.NodeDimensions
@@ -30,6 +31,9 @@ import kotlin.math.roundToInt
  * @param centerY y center of the viewport
  * @param targets the caller's layout generation
  * @param transition shared progress driving node movement
+ * @param state the viewer state, for the interaction a node reports into
+ * @param config viewer configuration, read for which node gestures are enabled
+ * @param callbacks the caller's interaction callbacks
  * @param skipAnimation places nodes at [targets] directly, as initial placement does
  * @param onMeasured receives the sizes of all auto-sized nodes, whenever they change
  * @param nodeContent composable content of a node
@@ -42,12 +46,16 @@ internal fun NodeLayer(
     centerY: Dp,
     targets: NodePositions,
     transition: LayoutTransition,
+    state: KuiverViewerState,
+    config: KuiverViewerConfig,
+    callbacks: KuiverInteractionCallbacks,
     skipAnimation: Boolean,
     onMeasured: (Map<String, NodeDimensions>) -> Unit,
-    nodeContent: @Composable (KuiverNode) -> Unit
+    nodeContent: @Composable KuiverNodeScope.(KuiverNode) -> Unit
 ) {
     // Plain map, not snapshot state: only compared to decide whether to report
     val reported = remember { mutableMapOf<String, NodeDimensions>() }
+    val interaction = state.interaction
 
     SubcomposeLayout(modifier = Modifier.fillMaxSize()) { constraints ->
         val placed = ArrayList<PlacedNode>(kuiver.nodes.size)
@@ -57,12 +65,16 @@ internal fun NodeLayer(
             val explicit = source.nodes[nodeId]?.dimensions
             val content = subcompose(nodeId) {
                 // Explicit dimensions fix the node box; otherwise it wraps its content
-                val boxModifier = if (explicit != null) {
+                val sizeModifier = if (explicit != null) {
                     Modifier.size(explicit.width, explicit.height)
                 } else {
                     Modifier
                 }
-                Box(boxModifier) { nodeContent(node) }
+                // Remembered, so the content is not handed a new receiver on every measure pass
+                val scope = remember(nodeId) { NodeScope(nodeId, interaction) }
+                Box(sizeModifier.nodeInteraction(node, state, config, callbacks)) {
+                    scope.nodeContent(node)
+                }
             }
             // The box above is the single root of the slot
             val placeable = content.firstOrNull()?.measure(Constraints()) ?: return@forEach
@@ -91,7 +103,10 @@ internal fun NodeLayer(
         layout(width, height) {
             with(measureScope) {
                 placed.forEach { (nodeId, placeable) ->
-                    val position = transition.positionOf(nodeId, targets, skipAnimation)
+                    // The live drag offset is added here rather than written into the graph, so a
+                    // node follows the pointer through placement alone, without recomposing
+                    val position = transition.positionOf(nodeId, targets, skipAnimation) +
+                            interaction.dragOffsetOf(nodeId)
                     placeable.place(
                         x = (centerXPx + position.x.toPx() - placeable.width / 2f).roundToInt(),
                         y = (centerYPx + position.y.toPx() - placeable.height / 2f).roundToInt()

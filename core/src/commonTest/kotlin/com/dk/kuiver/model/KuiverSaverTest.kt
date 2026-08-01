@@ -1,5 +1,7 @@
 package com.dk.kuiver.model
 
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.SaverScope
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import kotlin.test.Test
@@ -69,4 +71,22 @@ class KuiverSaverTest {
         assertNull(edge2.fromAnchor)
         assertNull(edge2.toAnchor)
     }
+
+    @Test
+    fun `manual positions survive a save and restore round trip`() {
+        val positions = mapOf(
+            "node1" to DpOffset(120.dp, (-40).dp),
+            "node2" to DpOffset(0.dp, 500.5f.dp)
+        )
+        assertEquals(positions, manualPositionsSaver().roundTrip(positions))
+    }
+
+    @Test
+    fun `an empty set of manual positions restores as empty`() {
+        assertEquals(emptyMap(), manualPositionsSaver().roundTrip(emptyMap()))
+    }
+
+    /** Puts [value] through the saver the way `rememberSaveable` does. */
+    private fun <T> Saver<T, Any>.roundTrip(value: T): T? =
+        restore(assertNotNull(SaverScope { true }.save(value)))
 }

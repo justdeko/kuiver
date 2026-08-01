@@ -1,5 +1,7 @@
 package com.dk.kuiver.sample
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -55,6 +57,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dk.kuiver.SelectionMode
 import com.dk.kuiver.model.EdgeType
 import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.buildKuiver
@@ -439,6 +442,14 @@ fun ProcessDiagramDemo(
                         onClick = { showAnchors = !showAnchors },
                         label = { Text("Anchors") }
                     )
+
+                    // Nodes stay where they are dropped until the layout gets them back
+                    FilterChip(
+                        selected = false,
+                        enabled = kuiverViewerState.manualPositions.isNotEmpty(),
+                        onClick = kuiverViewerState::clearManualPositions,
+                        label = { Text("Reset positions") }
+                    )
                 }
             }
         }
@@ -450,7 +461,13 @@ fun ProcessDiagramDemo(
         ) {
             KuiverViewer(
                 state = kuiverViewerState,
-                config = KuiverViewerConfig(enterAnimationSpec = tween(durationMillis = 400)),
+                config = KuiverViewerConfig(
+                    enterAnimationSpec = tween(durationMillis = 400),
+                    selectionMode = SelectionMode.SINGLE,
+                    nodeDragEnabled = true,
+                    hoverEnabled = true,
+                    keyboardEnabled = true
+                ),
                 modifier = Modifier
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.surface),
@@ -460,7 +477,9 @@ fun ProcessDiagramDemo(
                             data = it,
                             nodeId = node.id,
                             showAnchors = showAnchors,
-                            kuiver = kuiverViewerState.layoutedKuiver
+                            kuiver = kuiverViewerState.layoutedKuiver,
+                            isSelected = isSelected,
+                            isHighlighted = isHovered || isDragging
                         )
                     }
                 },
@@ -550,7 +569,9 @@ private fun ProcessNodeContent(
     data: ProcessNode,
     nodeId: String,
     showAnchors: Boolean,
-    kuiver: Kuiver
+    kuiver: Kuiver,
+    isSelected: Boolean,
+    isHighlighted: Boolean
 ) {
     val (backgroundColor, shape) = when (data.type) {
         ProcessNodeType.START -> Color(0xFF4CAF50) to CircleShape
@@ -561,11 +582,22 @@ private fun ProcessNodeContent(
         ProcessNodeType.DATA -> Color(0xFF00BCD4) to RoundedCornerShape(8.dp)
     }
 
+    // Selection and hover are viewer state, the look of them is entirely up to here
+    val borderWidth by animateDpAsState(if (isSelected) 4.dp else 3.dp, label = "node_border")
+    val borderColor by animateColorAsState(
+        when {
+            isSelected -> MaterialTheme.colorScheme.onSurface
+            isHighlighted -> Color.White.copy(alpha = 0.8f)
+            else -> Color.White.copy(alpha = 0.3f)
+        },
+        label = "node_border_color"
+    )
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(backgroundColor, shape)
-            .border(3.dp, Color.White.copy(alpha = 0.3f), shape),
+            .border(borderWidth, borderColor, shape),
         contentAlignment = Alignment.Center
     ) {
         // Anchor points when enabled - positioned at the borders

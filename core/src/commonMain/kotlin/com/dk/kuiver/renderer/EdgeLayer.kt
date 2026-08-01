@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.unit.Dp
+import com.dk.kuiver.KuiverInteractionState
 import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.ui.EdgeStyle
@@ -24,6 +25,7 @@ internal fun EdgeLayer(
     centerY: Dp,
     targets: NodePositions,
     transition: LayoutTransition,
+    interaction: KuiverInteractionState,
     anchorRegistry: AnchorPositionRegistry,
     skipAnimation: Boolean,
     edgeStyle: (KuiverEdge) -> EdgeStyle
@@ -44,6 +46,7 @@ internal fun EdgeLayer(
                         centerY = centerY,
                         targets = targets,
                         transition = transition,
+                        interaction = interaction,
                         anchorRegistry = anchorRegistry,
                         skipAnimation = skipAnimation
                     )

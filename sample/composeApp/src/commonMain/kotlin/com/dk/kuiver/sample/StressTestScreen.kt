@@ -63,6 +63,7 @@ import com.dk.kuiver.model.buildKuiver
 import com.dk.kuiver.model.layout.LayoutConfig
 import com.dk.kuiver.model.layout.LayoutDirection
 import com.dk.kuiver.rememberSaveableKuiverViewerState
+import com.dk.kuiver.renderer.KuiverNodeScope
 import com.dk.kuiver.renderer.KuiverViewer
 import com.dk.kuiver.renderer.KuiverViewerConfig
 import com.dk.kuiver.ui.EdgeStyle
@@ -91,7 +92,7 @@ private fun generateStressTestGraph(
 ): Pair<Map<String, StressNodeData>, com.dk.kuiver.model.Kuiver> {
     val rng = Random(seed)
     val nodeDataMap = mutableMapOf<String, StressNodeData>()
-    val kuiverNodes = mutableListOf<com.dk.kuiver.model.KuiverNode>()
+    val kuiverNodes = mutableListOf<KuiverNode>()
 
     for (i in 1..nodeCount) {
         val id = i.toString()
@@ -461,7 +462,7 @@ fun StressTestScreen(onNavigateBack: () -> Unit) {
         val viewerModifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surface)
-        val nodeContent: @Composable (KuiverNode) -> Unit = { node ->
+        val nodeContent: @Composable KuiverNodeScope.(KuiverNode) -> Unit = { node ->
             nodeDataMap[node.id]?.let { StressNodeContent(it) }
         }
         val baseColor = MaterialTheme.colorScheme.outline

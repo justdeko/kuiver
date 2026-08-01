@@ -5,21 +5,27 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.referentialEqualityPolicy
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.NodeDimensions
 import com.dk.kuiver.model.kuiverSaver
 import com.dk.kuiver.model.layout.LayoutConfig
 import com.dk.kuiver.model.layout.layout
+import com.dk.kuiver.model.manualPositionsSaver
 import com.dk.kuiver.renderer.KuiverViewerConfig
 import com.dk.kuiver.util.calculateNodeBounds
+import com.dk.kuiver.util.calculatePositionBounds
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
@@ -45,6 +51,9 @@ internal data class AnimationRequest(val scale: Float, val offset: Offset, val v
  * @property contentOffset Offset in pixels reserved for UI overlay content
  * @property hasFittedInitially True once the graph has been laid out and auto-centered for the
  * first time. Useful when you have loading UI that should disappear once the graph is ready.
+ * @property interaction Selection, hover and drag of the nodes
+ * @property manualPositions Positions the user or the caller has set by hand, keyed by node id.
+ * Under [RelayoutPolicy.KEEP_MANUAL] they are reapplied after every layout pass.
  */
 @Stable
 class KuiverViewerState internal constructor(
@@ -52,6 +61,8 @@ class KuiverViewerState internal constructor(
     initialScale: Float = 1f,
     initialOffset: Offset = Offset.Zero
 ) {
+    val interaction: KuiverInteractionState = KuiverInteractionState()
+
     var kuiver: Kuiver by mutableStateOf(initialKuiver)
         internal set
 
@@ -80,7 +91,23 @@ class KuiverViewerState internal constructor(
     internal var measuredDimensions: Map<String, NodeDimensions> by mutableStateOf(emptyMap())
         private set
 
+    var manualPositions: Map<String, DpOffset> by mutableStateOf(emptyMap())
+        private set
+
     internal var config: KuiverViewerConfig = KuiverViewerConfig()
+
+    // The renderer's density, so moving a node can compensate the view transform in pixels
+    internal var density: Density = Density(1f)
+
+    // The layout generation a by-hand move produced, held by identity. Read during composition, so
+    // the frame that adopts the move already places the nodes rather than animating them there
+    private var manualLayout: Kuiver? by mutableStateOf(null, referentialEqualityPolicy())
+
+    // Bumped to ask for a layout pass that nothing else would have triggered
+    private var layoutGeneration: Int by mutableIntStateOf(0)
+
+    /** Key of the current layout request, so the renderer relaunches layout when it changes. */
+    internal val layoutKey: Int get() = layoutGeneration
 
     private var animationVersion = 0
     internal var pendingAnimation: AnimationRequest? by mutableStateOf(null)
@@ -114,6 +141,96 @@ class KuiverViewerState internal constructor(
         contentOffset = newOffset
     }
 
+    /**
+     * Moves [nodeId] to [position] in the dp space the graph is laid out in, and records it as a
+     * manual position so [RelayoutPolicy.KEEP_MANUAL] can put it back after the next layout pass.
+     * This is what a node drag commits, and it is equally the way to place a node from code.
+     *
+     * Unknown ids are ignored.
+     *
+     * @param nodeId id of the node to move
+     * @param position where to move it, in graph dp
+     */
+    fun moveNode(nodeId: String, position: DpOffset) {
+        val node = layoutedKuiver.nodes[nodeId] ?: return
+        if (node.position == position) return
+
+        val before = layoutedKuiver.nodes.values.calculatePositionBounds()
+        val moved = layoutedKuiver.withNode(node.copy(position = position))
+        val after = moved.nodes.values.calculatePositionBounds()
+
+        layoutedKuiver = moved
+        manualPositions = manualPositions + (nodeId to position)
+        // This generation is the move itself, which the caller already performed
+        manualLayout = moved
+
+        // Nodes are placed around the center of the graph bounds, so moving one shifts every other
+        // node on screen. Take that shift back out of the view transform, so only the node moves.
+        with(density) {
+            offset += Offset(
+                (after.centerX - before.centerX).toPx() * scale,
+                (after.centerY - before.centerY).toPx() * scale
+            )
+        }
+    }
+
+    /** Moves [nodeId] by [delta] from where it currently is. See [moveNode]. */
+    fun moveNodeBy(nodeId: String, delta: DpOffset) {
+        if (delta == DpOffset.Zero) return
+        val node = layoutedKuiver.nodes[nodeId] ?: return
+        moveNode(nodeId, node.position + delta)
+    }
+
+    /**
+     * Lays the graph out again from scratch. The viewer does this on its own whenever the graph,
+     * the node sizes or the canvas change, so this is for the times nothing observable changed and
+     * you still want the algorithm to have another go.
+     */
+    fun relayout() {
+        layoutGeneration++
+    }
+
+    /**
+     * Hands every node back to the layout algorithm, dropping the positions collected by dragging
+     * and by [moveNode], and lays the graph out again.
+     */
+    fun clearManualPositions() {
+        if (manualPositions.isEmpty()) return
+        manualPositions = emptyMap()
+        relayout()
+    }
+
+    /** Adopts manual positions carried over from a previous instance of this state. */
+    internal fun restoreManualPositions(positions: Map<String, DpOffset>) {
+        if (positions.isNotEmpty()) manualPositions = positions
+    }
+
+    /** Drops manual positions of nodes that are no longer in the graph. */
+    private fun pruneManualPositions(nodeIds: Set<String>) {
+        if (manualPositions.keys.all { it in nodeIds }) return
+        manualPositions = manualPositions.filterKeys { it in nodeIds }
+    }
+
+    /**
+     * Applies the manual positions to a freshly laid out graph, unless the caller has handed
+     * layout full control through [RelayoutPolicy.RELAYOUT_ALL].
+     */
+    internal fun withRelayoutPolicyApplied(laid: Kuiver): Kuiver {
+        pruneManualPositions(laid.nodes.keys)
+        if (config.relayoutPolicy == RelayoutPolicy.RELAYOUT_ALL) return laid
+        val overrides = manualPositions.mapNotNull { (nodeId, position) ->
+            laid.nodes[nodeId]?.takeIf { it.position != position }?.copy(position = position)
+        }
+        return laid.withNodes(overrides)
+    }
+
+    /**
+     * Whether [candidate] is a generation that came from [moveNode] rather than from the layout
+     * algorithm. Those are placed outright: the node is already where the caller put it, and
+     * animating to it would first render it back at where it started.
+     */
+    internal fun isManualLayout(candidate: Kuiver): Boolean = manualLayout === candidate
+
     fun centerGraph(animated: Boolean = true) {
         val centeringOffset = Offset(contentOffset.x / 2f, contentOffset.y / 2f)
         if (layoutedKuiver.nodes.isEmpty() || canvasWidth == 0.dp || canvasHeight == 0.dp) {
@@ -138,6 +255,11 @@ class KuiverViewerState internal constructor(
         requestAnimation(newScale, offset * (newScale / scale))
     }
 
+    /**
+     * Sets the view transform outright, which is also how gestures apply themselves: dropping the
+     * pending animation cancels an animated zoom or pan that is still running, so a gesture takes
+     * the transform over from it without a suspension of its own.
+     */
     fun updateTransform(scale: Float, offset: Offset, animated: Boolean = false) {
         if (animated) {
             requestAnimation(scale, offset)
@@ -205,10 +327,14 @@ fun rememberSaveableKuiverViewerState(
     var savedOffsetX by rememberSaveable { mutableFloatStateOf(0f) }
     var savedOffsetY by rememberSaveable { mutableFloatStateOf(0f) }
     var savedHasFitted by rememberSaveable { mutableStateOf(false) }
+    var savedManualPositions by rememberSaveable(stateSaver = manualPositionsSaver()) {
+        mutableStateOf(emptyMap<String, DpOffset>())
+    }
 
     val state = remember {
         KuiverViewerState(savedKuiver, savedScale, Offset(savedOffsetX, savedOffsetY)).also {
             it.hasFittedInitially = savedHasFitted
+            it.restoreManualPositions(savedManualPositions)
         }
     }
 
@@ -217,6 +343,7 @@ fun rememberSaveableKuiverViewerState(
         launch { snapshotFlow { state.kuiver }.collect { savedKuiver = it } }
         launch { snapshotFlow { state.scale }.collect { savedScale = it } }
         launch { snapshotFlow { state.hasFittedInitially }.collect { savedHasFitted = it } }
+        launch { snapshotFlow { state.manualPositions }.collect { savedManualPositions = it } }
         launch {
             snapshotFlow { state.offset }.collect {
                 savedOffsetX = it.x; savedOffsetY = it.y
@@ -240,7 +367,8 @@ private fun setupLayout(state: KuiverViewerState, layoutConfig: LayoutConfig) {
     val measuredDimensions = state.measuredDimensions
     val canvasWidth = state.canvasWidth
     val canvasHeight = state.canvasHeight
-    LaunchedEffect(kuiver, measuredDimensions, layoutConfig, canvasWidth, canvasHeight) {
+    val layoutKey = state.layoutKey
+    LaunchedEffect(kuiver, measuredDimensions, layoutConfig, canvasWidth, canvasHeight, layoutKey) {
         val sizedKuiver = if (measuredDimensions.isEmpty()) {
             kuiver
         } else {
@@ -272,7 +400,10 @@ private fun setupLayout(state: KuiverViewerState, layoutConfig: LayoutConfig) {
         } else {
             sizedKuiver
         }
-        state.layoutedKuiver = laid
+        // Read here rather than captured above: manual positions come from event handlers, so the
+        // freshest set is the right one, and reading them in composition would recompose the
+        // caller on every drop
+        state.layoutedKuiver = state.withRelayoutPolicyApplied(laid)
         state.applyInitialFit(canvasWidth, canvasHeight)
     }
 }

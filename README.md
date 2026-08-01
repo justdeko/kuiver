@@ -32,6 +32,8 @@
 - Customizable nodes and edges
 - Edge labels
 - Zooming and panning
+- Node selection, hover and drag to reposition
+- Keyboard pan and zoom
 - Resizable canvas
 - Layout animations
 
@@ -437,6 +439,14 @@ KuiverViewer(
         // Pan
         panVelocity = 1.0f,                // Scroll sensitivity (platform-specific default)
 
+        // Interaction, all off by default
+        selectionMode = SelectionMode.NONE,          // NONE, SINGLE or MULTIPLE
+        nodeDragEnabled = false,           // Drag nodes to reposition them
+        hoverEnabled = false,              // Track the node under the pointer
+        keyboardEnabled = false,           // Arrow keys pan, + and - zoom
+        keyboardPanStep = 48.dp,           // How far one arrow key press pans
+        relayoutPolicy = RelayoutPolicy.KEEP_MANUAL, // What layout does to dragged nodes
+
         // Animations
         scaleAnimationSpec = spring(       // Zoom animation
             dampingRatio = Spring.DampingRatioMediumBouncy,
@@ -484,6 +494,86 @@ in sync with gestures. `updateTransform` is unclamped by design — it sets exac
 
 - **Touch/Mobile:** Drag to pan, pinch to zoom
 - **Mouse/Desktop:** Drag to pan, scroll to pan, Ctrl+Scroll to zoom
+- **Keyboard:** Arrow keys pan, `+` and `-` zoom, once `keyboardEnabled = true`
+
+## Selecting, Hovering and Dragging Nodes
+
+Everything past pan and zoom is off until you turn it on, so a viewer that worked before these
+knobs existed still behaves the same way.
+
+```kotlin
+KuiverViewer(
+    state = viewerState,
+    config = KuiverViewerConfig(
+        selectionMode = SelectionMode.SINGLE,
+        nodeDragEnabled = true,
+        hoverEnabled = true
+    ),
+    callbacks = KuiverInteractionCallbacks(
+        onNodeClick = { node -> println("clicked ${node.id}") },
+        onNodeLongPress = { node -> showMenuFor(node) },
+        onNodeDragEnd = { node, travelled -> println("${node.id} moved by $travelled") },
+        onCanvasClick = { println("deselected") }
+    ),
+    nodeContent = { node -> /* ... */ },
+    edgeStyle = { EdgeStyle() }
+)
+```
+
+The viewer tracks *what* a node is, your `nodeContent` decides what that looks like. It runs with a
+`KuiverNodeScope` receiver holding `isSelected`, `isHovered` and `isDragging`:
+
+```kotlin
+nodeContent = { node ->
+    Box(
+        Modifier
+            .size(120.dp, 60.dp)
+            .border(
+                width = if (isSelected) 3.dp else 1.dp,
+                color = if (isHovered) MaterialTheme.colorScheme.primary else Color.Gray
+            )
+    ) { Text(node.id) }
+}
+```
+
+Each flag is read where you use it, so a node recomposes only for the ones its content touches.
+`isHovered` is always false on touch, which has no hover.
+
+The same state is readable and writable from `viewerState.interaction`:
+
+```kotlin
+val selected = viewerState.interaction.selectedNodeIds   // Set<String>
+val hovered = viewerState.interaction.hoveredNodeId      // String?
+val dragging = viewerState.interaction.isDragging
+
+viewerState.interaction.select("A")
+viewerState.interaction.toggleSelection("B")
+viewerState.interaction.clearSelection()
+```
+
+### Where Dragged Nodes End Up
+
+A drag writes the node's new position into the graph and remembers it as a manual position.
+`relayoutPolicy` decides what the next layout pass does with it:
+
+- `RelayoutPolicy.KEEP_MANUAL` (default) puts dragged nodes back where the user left them and lays
+  out the rest as usual
+- `RelayoutPolicy.RELAYOUT_ALL` gives every position back to the algorithm, so a drag survives only
+  until the graph, the node sizes or the canvas next change
+
+Positions are equally settable from code, which is the same path a drag takes:
+
+```kotlin
+viewerState.moveNode("A", DpOffset(120.dp, 40.dp))  // absolute, in graph dp
+viewerState.moveNodeBy("A", DpOffset(10.dp, 0.dp))  // relative
+
+viewerState.manualPositions        // Map<String, DpOffset> of everything moved by hand
+viewerState.clearManualPositions() // hand them all back to the layout and lay out again
+viewerState.relayout()             // lay out again without changing anything else
+```
+
+Moving a node never shifts the others: the graph renders around the center of its bounds, and the
+viewer takes the re-centering back out of the view transform.
 
 ### State Persistence
 

@@ -260,7 +260,7 @@ class NodeMeasurementTest {
     @Composable
     private fun TestViewer(
         state: KuiverViewerState,
-        nodeContent: @Composable (KuiverNode) -> Unit
+        nodeContent: @Composable KuiverNodeScope.(KuiverNode) -> Unit
     ) {
         KuiverViewer(
             state = state,
