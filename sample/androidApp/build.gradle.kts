@@ -24,7 +24,9 @@ android {
     }
     buildTypes {
         getByName("release") {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
         }
     }
     compileOptions {
@@ -42,6 +44,7 @@ kotlin {
     dependencies {
         implementation(projects.sample.composeApp)
         implementation(libs.androidx.activity.compose)
+        implementation(libs.ui.tooling.preview)
         debugImplementation(libs.ui.tooling)
     }
 }
