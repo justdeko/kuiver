@@ -206,48 +206,11 @@ edgeContent = { edge, from, to ->
 `StyledEdgeContent` also accepts the same label parameters, so you can combine automatic
 edge styling with labels in one call.
 
-### Batched Edges (Large Graphs)
-
-Each edge composable is a layout node to compose, measure and draw, and every edge recomposes on
-every frame of a layout animation to pick up its new end points.
-
-Pass `edgeStyle` instead of `edgeContent` to draw the whole edge set from one canvas, with
-end points resolved in the draw phase:
-
-```kotlin
-KuiverViewer(
-    state = viewerState,
-    nodeContent = { node -> /* ... */ },
-    edgeStyle = { edge ->
-        EdgeStyle.styled(edge, baseColor = Color.Gray)      // the StyledEdgeContent look
-    }
-)
-```
-
-`EdgeStyle` has the same parameters as the edge composables:
-
-```kotlin
-edgeStyle = { edge ->
-    EdgeStyle(
-        color = if (edge.type == EdgeType.BACK) Color.Red else Color.Gray,
-        strokeWidth = 2f,
-        dashed = edge.type == EdgeType.BACK,
-        shape = EdgeShape.ORTHOGONAL // AUTO, STRAIGHT, CURVED, ORTHOGONAL, RIGHT_ANGLE
-    )
-}
-```
-
-Edges are values rather than composables here, so they cannot hold composable content. No edge
-labels in this mode.
-
 ### Theming
 
 Kuiver depends on compose `runtime` + `foundation` + `ui` only, so it can't read `MaterialTheme`
-directly (`foundation` has no `LocalContentColor`). Edge and label colors that aren't passed
-explicitly instead come from `LocalKuiverColors`, a foundation-only seam. Its defaults reproduce
-kuiver's original hardcoded colors, so providing nothing here changes nothing.
-
-Provide `LocalKuiverColors` once instead of overriding colors in every `edgeContent` lambda:
+directly. However you can use`LocalKuiverColors`. Provide it once instead of overriding colors
+in every `edgeContent` lambda:
 
 ```kotlin
 CompositionLocalProvider(
@@ -264,21 +227,6 @@ CompositionLocalProvider(
         edgeContent = { edge, from, to -> StyledEdgeContent(edge, from, to) }
     )
 }
-```
-
-Explicit `color`, `baseColor`, `backEdgeColor`, and `labelStyle` arguments on the edge
-composables still take precedence over `LocalKuiverColors`.
-
-The batched `edgeStyle` lambda runs while drawing rather than while composing, so it cannot read
-`LocalKuiverColors` itself. `KuiverDefaults.edgeStyle()` reads the colors in composition and
-returns a lambda closing over them:
-
-```kotlin
-KuiverViewer(
-    state = viewerState,
-    nodeContent = { node -> Text(node.id) },
-    edgeStyle = KuiverDefaults.edgeStyle()
-)
 ```
 
 ### Custom Arrow Drawing
@@ -477,7 +425,7 @@ KuiverViewer(
         zoomStep = 1.2f,                   // Multiplier applied by zoomIn()/zoomOut()
 
         // Pan
-        panVelocity = 1.0f,                // Scroll sensitivity, dp per scroll unit
+        panVelocity = 15f,                 // Scroll sensitivity, dp per scroll unit.
 
         // Interaction, all off by default
         selectionMode = SelectionMode.NONE,          // NONE, SINGLE or MULTIPLE
@@ -488,10 +436,12 @@ KuiverViewer(
         // Animations
         scaleAnimationSpec = spring(       // Zoom animation
             dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
+            stiffness = Spring.StiffnessMedium
         ),
         offsetAnimationSpec = spring(), // Pan animation
         layoutAnimationSpec = spring(), // Progress of a layout change, shared by nodes and edges
+        animateInitialPlacement = false,// Whether the very first placement animates too
+        enterAnimationSpec = null,      // animation when the graph is ready, none when null
 
         // Desktop-specific
         zoomConditionDesktop = { event ->  // When to zoom vs pan on desktop
@@ -532,12 +482,10 @@ in sync with gestures. `updateTransform` is unclamped by design — it sets exac
 
 - **Touch/Mobile:** Drag to pan, pinch to zoom
 - **Mouse/Desktop:** Drag to pan, scroll to pan, Ctrl+Scroll to zoom
-- **Keyboard:** Arrow keys pan, `+` and `-` zoom, once `keyboardEnabled = true`
 
-## Selecting, Hovering and Dragging Nodes
+### Selecting, Hovering and Dragging Nodes
 
-Everything past pan and zoom is off until you turn it on, so a viewer that worked before these
-knobs existed still behaves the same way.
+You can enable hovering and dragging nodes, then respond to them with `KuiverInteractionCallbacks`:
 
 ```kotlin
 KuiverViewer(
@@ -554,12 +502,11 @@ KuiverViewer(
         onCanvasClick = { println("deselected") }
     ),
     nodeContent = { node -> /* ... */ },
-    edgeStyle = { EdgeStyle() }
+    edgeContent = { edge, from, to -> StyledEdgeContent(edge, from, to) }
 )
 ```
 
-The viewer tracks *what* a node is, your `nodeContent` decides what that looks like. It runs with a
-`KuiverNodeScope` receiver holding `isSelected`, `isHovered` and `isDragging`:
+Additionally, you have `KuiverNodeScope` with `isSelected`, `isHovered` and `isDragging`:
 
 ```kotlin
 nodeContent = { node ->
@@ -574,14 +521,13 @@ nodeContent = { node ->
 }
 ```
 
-Each flag is read where you use it, so a node recomposes only for the ones its content touches.
 `isHovered` is always false on touch, which has no hover.
 
 The same state is readable and writable from `viewerState.interaction`:
 
 ```kotlin
-val selected = viewerState.interaction.selectedNodeIds   // Set<String>
-val hovered = viewerState.interaction.hoveredNodeId      // String?
+val selected = viewerState.interaction.selectedNodeIds
+val hovered = viewerState.interaction.hoveredNodeId
 val dragging = viewerState.interaction.isDragging
 
 viewerState.interaction.select("A")
@@ -589,9 +535,9 @@ viewerState.interaction.toggleSelection("B")
 viewerState.interaction.clearSelection()
 ```
 
-### Where Dragged Nodes End Up
+#### Where Dragged Nodes End Up
 
-A drag writes the node's new position into the graph and remembers it as a manual position.
+A drag saves the node's new position into the graph and remembers it as a manual position.
 `relayoutPolicy` decides what the next layout pass does with it:
 
 - `RelayoutPolicy.KEEP_MANUAL` (default) puts dragged nodes back where the user left them and lays
@@ -599,19 +545,16 @@ A drag writes the node's new position into the graph and remembers it as a manua
 - `RelayoutPolicy.RELAYOUT_ALL` gives every position back to the algorithm, so a drag survives only
   until the graph, the node sizes or the canvas next change
 
-Positions are equally settable from code, which is the same path a drag takes:
+You can also set and get these positions programmatically:
 
 ```kotlin
 viewerState.moveNode("A", DpOffset(120.dp, 40.dp))  // absolute, in graph dp
 viewerState.moveNodeBy("A", DpOffset(10.dp, 0.dp))  // relative
 
-viewerState.manualPositions        // Map<String, DpOffset> of everything moved by hand
-viewerState.clearManualPositions() // hand them all back to the layout and lay out again
-viewerState.relayout()             // lay out again without changing anything else
+viewerState.manualPositions
+viewerState.clearManualPositions()
+viewerState.relayout()
 ```
-
-Moving a node never shifts the others: the graph renders around the center of its bounds, and the
-viewer takes the re-centering back out of the view transform.
 
 ### State Persistence
 
@@ -619,8 +562,8 @@ Use `rememberSaveableKuiverViewerState` to preserve zoom/pan across process deat
 
 ### Updating the Graph
 
-A `Kuiver` is immutable. `buildKuiver { }` collects nodes and edges in a `KuiverBuilder` and freezes
-them, and every change afterwards hands back a new graph instead of touching the old one. Two graphs
+A `Kuiver` is immutable. `buildKuiver { }` is a simple constructor dsl and every change afterwards 
+hands back a new graph instead of modifying the old one. Two graphs
 with the same nodes and edges are equal, so they work as snapshot state and as `remember` keys.
 
 Derive the new graph and hand it to `viewerState.updateKuiver(newKuiver)`:
@@ -651,6 +594,52 @@ you move a node or give it explicit dimensions. `withEdge` throws if either endp
 the graph.
 
 ## Advanced Features
+
+### Batched Edges (Large Graphs)
+
+Each edge composable is a layout node to compose, measure and draw, and every edge recomposes on
+every frame of a layout animation to pick up its new end points.
+
+Pass `edgeStyle` instead of `edgeContent` to draw the whole edge set from one canvas, with
+end points resolved in the draw phase:
+
+```kotlin
+KuiverViewer(
+    state = viewerState,
+    nodeContent = { node -> /* ... */ },
+    edgeStyle = { edge ->
+        EdgeStyle.styled(edge, baseColor = Color.Gray)      // the StyledEdgeContent look
+    }
+)
+```
+
+`EdgeStyle` has the same parameters as the edge composables:
+
+```kotlin
+edgeStyle = { edge ->
+    EdgeStyle(
+        color = if (edge.type == EdgeType.BACK) Color.Red else Color.Gray,
+        strokeWidth = 2f,
+        dashed = edge.type == EdgeType.BACK,
+        shape = EdgeShape.ORTHOGONAL // AUTO, STRAIGHT, CURVED, ORTHOGONAL, RIGHT_ANGLE
+    )
+}
+```
+
+Edges are values rather than composables here, so they cannot hold composable content. No edge
+labels in this mode.
+
+The `edgeStyle` lambda also runs while drawing rather than while composing, so it cannot read
+`LocalKuiverColors` itself. `KuiverDefaults.edgeStyle()` reads the colors in composition and returns
+a lambda closing over them:
+
+```kotlin
+KuiverViewer(
+    state = viewerState,
+    nodeContent = { node -> Text(node.id) },
+    edgeStyle = KuiverDefaults.edgeStyle()
+)
+```
 
 ### Cycle Detection
 
@@ -727,9 +716,8 @@ The Web target is **experimental** and has known issues.
 
 The library implements several web-specific adjustments to handle browser limitations:
 
-- **Reduced Pan Velocity**: Default pan velocity is `4f` (vs `30f` on native platforms) to
-  compensate for higher scroll sensitivity in browsers
-    - See: `core/src/wasmJsMain/kotlin/com/dk/kuiver/renderer/PlatformDefaults.wasmJs.kt:4`
+- **Reduced Pan Velocity**: `panVelocity` defaults to `2f` on js/wasmJs (vs `15f` on Android, iOS and
+  desktop) to compensate for higher scroll sensitivity in browsers
 - **Late Fonts**: a font that finishes loading after the first frame re-measures the text in your
   nodes. Kuiver measures nodes as it renders them and lays the graph out again when those
   measurements change, so the nodes end up correctly sized either way. This only arises if you
@@ -742,8 +730,6 @@ The library implements several web-specific adjustments to handle browser limita
 
 - **Multiple Edges**: The library does not currently support multiple edges between the same pair of
   nodes
-- **Large Graphs**: Performance with graphs >100 nodes has not been extensively tested. See
-  [Batched Edges](#batched-edges-large-graphs) for the edge rendering mode meant for them
 
 ### API Stability
 

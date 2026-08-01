@@ -1,6 +1,7 @@
 package com.dk.kuiver.sample
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -90,6 +91,9 @@ import com.dk.kuiver.ui.OrthogonalEdgeContentWithLabel
 import com.dk.kuiver.ui.StyledEdgeContent
 import com.dk.kuiver.ui.StyledRightAngleEdgeContent
 import kotlinx.coroutines.flow.first
+
+/** How long a zoom step, a keyboard zoom or a recenter takes. */
+private const val ZoomDurationMillis = 250
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -479,6 +483,8 @@ fun ProcessDiagramDemo(
                 state = kuiverViewerState,
                 config = KuiverViewerConfig(
                     enterAnimationSpec = tween(durationMillis = 400),
+                    scaleAnimationSpec = tween(ZoomDurationMillis, easing = FastOutSlowInEasing),
+                    offsetAnimationSpec = tween(ZoomDurationMillis, easing = FastOutSlowInEasing),
                     selectionMode = SelectionMode.SINGLE,
                     nodeDragEnabled = true,
                     hoverEnabled = true
