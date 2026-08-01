@@ -10,10 +10,10 @@ import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import com.dk.kuiver.KuiverViewerState
 import com.dk.kuiver.model.AnchorOffset
-import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
 import com.dk.kuiver.model.NodeDimensions
+import com.dk.kuiver.model.buildKuiver
 import com.dk.kuiver.ui.EdgeStyle
 import com.dk.kuiver.ui.KuiverAnchor
 import kotlin.test.Test
@@ -29,7 +29,7 @@ class AnchorRegistrationTest {
     @Test
     fun `an anchor in node content registers its offset within the node`() = runComposeUiTest {
         lateinit var registry: AnchorPositionRegistry
-        val graph = Kuiver().apply {
+        val graph = buildKuiver {
             addNode(KuiverNode("A", dimensions = NodeDimensions(NODE_WIDTH.dp, NODE_HEIGHT.dp)))
             addNode(KuiverNode("B", dimensions = NodeDimensions(NODE_WIDTH.dp, NODE_HEIGHT.dp)))
             addEdge(KuiverEdge("A", "B", fromAnchor = "right", toAnchor = "right"))

@@ -491,8 +491,36 @@ Use `rememberSaveableKuiverViewerState` to preserve zoom/pan across process deat
 
 ### Updating the Graph
 
-Update the graph structure by passing an updated or new `Kuiver` instance with
-`viewerState.updateKuiver(newKuiver)`.
+A `Kuiver` is immutable. `buildKuiver { }` collects nodes and edges in a `KuiverBuilder` and freezes
+them, and every change afterwards hands back a new graph instead of touching the old one. Two graphs
+with the same nodes and edges are equal, so they work as snapshot state and as `remember` keys.
+
+Derive the new graph and hand it to `viewerState.updateKuiver(newKuiver)`:
+
+```kotlin
+val graph = buildKuiver {
+    nodes("A", "B")
+    edge("A", "B")
+}
+
+// Single changes
+val withNode = graph.withNode(KuiverNode("C"))
+val withEdge = withNode.withEdge(KuiverEdge("B", "C"))
+val trimmed = withEdge.withoutNode("A")     // also drops the edges touching A
+val unlinked = withEdge.withoutEdge(KuiverEdge("A", "B"))
+
+// Batches, back in the builder
+val extended = graph.rebuild {
+    nodes("C", "D")
+    edges("B" to "C", "C" to "D")
+}
+
+viewerState.updateKuiver(extended)
+```
+
+`withNode` replaces a node that already carries the same id and leaves its edges alone, which is how
+you move a node or give it explicit dimensions. `withEdge` throws if either endpoint is missing from
+the graph.
 
 ## Advanced Features
 

@@ -36,7 +36,7 @@ fun kuiverSaver(): Saver<Kuiver, Any> = Saver(
         val nodesData = map["nodes"] as List<Map<String, Any?>>
         val edgesData = map["edges"] as List<Map<String, Any?>>
 
-        Kuiver().apply {
+        buildKuiver {
             // Restore nodes
             nodesData.forEach { nodeMap ->
                 val id = nodeMap["id"] as String

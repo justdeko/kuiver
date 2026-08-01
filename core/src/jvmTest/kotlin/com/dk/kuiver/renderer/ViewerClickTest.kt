@@ -13,9 +13,9 @@ import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import com.dk.kuiver.KuiverViewerState
-import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.KuiverNode
 import com.dk.kuiver.model.NodeDimensions
+import com.dk.kuiver.model.buildKuiver
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -24,7 +24,7 @@ import kotlin.test.assertTrue
 class ViewerClickTest {
 
     private fun singleNodeState(): KuiverViewerState {
-        val kuiver = Kuiver().apply {
+        val kuiver = buildKuiver {
             addNode(KuiverNode(id = "a", dimensions = NodeDimensions(120.dp, 120.dp)))
         }
         return KuiverViewerState(kuiver).apply {

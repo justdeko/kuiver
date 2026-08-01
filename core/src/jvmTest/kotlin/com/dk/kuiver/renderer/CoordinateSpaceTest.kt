@@ -17,9 +17,9 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import com.dk.kuiver.KuiverViewerState
 import com.dk.kuiver.assertDpOffsetEquals
-import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
+import com.dk.kuiver.model.buildKuiver
 import com.dk.kuiver.model.layout.LayoutConfig
 import com.dk.kuiver.rememberKuiverViewerState
 import com.dk.kuiver.ui.EdgeStyle
@@ -131,7 +131,7 @@ class CoordinateSpaceTest {
         val scale: Float
     )
 
-    private fun chainGraph() = Kuiver().apply {
+    private fun chainGraph() = buildKuiver {
         addNode(KuiverNode("A"))
         addNode(KuiverNode("B"))
         addNode(KuiverNode("C"))

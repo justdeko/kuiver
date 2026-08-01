@@ -18,6 +18,7 @@ import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
 import com.dk.kuiver.model.NodeDimensions
+import com.dk.kuiver.model.buildKuiver
 import com.dk.kuiver.ui.DefaultArrowDrawer
 import com.dk.kuiver.ui.EdgeStyle
 import com.dk.kuiver.ui.StyledEdgeContent
@@ -138,30 +139,30 @@ internal class ViewerScene(
  */
 internal fun ringGraph(nodeCount: Int, withEdges: Boolean, seed: Int): Kuiver {
     val random = Random(seed)
-    val kuiver = Kuiver()
-    repeat(nodeCount) { index ->
-        val angle = 2 * PI * index / nodeCount + seed * 0.6
-        val radius = 900f + random.nextFloat() * 300f
-        kuiver.addNode(
-            KuiverNode(
-                id = index.toString(),
-                dimensions = NodeDimensions(NODE_WIDTH_DP.dp, NODE_HEIGHT_DP.dp),
-                position = DpOffset(
-                    (radius * cos(angle)).toFloat().dp,
-                    (radius * sin(angle)).toFloat().dp
-                )
-            )
-        )
-    }
-    if (withEdges) {
+    return buildKuiver {
         repeat(nodeCount) { index ->
-            kuiver.addEdge(
-                KuiverEdge(
-                    fromId = index.toString(),
-                    toId = ((index * 7 + 3) % nodeCount).toString()
+            val angle = 2 * PI * index / nodeCount + seed * 0.6
+            val radius = 900f + random.nextFloat() * 300f
+            addNode(
+                KuiverNode(
+                    id = index.toString(),
+                    dimensions = NodeDimensions(NODE_WIDTH_DP.dp, NODE_HEIGHT_DP.dp),
+                    position = DpOffset(
+                        (radius * cos(angle)).toFloat().dp,
+                        (radius * sin(angle)).toFloat().dp
+                    )
                 )
             )
         }
+        if (withEdges) {
+            repeat(nodeCount) { index ->
+                addEdge(
+                    KuiverEdge(
+                        fromId = index.toString(),
+                        toId = ((index * 7 + 3) % nodeCount).toString()
+                    )
+                )
+            }
+        }
     }
-    return kuiver
 }

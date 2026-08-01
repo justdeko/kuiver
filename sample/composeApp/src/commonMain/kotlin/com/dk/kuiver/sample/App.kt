@@ -195,12 +195,7 @@ private fun GraphBuilderScreen(
 
                 // Add node to the graph (structure only)
                 val newNode = KuiverNode(id = generatedId)
-                val newKuiver = buildKuiver {
-                    currentKuiver.nodes.values.forEach { addNode(it) }
-                    currentKuiver.edges.forEach { addEdge(it) }
-                    addNode(newNode)
-                }
-                kuiverViewerState.updateKuiver(newKuiver)
+                kuiverViewerState.updateKuiver(currentKuiver.withNode(newNode))
                 nextNodeId++
                 true
             } else {
@@ -222,14 +217,8 @@ private fun GraphBuilderScreen(
 
                         if (!edgeExists) {
                             val newEdge = KuiverEdge(fromNode.id, toNode.id)
-                            val newKuiver = buildKuiver {
-                                currentKuiver.nodes.values.forEach { addNode(it) }
-                                currentKuiver.edges.forEach { addEdge(it) }
-                            }
-                            edgeAdded = newKuiver.addEdge(newEdge)
-                            if (edgeAdded) {
-                                kuiverViewerState.updateKuiver(newKuiver)
-                            }
+                            kuiverViewerState.updateKuiver(currentKuiver.withEdge(newEdge))
+                            edgeAdded = true
                         }
                         attempts++
                     }
@@ -281,16 +270,9 @@ private fun GraphBuilderScreen(
                                     val fromNode = connectionState.sourceNode
                                     if (fromNode != null) {
                                         val newEdge = KuiverEdge(fromNode.id, node.id)
-                                        val newKuiver = buildKuiver {
-                                            kuiverViewerState.kuiver.nodes.values.forEach {
-                                                addNode(
-                                                    it
-                                                )
-                                            }
-                                            kuiverViewerState.kuiver.edges.forEach { addEdge(it) }
-                                            addEdge(newEdge)
-                                        }
-                                        kuiverViewerState.updateKuiver(newKuiver)
+                                        kuiverViewerState.updateKuiver(
+                                            kuiverViewerState.kuiver.withEdge(newEdge)
+                                        )
                                     }
                                     // Reset connection state
                                     connectionState.reset()
@@ -471,12 +453,9 @@ private fun GraphBuilderScreen(
 
                             // Add node to the graph (structure only)
                             val newNode = KuiverNode(id = generatedId)
-                            val newKuiver = buildKuiver {
-                                kuiverViewerState.kuiver.nodes.values.forEach { addNode(it) }
-                                kuiverViewerState.kuiver.edges.forEach { addEdge(it) }
-                                addNode(newNode)
-                            }
-                            kuiverViewerState.updateKuiver(newKuiver)
+                            kuiverViewerState.updateKuiver(
+                                kuiverViewerState.kuiver.withNode(newNode)
+                            )
                             nextNodeId++
                             newNodeData = ""
                         }
@@ -504,12 +483,9 @@ private fun GraphBuilderScreen(
 
                                 if (fromNodeEntry != null && toNodeEntry != null) {
                                     val newEdge = KuiverEdge(fromNodeEntry.key, toNodeEntry.key)
-                                    val newKuiver = buildKuiver {
-                                        kuiverViewerState.kuiver.nodes.values.forEach { addNode(it) }
-                                        kuiverViewerState.kuiver.edges.forEach { addEdge(it) }
-                                        addEdge(newEdge)
-                                    }
-                                    kuiverViewerState.updateKuiver(newKuiver)
+                                    kuiverViewerState.updateKuiver(
+                                        kuiverViewerState.kuiver.withEdge(newEdge)
+                                    )
 
                                     if (newEdgeLabel.isNotBlank()) {
                                         edgeData = edgeData + (

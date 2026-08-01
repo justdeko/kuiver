@@ -301,7 +301,7 @@ class HierarchicalLayoutTest {
         }
 
         // additional test for back edge
-        kuiver.addEdge(KuiverEdge(fromId = "n${length - 1}", toId = "n0"))
-        assertEquals(length, layout(kuiver, LayoutConfig.Hierarchical()).nodes.size)
+        val withBackEdge = kuiver.withEdge(KuiverEdge(fromId = "n${length - 1}", toId = "n0"))
+        assertEquals(length, layout(withBackEdge, LayoutConfig.Hierarchical()).nodes.size)
     }
 }

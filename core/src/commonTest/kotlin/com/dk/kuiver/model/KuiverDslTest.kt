@@ -2,6 +2,7 @@ package com.dk.kuiver.model
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class KuiverDslTest {
@@ -94,6 +95,21 @@ class KuiverDslTest {
 
         assertEquals(3, kuiver.nodes.size)
         assertEquals(2, kuiver.edges.size)
+    }
+
+    @Test
+    fun `wouldCreateCycle answers on what the builder holds so far`() {
+        val kuiver = buildKuiver {
+            nodes("A", "B", "C")
+            edge("A", "B")
+            // Nothing reaches back to A yet, so this one goes in
+            if (!wouldCreateCycle("B", "C")) edge("B", "C")
+            // A -> B -> C is in place by now, so this one closes the loop and is skipped
+            if (!wouldCreateCycle("C", "A")) edge("C", "A")
+        }
+
+        assertEquals(setOf(KuiverEdge("A", "B"), KuiverEdge("B", "C")), kuiver.edges)
+        assertFalse(kuiver.hasCycles())
     }
 
     @Test

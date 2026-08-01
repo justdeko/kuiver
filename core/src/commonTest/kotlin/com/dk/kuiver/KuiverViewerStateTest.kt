@@ -6,6 +6,7 @@ import androidx.compose.ui.unit.dp
 import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.KuiverNode
 import com.dk.kuiver.model.NodeDimensions
+import com.dk.kuiver.model.buildKuiver
 import com.dk.kuiver.renderer.KuiverViewerConfig
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -15,7 +16,7 @@ import kotlin.test.assertTrue
 
 class KuiverViewerStateTest {
 
-    private fun wideGraph(measured: Boolean = true) = Kuiver().apply {
+    private fun wideGraph(measured: Boolean = true) = buildKuiver {
         val dimensions = if (measured) NodeDimensions(100.dp, 100.dp) else null
         addNode(KuiverNode(id = "A", dimensions = dimensions, position = DpOffset(-350.dp, 0.dp)))
         addNode(KuiverNode(id = "B", dimensions = dimensions, position = DpOffset(350.dp, 0.dp)))

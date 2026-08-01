@@ -12,9 +12,9 @@ package com.dk.kuiver.model
  * }
  * ```
  *
- * @return A new Kuiver instance (treat as immutable after construction)
+ * @return A new immutable Kuiver instance
  */
-fun buildKuiver(block: Kuiver.() -> Unit): Kuiver = Kuiver().apply(block)
+fun buildKuiver(block: KuiverBuilder.() -> Unit): Kuiver = KuiverBuilder().apply(block).build()
 
 /**
  * Builds a new Kuiver instance with the given nodes and edges from the original graph,
@@ -28,14 +28,14 @@ fun buildKuiverWithClassifiedEdges(
     nodes: Collection<KuiverNode>,
     originalEdges: Collection<KuiverEdge>
 ): Kuiver {
-    val tempKuiver = Kuiver().apply {
+    val tempKuiver = buildKuiver {
         nodes.forEach { addNode(it) }
         originalEdges.forEach { addEdge(it) }
     }
 
     val edgeClassifications = tempKuiver.classifyAllEdges()
 
-    return Kuiver().apply {
+    return buildKuiver {
         nodes.forEach { addNode(it) }
         edgeClassifications.forEach { (edge, type) ->
             addEdge(edge.copy(type = type))
@@ -53,7 +53,7 @@ fun buildKuiverWithClassifiedEdges(
  * }
  * ```
  */
-fun Kuiver.nodes(vararg ids: String) = nodes(ids.toList())
+fun KuiverBuilder.nodes(vararg ids: String) = nodes(ids.toList())
 
 /**
  * Adds multiple nodes from a collection of IDs.
@@ -65,7 +65,7 @@ fun Kuiver.nodes(vararg ids: String) = nodes(ids.toList())
  * }
  * ```
  */
-fun Kuiver.nodes(ids: Collection<String>) {
+fun KuiverBuilder.nodes(ids: Collection<String>) {
     ids.forEach { addNode(KuiverNode(it)) }
 }
 
@@ -85,7 +85,7 @@ fun Kuiver.nodes(ids: Collection<String>) {
  * @param fromAnchor Optional anchor point on the starting node
  * @param toAnchor Optional anchor point on the ending node
  */
-fun Kuiver.edge(
+fun KuiverBuilder.edge(
     from: String,
     to: String,
     fromAnchor: String? = null,
@@ -108,7 +108,7 @@ fun Kuiver.edge(
  * }
  * ```
  */
-fun Kuiver.edges(vararg pairs: Pair<String, String>) {
+fun KuiverBuilder.edges(vararg pairs: Pair<String, String>) {
     pairs.forEach { (from, to) ->
         addEdge(KuiverEdge(from, to))
     }
@@ -134,7 +134,7 @@ fun Kuiver.edges(vararg pairs: Pair<String, String>) {
  * @param edges List of pairs representing edges (from, to)
  * @param createNodes Whether to create nodes if they don't exist (default: true)
  */
-fun Kuiver.fromEdgeList(edges: List<Pair<String, String>>, createNodes: Boolean = true) {
+fun KuiverBuilder.fromEdgeList(edges: List<Pair<String, String>>, createNodes: Boolean = true) {
     if (createNodes) {
         val seenNodes = mutableSetOf<String>()
         edges.forEach { (from, to) ->

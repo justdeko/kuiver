@@ -89,6 +89,13 @@ class KuiverViewerState internal constructor(
     var hasFittedInitially: Boolean by mutableStateOf(false)
         internal set
 
+    /**
+     * Swaps in a new graph, which lays it out again. [Kuiver] is immutable, so derive the new graph
+     * with [Kuiver.withNode], [Kuiver.withEdge] or [Kuiver.rebuild] and pass the result here. A
+     * graph equal to the current one is a no-op.
+     *
+     * @param newKuiver the graph to display
+     */
     fun updateKuiver(newKuiver: Kuiver) {
         kuiver = newKuiver
     }

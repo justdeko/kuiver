@@ -17,10 +17,10 @@ import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.dk.kuiver.KuiverViewerState
-import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
 import com.dk.kuiver.model.NodeDimensions
+import com.dk.kuiver.model.buildKuiver
 import com.dk.kuiver.model.layout.LayoutConfig
 import com.dk.kuiver.rememberKuiverViewerState
 import com.dk.kuiver.ui.EdgeStyle
@@ -226,9 +226,7 @@ class NodeMeasurementTest {
 
         runOnIdle {
             state.updateKuiver(
-                Kuiver().apply {
-                    state.kuiver.nodes.values.forEach { addNode(it) }
-                    state.kuiver.edges.forEach { addEdge(it) }
+                state.kuiver.rebuild {
                     addNode(KuiverNode("C"))
                     addEdge(KuiverEdge("B", "C"))
                 }
@@ -272,7 +270,7 @@ class NodeMeasurementTest {
         )
     }
 
-    private fun twoNodeGraph(dimensions: NodeDimensions? = null) = Kuiver().apply {
+    private fun twoNodeGraph(dimensions: NodeDimensions? = null) = buildKuiver {
         addNode(KuiverNode("A", dimensions = dimensions))
         addNode(KuiverNode("B", dimensions = dimensions))
         addEdge(KuiverEdge("A", "B"))
