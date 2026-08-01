@@ -84,8 +84,8 @@ import com.dk.kuiver.model.nodes
 import com.dk.kuiver.rememberSaveableKuiverViewerState
 import com.dk.kuiver.renderer.KuiverViewer
 import com.dk.kuiver.renderer.KuiverViewerConfig
-import com.dk.kuiver.ui.EdgeLabelStyle
 import com.dk.kuiver.ui.KuiverAnchor
+import com.dk.kuiver.ui.KuiverDefaults
 import com.dk.kuiver.ui.OrthogonalEdgeContentWithLabel
 import com.dk.kuiver.ui.StyledEdgeContent
 import com.dk.kuiver.ui.StyledRightAngleEdgeContent
@@ -501,12 +501,7 @@ fun ProcessDiagramDemo(
                 },
                 edgeContent = { edge, from, to ->
                     val edgeLabel = edgeLabels[edge.fromId to edge.toId]
-                    val labelStyle = EdgeLabelStyle(
-                        textColor = MaterialTheme.colorScheme.onSurface,
-                        backgroundColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
-                        borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                        fontSize = 11.sp
-                    )
+                    val labelStyle = KuiverDefaults.edgeLabelStyle().copy(fontSize = 11.sp)
 
                     val isBackOrSelfLoop =
                         edge.type == EdgeType.BACK || edge.type == EdgeType.SELF_LOOP
@@ -516,7 +511,6 @@ fun ProcessDiagramDemo(
                             OrthogonalEdgeContentWithLabel(
                                 from = from,
                                 to = to,
-                                color = MaterialTheme.colorScheme.outline,
                                 strokeWidth = 2.5f,
                                 label = edgeLabel,
                                 labelStyle = labelStyle.copy(rotateWithEdge = true)
@@ -527,7 +521,6 @@ fun ProcessDiagramDemo(
                                 edge = edge,
                                 from = from,
                                 to = to,
-                                color = MaterialTheme.colorScheme.outline,
                                 strokeWidth = 2.5f,
                                 label = edgeLabel,
                                 labelStyle = labelStyle
@@ -537,8 +530,6 @@ fun ProcessDiagramDemo(
                             edge = edge,
                             from = from,
                             to = to,
-                            baseColor = MaterialTheme.colorScheme.outline,
-                            backEdgeColor = MaterialTheme.colorScheme.error,
                             strokeWidth = 2.5f,
                             label = edgeLabel,
                             labelStyle = labelStyle

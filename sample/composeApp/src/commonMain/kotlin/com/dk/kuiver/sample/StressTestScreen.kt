@@ -67,7 +67,7 @@ import com.dk.kuiver.rememberSaveableKuiverViewerState
 import com.dk.kuiver.renderer.KuiverNodeScope
 import com.dk.kuiver.renderer.KuiverViewer
 import com.dk.kuiver.renderer.KuiverViewerConfig
-import com.dk.kuiver.ui.EdgeStyle
+import com.dk.kuiver.ui.KuiverDefaults
 import com.dk.kuiver.ui.StyledEdgeContent
 import kotlin.random.Random
 
@@ -468,8 +468,7 @@ fun StressTestScreen(onNavigateBack: () -> Unit) {
         val nodeContent: @Composable KuiverNodeScope.(KuiverNode) -> Unit = { node ->
             nodeDataMap[node.id]?.let { StressNodeContent(it) }
         }
-        val baseColor = MaterialTheme.colorScheme.outline
-        val backEdgeColor = MaterialTheme.colorScheme.error
+        val batchedEdgeStyle = KuiverDefaults.edgeStyle()
 
         if (batchedEdges) {
             KuiverViewer(
@@ -477,7 +476,7 @@ fun StressTestScreen(onNavigateBack: () -> Unit) {
                 config = viewerConfig,
                 modifier = viewerModifier,
                 nodeContent = nodeContent,
-                edgeStyle = { edge -> EdgeStyle.styled(edge, baseColor, backEdgeColor) },
+                edgeStyle = batchedEdgeStyle,
             )
         } else {
             KuiverViewer(
@@ -486,13 +485,7 @@ fun StressTestScreen(onNavigateBack: () -> Unit) {
                 modifier = viewerModifier,
                 nodeContent = nodeContent,
                 edgeContent = { edge, from, to ->
-                    StyledEdgeContent(
-                        edge = edge,
-                        from = from,
-                        to = to,
-                        baseColor = baseColor,
-                        backEdgeColor = backEdgeColor,
-                    )
+                    StyledEdgeContent(edge = edge, from = from, to = to)
                 },
             )
         }

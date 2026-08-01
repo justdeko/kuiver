@@ -64,7 +64,6 @@ import com.dk.kuiver.sample.components.GraphControlMenu
 import com.dk.kuiver.sample.components.NodeCreationForm
 import com.dk.kuiver.sample.theme.AppTheme
 import com.dk.kuiver.ui.DefaultNodeContent
-import com.dk.kuiver.ui.EdgeLabelStyle
 import com.dk.kuiver.ui.StyledEdgeContent
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
@@ -293,15 +292,8 @@ private fun GraphBuilderScreen(
                         edge = edge,
                         from = from,
                         to = to,
-                        baseColor = MaterialTheme.colorScheme.outline,
-                        backEdgeColor = MaterialTheme.colorScheme.error,
                         label = data?.label,
-                        labelOffset = data?.labelOffset ?: 0.5f,
-                        labelStyle = EdgeLabelStyle(
-                            textColor = MaterialTheme.colorScheme.onSurface,
-                            backgroundColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                            borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-                        )
+                        labelOffset = data?.labelOffset ?: 0.5f
                     )
                 }
             )
