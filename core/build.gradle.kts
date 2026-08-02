@@ -36,11 +36,14 @@ kotlin {
 
     js {
         browser()
+        // TODO:  Compose UI tests need the Skiko runtime webpack-bundled, remove when CMP-4906 fixed
+        binaries.executable()
     }
 
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
         browser()
+        binaries.executable()
     }
 
     sourceSets {

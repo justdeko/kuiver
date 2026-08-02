@@ -101,8 +101,8 @@ fun ProcessDiagramDemo(
     onNavigateBack: () -> Unit
 ) {
     var selectedLayoutAlgorithm by rememberSaveable { mutableStateOf(LayoutAlgorithm.HIERARCHICAL) }
-    var selectedEdgeStyle by rememberSaveable { mutableStateOf(EdgeStyle.REGULAR) }
-    var showAnchors by rememberSaveable { mutableStateOf(false) }
+    var selectedEdgeStyle by rememberSaveable { mutableStateOf(EdgeStyle.ORTHOGONAL) }
+    var showAnchors by rememberSaveable { mutableStateOf(true) }
 
     val processNodeData = remember {
         mapOf(
