@@ -9,4 +9,10 @@ internal expect object PlatformDefaults {
      * Web platforms use a lower value to compensate for higher sensitivity.
      */
     val defaultPanVelocity: Float
+
+    /**
+     * Default zoom sensitivity for scroll/trackpad gestures, in scale exponent per scroll unit.
+     * Web platforms use a lower value to compensate for higher sensitivity.
+     */
+    val defaultZoomVelocity: Float
 }
