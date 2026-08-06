@@ -6,6 +6,8 @@ import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.dk.kuiver.model.KuiverEdge
 
 /**
@@ -81,7 +83,7 @@ object KuiverDefaults {
      * @param strokeWidth width of the edge line
      */
     @Composable
-    fun edgeStyle(strokeWidth: Float = 3f): (KuiverEdge) -> EdgeStyle {
+    fun edgeStyle(strokeWidth: Dp = 3.dp): (KuiverEdge) -> EdgeStyle {
         val colors = LocalKuiverColors.current
         return remember(colors, strokeWidth) {
             { edge ->

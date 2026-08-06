@@ -10,7 +10,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.constrainWidth
 import kotlin.math.ceil
@@ -25,14 +27,17 @@ private const val MAX_EDGE_EXTENT_PX = 30_000
  *
  * ```kotlin
  * edgeContent = { _, from, to ->
- *     val path = remember(from, to) { EdgePathFactory.createStraightPath(from, to) }
- *     EdgeCanvas(remember(path) { path.boundingRect() }) {
- *         drawLine(Color.Blue, path.from, path.pathEndpoint, strokeWidth = 2f)
+ *     val density = LocalDensity.current
+ *     val path = remember(from, to, density) {
+ *         EdgePathFactory.createStraightPath(from, to, density)
+ *     }
+ *     EdgeCanvas(remember(path, density) { path.boundingRect(density) }) {
+ *         drawLine(Color.Blue, path.from, path.pathEndpoint, strokeWidth = 2.dp.toPx())
  *     }
  * }
  * ```
  *
- * @param bounds area the edge draws into, see [boundingRect]
+ * @param bounds area the edge draws into in pixels, see [boundingRect]
  * @param onDraw draws the edge
  */
 @Composable
@@ -62,15 +67,22 @@ fun EdgeCanvas(bounds: Rect, onDraw: DrawScope.() -> Unit) {
 internal fun EdgePathCanvas(
     path: EdgePath,
     color: Color,
-    strokeWidth: Float,
+    strokeWidth: Dp,
     showArrow: Boolean,
     dashed: Boolean,
-    dashLength: Float,
-    gapLength: Float,
+    dashLength: Dp,
+    gapLength: Dp,
+    arrowSize: Dp,
     arrowDrawer: ArrowDrawer
 ) {
-    val bounds = remember(path, strokeWidth, showArrow) {
-        path.boundingRect(strokeWidth = strokeWidth, showArrow = showArrow)
+    val density = LocalDensity.current
+    val bounds = remember(path, density, strokeWidth, arrowSize, showArrow) {
+        path.boundingRect(
+            density = density,
+            strokeWidth = strokeWidth,
+            arrowSize = arrowSize,
+            showArrow = showArrow
+        )
     }
 
     EdgeCanvas(bounds) {
@@ -82,6 +94,7 @@ internal fun EdgePathCanvas(
             dashed = dashed,
             dashLength = dashLength,
             gapLength = gapLength,
+            arrowSize = arrowSize,
             arrowDrawer = arrowDrawer
         )
     }

@@ -1,6 +1,8 @@
 package com.dk.kuiver.ui
 
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.test.Test
@@ -11,11 +13,14 @@ import kotlin.test.assertTrue
 
 class EdgePathTest {
 
+    private val density = Density(1f)
+
     @Test
     fun `straight path endpoint and length`() {
         val withoutArrow = EdgePathFactory.createStraightPath(
             from = Offset(0f, 0f),
             to = Offset(100f, 0f),
+            density = density,
             showArrow = false
         )
         assertEquals(100f, withoutArrow.pathEndpoint.x, 0.01f)
@@ -24,14 +29,16 @@ class EdgePathTest {
         val withArrow = EdgePathFactory.createStraightPath(
             from = Offset(0f, 0f),
             to = Offset(100f, 0f),
+            density = density,
             showArrow = true,
-            strokeWidth = 3f
+            strokeWidth = 3.dp
         )
         assertTrue(withArrow.pathEndpoint.x < withArrow.to.x)
 
         val diagonal = EdgePathFactory.createStraightPath(
             from = Offset(0f, 0f),
             to = Offset(3f, 4f),
+            density = density,
             showArrow = false
         )
         assertEquals(5f, diagonal.edgeLength, 0.01f)
@@ -42,6 +49,7 @@ class EdgePathTest {
         val path = EdgePathFactory.createCurvedPath(
             from = Offset(0f, 0f),
             to = Offset(100f, 0f),
+            density = density,
             showArrow = true
         )
 
@@ -59,6 +67,7 @@ class EdgePathTest {
         val path = EdgePathFactory.createCurvedPath(
             from = Offset(50f, 50f),
             to = Offset(50f, 50f),
+            density = density,
             showArrow = false
         )
         assertEquals(0f, path.edgeLength, 0.01f)
@@ -70,7 +79,8 @@ class EdgePathTest {
         val path = EdgePathFactory.createSelfLoopPath(
             from = Offset(100f, 100f),
             to = Offset(110f, 100f),
-            loopRadius = 40f,
+            density = density,
+            loopRadius = 40.dp,
             showArrow = true
         )
 
@@ -86,6 +96,7 @@ class EdgePathTest {
         val rightward = EdgePathFactory.createOrthogonalPath(
             from = Offset(0f, 0f),
             to = Offset(100f, 100f),
+            density = density,
             curveFactor = 0.5f,
             showArrow = true
         )
@@ -104,6 +115,7 @@ class EdgePathTest {
         val leftward = EdgePathFactory.createOrthogonalPath(
             from = Offset(100f, 0f),
             to = Offset(0f, 100f),
+            density = density,
             curveFactor = 0.5f,
             showArrow = false
         )
@@ -120,10 +132,18 @@ class EdgePathTest {
     @Test
     fun `labels hide on short edges for all edge types`() {
         val paths = listOf(
-            EdgePathFactory.createStraightPath(Offset(0f, 0f), Offset(10f, 0f), false),
-            EdgePathFactory.createCurvedPath(Offset(0f, 0f), Offset(10f, 0f), false),
-            EdgePathFactory.createSelfLoopPath(Offset(0f, 0f), Offset(5f, 0f), 5f, false),
-            EdgePathFactory.createOrthogonalPath(Offset(0f, 0f), Offset(10f, 0f), 0.5f, false)
+            EdgePathFactory.createStraightPath(
+                Offset(0f, 0f), Offset(10f, 0f), density, false
+            ),
+            EdgePathFactory.createCurvedPath(
+                Offset(0f, 0f), Offset(10f, 0f), density, false
+            ),
+            EdgePathFactory.createSelfLoopPath(
+                Offset(0f, 0f), Offset(5f, 0f), density, 5.dp, false
+            ),
+            EdgePathFactory.createOrthogonalPath(
+                Offset(0f, 0f), Offset(10f, 0f), density, 0.5f, false
+            )
         )
 
         paths.forEach { path ->
@@ -136,6 +156,7 @@ class EdgePathTest {
         val straightPath = EdgePathFactory.createStraightPath(
             from = Offset(0f, 0f),
             to = Offset(100f, 0f),
+            density = density,
             showArrow = false
         )
 
@@ -148,6 +169,7 @@ class EdgePathTest {
         val curvedPath = EdgePathFactory.createCurvedPath(
             from = Offset(0f, 0f),
             to = Offset(100f, 0f),
+            density = density,
             showArrow = false
         )
         assertNotNull(curvedPath.calculateLabelPosition(0.5f, 50f))
@@ -158,6 +180,7 @@ class EdgePathTest {
         val path = EdgePathFactory.createStraightPath(
             from = Offset(0f, 0f),
             to = Offset(100f, 0f),
+            density = density,
             showArrow = false
         )
 
@@ -175,12 +198,14 @@ class EdgePathTest {
         val straight = EdgePathFactory.createStraightPath(
             from = Offset(0f, 0f),
             to = Offset(100f, 0f),
+            density = density,
             showArrow = false
         )
 
         val curved = EdgePathFactory.createCurvedPath(
             from = Offset(0f, 0f),
             to = Offset(100f, 0f),
+            density = density,
             showArrow = false
         )
 
@@ -193,13 +218,60 @@ class EdgePathTest {
         val path = EdgePathFactory.createCurvedPath(
             from = Offset(0f, 0f),
             to = Offset(100f, 0f),
+            density = density,
             showArrow = true,
-            strokeWidth = 3f
+            strokeWidth = 3.dp
         )
 
         val labelPos = path.calculateLabelPosition(1.0f, 10f)
         assertNotNull(labelPos)
         assertTrue(labelPos.position.x < path.to.x)
+    }
+
+    @Test
+    fun `arrow shortening scales with density`() {
+        fun shortenAt(density: Density): Float {
+            val path = EdgePathFactory.createStraightPath(
+                from = Offset(0f, 0f),
+                to = Offset(100f, 0f),
+                density = density,
+                showArrow = true,
+                strokeWidth = 3.dp
+            )
+            return path.to.x - path.pathEndpoint.x
+        }
+
+        assertEquals(2f * shortenAt(Density(1f)), shortenAt(Density(2f)), 0.01f)
+    }
+
+    @Test
+    fun `self-loop height scales with density`() {
+        fun heightAt(density: Density): Float {
+            val path = EdgePathFactory.createSelfLoopPath(
+                from = Offset(100f, 100f),
+                to = Offset(110f, 100f),
+                density = density,
+                loopRadius = 40.dp,
+                showArrow = false
+            )
+            return 100f - path.controlPoint.y
+        }
+
+        assertEquals(2f * heightAt(Density(1f)), heightAt(Density(2f)), 0.01f)
+    }
+
+    @Test
+    fun `bounding box padding scales with density`() {
+        val path = EdgePathFactory.createStraightPath(
+            from = Offset(0f, 0f),
+            to = Offset(100f, 0f),
+            density = density,
+            showArrow = true
+        )
+
+        fun paddingAt(d: Density) = -path.boundingRect(d, showArrow = true).top
+
+        assertEquals(2f * paddingAt(Density(1f)), paddingAt(Density(2f)), 0.01f)
     }
 
     private fun isReadableAngle(angleRadians: Float): Boolean {

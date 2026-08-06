@@ -5,6 +5,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.dk.kuiver.model.EdgeType
 import com.dk.kuiver.model.KuiverEdge
 
@@ -14,14 +18,15 @@ fun EdgeContent(
     from: Offset,
     to: Offset,
     color: Color = LocalKuiverColors.current.edge,
-    strokeWidth: Float = 3f,
+    strokeWidth: Dp = 3.dp,
     showArrow: Boolean = true,
     dashed: Boolean = false,
-    dashLength: Float = 10f,
-    gapLength: Float = 5f,
+    dashLength: Dp = 10.dp,
+    gapLength: Dp = 5.dp,
     isSelfLoop: Boolean = false,
-    loopRadius: Float = 40f,
+    loopRadius: Dp = 40.dp,
     enableCurve: Boolean = false,
+    arrowSize: Dp = 16.dp,
     arrowDrawer: ArrowDrawer = DefaultArrowDrawer
 ) {
     val edgePath =
@@ -35,6 +40,7 @@ fun EdgeContent(
         dashed = dashed,
         dashLength = dashLength,
         gapLength = gapLength,
+        arrowSize = arrowSize,
         arrowDrawer = arrowDrawer
     )
 }
@@ -45,21 +51,29 @@ private fun rememberEdgePath(
     to: Offset,
     isSelfLoop: Boolean,
     enableCurve: Boolean,
-    loopRadius: Float,
+    loopRadius: Dp,
     showArrow: Boolean,
-    strokeWidth: Float
-): EdgePath = remember(from, to, isSelfLoop, enableCurve, loopRadius, showArrow, strokeWidth) {
-    when {
-        isSelfLoop -> EdgePathFactory.createSelfLoopPath(
-            from,
-            to,
-            loopRadius,
-            showArrow,
-            strokeWidth
-        )
+    strokeWidth: Dp
+): EdgePath {
+    val density = LocalDensity.current
+    return remember(
+        from, to, density, isSelfLoop, enableCurve, loopRadius, showArrow, strokeWidth
+    ) {
+        when {
+            isSelfLoop -> EdgePathFactory.createSelfLoopPath(
+                from,
+                to,
+                density,
+                loopRadius,
+                showArrow,
+                strokeWidth
+            )
 
-        enableCurve -> EdgePathFactory.createCurvedPath(from, to, showArrow, strokeWidth)
-        else -> EdgePathFactory.createStraightPath(from, to, showArrow, strokeWidth)
+            enableCurve ->
+                EdgePathFactory.createCurvedPath(from, to, density, showArrow, strokeWidth)
+
+            else -> EdgePathFactory.createStraightPath(from, to, density, showArrow, strokeWidth)
+        }
     }
 }
 
@@ -87,6 +101,7 @@ private fun rememberEdgePath(
  * @param isSelfLoop Whether this is a self-loop edge
  * @param loopRadius Radius for self-loop arcs. Must be positive
  * @param enableCurve Whether to curve the edge (for back edges)
+ * @param arrowSize Size of the arrow head
  * @param arrowDrawer Custom arrow drawing function
  * @param minEdgeLengthForLabel Minimum edge length to show label. Must be non-negative
  */
@@ -100,25 +115,26 @@ fun EdgeContentWithLabel(
     labelStyle: EdgeLabelStyle = KuiverDefaults.edgeLabelStyle(),
     labelContent: (@Composable (String) -> Unit)? = null,
     color: Color = LocalKuiverColors.current.edge,
-    strokeWidth: Float = 3f,
+    strokeWidth: Dp = 3.dp,
     showArrow: Boolean = true,
     dashed: Boolean = false,
-    dashLength: Float = 10f,
-    gapLength: Float = 5f,
+    dashLength: Dp = 10.dp,
+    gapLength: Dp = 5.dp,
     isSelfLoop: Boolean = false,
-    loopRadius: Float = 40f,
+    loopRadius: Dp = 40.dp,
     enableCurve: Boolean = false,
+    arrowSize: Dp = 16.dp,
     arrowDrawer: ArrowDrawer = DefaultArrowDrawer,
-    minEdgeLengthForLabel: Float = 50f
+    minEdgeLengthForLabel: Dp = 50.dp
 ) {
     require(labelOffset == null || labelOffset in 0f..1f) {
         "labelOffset must be in range [0, 1], got $labelOffset"
     }
-    require(strokeWidth > 0f) { "strokeWidth must be positive, got $strokeWidth" }
-    require(minEdgeLengthForLabel >= 0f) {
+    require(strokeWidth > 0.dp) { "strokeWidth must be positive, got $strokeWidth" }
+    require(minEdgeLengthForLabel >= 0.dp) {
         "minEdgeLengthForLabel must be non-negative, got $minEdgeLengthForLabel"
     }
-    require(loopRadius > 0f) { "loopRadius must be positive, got $loopRadius" }
+    require(loopRadius > 0.dp) { "loopRadius must be positive, got $loopRadius" }
 
     val offset = labelPlacement?.offset ?: labelOffset ?: 0.5f
 
@@ -133,6 +149,7 @@ fun EdgeContentWithLabel(
         dashed = dashed,
         dashLength = dashLength,
         gapLength = gapLength,
+        arrowSize = arrowSize,
         arrowDrawer = arrowDrawer,
         label = label,
         labelOffset = offset,
@@ -146,17 +163,18 @@ fun EdgeContentWithLabel(
 internal fun LabeledEdge(
     path: EdgePath,
     color: Color,
-    strokeWidth: Float,
+    strokeWidth: Dp,
     showArrow: Boolean,
     dashed: Boolean,
-    dashLength: Float,
-    gapLength: Float,
+    dashLength: Dp,
+    gapLength: Dp,
+    arrowSize: Dp,
     arrowDrawer: ArrowDrawer,
     label: String?,
     labelOffset: Float,
     labelStyle: EdgeLabelStyle,
     labelContent: (@Composable (String) -> Unit)?,
-    minEdgeLengthForLabel: Float
+    minEdgeLengthForLabel: Dp
 ) {
     val edge = @Composable {
         EdgePathCanvas(
@@ -167,6 +185,7 @@ internal fun LabeledEdge(
             dashed = dashed,
             dashLength = dashLength,
             gapLength = gapLength,
+            arrowSize = arrowSize,
             arrowDrawer = arrowDrawer
         )
     }
@@ -176,8 +195,13 @@ internal fun LabeledEdge(
         return
     }
 
-    val labelPosition = remember(path, labelOffset, minEdgeLengthForLabel) {
-        path.calculateLabelPosition(labelOffset, minEdgeLengthForLabel)
+    val density: Density = LocalDensity.current
+    val labelPosition = remember(path, density, labelOffset, minEdgeLengthForLabel) {
+        // edgeLength is in pixels, so the dp threshold is resolved before comparing
+        path.calculateLabelPosition(
+            labelOffset,
+            with(density) { minEdgeLengthForLabel.toPx() }
+        )
     }
 
     if (labelPosition == null) {
@@ -203,6 +227,7 @@ internal fun LabeledEdge(
  * @param backEdgeColor Color for back edges and self-loops (default: red)
  * @param strokeWidth Width of the edge line
  * @param loopRadius Radius for self-loop arcs
+ * @param arrowSize Size of the arrow head
  * @param arrowDrawer Custom arrow drawing function
  * @param label Optional label text to display on the edge
  * @param labelOffset Position along the edge (0.0 = from, 1.0 = to). Must be in range [0, 1]
@@ -217,8 +242,9 @@ fun StyledEdgeContent(
     to: Offset,
     baseColor: Color = LocalKuiverColors.current.edge,
     backEdgeColor: Color = LocalKuiverColors.current.backEdge,
-    strokeWidth: Float = 3f,
-    loopRadius: Float = 40f,
+    strokeWidth: Dp = 3.dp,
+    loopRadius: Dp = 40.dp,
+    arrowSize: Dp = 16.dp,
     arrowDrawer: ArrowDrawer = DefaultArrowDrawer,
     label: String? = null,
     labelOffset: Float? = null,
@@ -248,6 +274,7 @@ fun StyledEdgeContent(
         isSelfLoop = isSelfLoop,
         loopRadius = loopRadius,
         enableCurve = edge.type == EdgeType.BACK,
+        arrowSize = arrowSize,
         arrowDrawer = arrowDrawer
     )
 }

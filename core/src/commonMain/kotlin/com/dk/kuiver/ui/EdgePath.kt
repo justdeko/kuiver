@@ -36,7 +36,8 @@ sealed class EdgePath {
      * for edge curvature and ensures the label aligns with the edge tangent.
      *
      * @param offset Position along curve (0.0 = start, 1.0 = end). Will be clamped to [0, 1].
-     * @param minEdgeLength Minimum edge length to show label. Returns null if edge is shorter.
+     * @param minEdgeLength Minimum edge length in pixels, matching [edgeLength], to show the label.
+     *   Returns null if the edge is shorter.
      * @return Label position with rotation angle, or null if edge is too short
      */
     abstract fun calculateLabelPosition(

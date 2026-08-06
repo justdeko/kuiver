@@ -7,44 +7,52 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.unit.Dp
 import kotlin.math.sqrt
+
+private fun DrawScope.dashEffect(dashed: Boolean, dashLength: Dp, gapLength: Dp): PathEffect? =
+    if (dashed) {
+        PathEffect.dashPathEffect(floatArrayOf(dashLength.toPx(), gapLength.toPx()))
+    } else {
+        null
+    }
 
 internal fun DrawScope.drawStraightEdgePath(
     path: EdgePath.Straight,
     color: Color,
-    strokeWidth: Float,
+    strokeWidth: Dp,
     showArrow: Boolean,
     dashed: Boolean,
-    dashLength: Float,
-    gapLength: Float,
+    dashLength: Dp,
+    gapLength: Dp,
+    arrowSize: Dp,
     arrowDrawer: ArrowDrawer
 ) {
     drawLine(
         color = color.copy(alpha = EdgeDrawingDefaults.LINE_ALPHA),
         start = path.from,
         end = path.pathEndpoint,
-        strokeWidth = strokeWidth,
-        pathEffect = if (dashed) PathEffect.dashPathEffect(
-            floatArrayOf(dashLength, gapLength)
-        ) else null,
+        strokeWidth = strokeWidth.toPx(),
+        pathEffect = dashEffect(dashed, dashLength, gapLength),
         cap = StrokeCap.Round
     )
 
     if (showArrow && path.edgeLength > 0f) {
         val direction = Offset(path.to.x - path.from.x, path.to.y - path.from.y)
         val normalized = Offset(direction.x / path.edgeLength, direction.y / path.edgeLength)
-        drawArrowAtEnd(path.to, normalized, color, arrowDrawer)
+        drawArrowAtEnd(path.to, normalized, color, arrowSize.toPx(), arrowDrawer)
     }
 }
 
 internal fun DrawScope.drawCurvedEdgePath(
     path: EdgePath.Curved,
     color: Color,
-    strokeWidth: Float,
+    strokeWidth: Dp,
     showArrow: Boolean,
     dashed: Boolean,
-    dashLength: Float,
-    gapLength: Float,
+    dashLength: Dp,
+    gapLength: Dp,
+    arrowSize: Dp,
     arrowDrawer: ArrowDrawer
 ) {
     val curvePath = Path().apply {
@@ -61,10 +69,8 @@ internal fun DrawScope.drawCurvedEdgePath(
         path = curvePath,
         color = color.copy(alpha = EdgeDrawingDefaults.LINE_ALPHA),
         style = Stroke(
-            width = strokeWidth,
-            pathEffect = if (dashed) PathEffect.dashPathEffect(
-                floatArrayOf(dashLength, gapLength)
-            ) else null,
+            width = strokeWidth.toPx(),
+            pathEffect = dashEffect(dashed, dashLength, gapLength),
             cap = StrokeCap.Round
         )
     )
@@ -74,7 +80,7 @@ internal fun DrawScope.drawCurvedEdgePath(
         val tangentDist = sqrt(tangent.x * tangent.x + tangent.y * tangent.y)
         if (tangentDist > 0f) {
             val normalized = Offset(tangent.x / tangentDist, tangent.y / tangentDist)
-            drawArrowAtEnd(path.to, normalized, color, arrowDrawer)
+            drawArrowAtEnd(path.to, normalized, color, arrowSize.toPx(), arrowDrawer)
         }
     }
 }
@@ -82,11 +88,12 @@ internal fun DrawScope.drawCurvedEdgePath(
 internal fun DrawScope.drawSelfLoopEdgePath(
     path: EdgePath.SelfLoop,
     color: Color,
-    strokeWidth: Float,
+    strokeWidth: Dp,
     showArrow: Boolean,
     dashed: Boolean,
-    dashLength: Float,
-    gapLength: Float,
+    dashLength: Dp,
+    gapLength: Dp,
+    arrowSize: Dp,
     arrowDrawer: ArrowDrawer
 ) {
     val loopPath = Path().apply {
@@ -103,10 +110,8 @@ internal fun DrawScope.drawSelfLoopEdgePath(
         path = loopPath,
         color = color.copy(alpha = EdgeDrawingDefaults.LINE_ALPHA),
         style = Stroke(
-            width = strokeWidth,
-            pathEffect = if (dashed) PathEffect.dashPathEffect(
-                floatArrayOf(dashLength, gapLength)
-            ) else null,
+            width = strokeWidth.toPx(),
+            pathEffect = dashEffect(dashed, dashLength, gapLength),
             cap = StrokeCap.Round
         )
     )
@@ -116,7 +121,7 @@ internal fun DrawScope.drawSelfLoopEdgePath(
         val distance = sqrt(direction.x * direction.x + direction.y * direction.y)
         if (distance > 0f) {
             val normalized = Offset(direction.x / distance, direction.y / distance)
-            drawArrowAtEnd(path.to, normalized, color, arrowDrawer)
+            drawArrowAtEnd(path.to, normalized, color, arrowSize.toPx(), arrowDrawer)
         }
     }
 }
@@ -124,11 +129,12 @@ internal fun DrawScope.drawSelfLoopEdgePath(
 internal fun DrawScope.drawOrthogonalEdgePath(
     path: EdgePath.Orthogonal,
     color: Color,
-    strokeWidth: Float,
+    strokeWidth: Dp,
     showArrow: Boolean,
     dashed: Boolean,
-    dashLength: Float,
-    gapLength: Float,
+    dashLength: Dp,
+    gapLength: Dp,
+    arrowSize: Dp,
     arrowDrawer: ArrowDrawer
 ) {
     val orthPath = Path().apply {
@@ -144,10 +150,8 @@ internal fun DrawScope.drawOrthogonalEdgePath(
         path = orthPath,
         color = color.copy(alpha = EdgeDrawingDefaults.LINE_ALPHA),
         style = Stroke(
-            width = strokeWidth,
-            pathEffect = if (dashed) PathEffect.dashPathEffect(
-                floatArrayOf(dashLength, gapLength)
-            ) else null,
+            width = strokeWidth.toPx(),
+            pathEffect = dashEffect(dashed, dashLength, gapLength),
             cap = StrokeCap.Round
         )
     )
@@ -158,7 +162,7 @@ internal fun DrawScope.drawOrthogonalEdgePath(
         val tangentDist = sqrt(tangent.x * tangent.x + tangent.y * tangent.y)
         if (tangentDist > 0f) {
             val direction = Offset(tangent.x / tangentDist, tangent.y / tangentDist)
-            drawArrowAtEnd(path.to, direction, color, arrowDrawer)
+            drawArrowAtEnd(path.to, direction, color, arrowSize.toPx(), arrowDrawer)
         }
     }
 }
@@ -166,11 +170,12 @@ internal fun DrawScope.drawOrthogonalEdgePath(
 internal fun DrawScope.drawRightAngleEdgePath(
     path: EdgePath.RightAngle,
     color: Color,
-    strokeWidth: Float,
+    strokeWidth: Dp,
     showArrow: Boolean,
     dashed: Boolean,
-    dashLength: Float,
-    gapLength: Float,
+    dashLength: Dp,
+    gapLength: Dp,
+    arrowSize: Dp,
     arrowDrawer: ArrowDrawer
 ) {
     val rightAnglePath = Path().apply {
@@ -185,27 +190,26 @@ internal fun DrawScope.drawRightAngleEdgePath(
         path = rightAnglePath,
         color = color.copy(alpha = EdgeDrawingDefaults.LINE_ALPHA),
         style = Stroke(
-            width = strokeWidth,
-            pathEffect = if (dashed) PathEffect.dashPathEffect(
-                floatArrayOf(dashLength, gapLength)
-            ) else null,
+            width = strokeWidth.toPx(),
+            pathEffect = dashEffect(dashed, dashLength, gapLength),
             cap = StrokeCap.Round
         )
     )
 
     if (showArrow && path.arrowDirection != null) {
-        drawArrowAtEnd(path.to, path.arrowDirection, color, arrowDrawer)
+        drawArrowAtEnd(path.to, path.arrowDirection, color, arrowSize.toPx(), arrowDrawer)
     }
 }
 
 internal fun DrawScope.drawEdgePath(
     path: EdgePath,
     color: Color,
-    strokeWidth: Float,
+    strokeWidth: Dp,
     showArrow: Boolean,
     dashed: Boolean,
-    dashLength: Float,
-    gapLength: Float,
+    dashLength: Dp,
+    gapLength: Dp,
+    arrowSize: Dp,
     arrowDrawer: ArrowDrawer
 ) {
     when (path) {
@@ -218,6 +222,7 @@ internal fun DrawScope.drawEdgePath(
                 dashed = dashed,
                 dashLength = dashLength,
                 gapLength = gapLength,
+                arrowSize = arrowSize,
                 arrowDrawer = arrowDrawer
             )
 
@@ -230,6 +235,7 @@ internal fun DrawScope.drawEdgePath(
                 dashed = dashed,
                 dashLength = dashLength,
                 gapLength = gapLength,
+                arrowSize = arrowSize,
                 arrowDrawer = arrowDrawer
             )
 
@@ -242,6 +248,7 @@ internal fun DrawScope.drawEdgePath(
                 dashed = dashed,
                 dashLength = dashLength,
                 gapLength = gapLength,
+                arrowSize = arrowSize,
                 arrowDrawer = arrowDrawer
             )
 
@@ -254,6 +261,7 @@ internal fun DrawScope.drawEdgePath(
                 dashed = dashed,
                 dashLength = dashLength,
                 gapLength = gapLength,
+                arrowSize = arrowSize,
                 arrowDrawer = arrowDrawer
             )
 
@@ -266,6 +274,7 @@ internal fun DrawScope.drawEdgePath(
                 dashed = dashed,
                 dashLength = dashLength,
                 gapLength = gapLength,
+                arrowSize = arrowSize,
                 arrowDrawer = arrowDrawer
             )
     }

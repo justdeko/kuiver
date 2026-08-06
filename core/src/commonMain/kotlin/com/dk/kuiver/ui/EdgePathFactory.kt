@@ -1,6 +1,9 @@
 package com.dk.kuiver.ui
 
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 import kotlin.math.sqrt
 
@@ -10,14 +13,18 @@ import kotlin.math.sqrt
  * Encapsulates all control point calculation logic that was previously
  * duplicated between drawing functions and label positioning code.
  * Provides a single source of truth for edge geometry.
+ *
+ * Endpoints and the returned paths are in pixels, matching the draw scope. Sizes are in dp and
+ * resolved through the [Density] each function takes.
  */
 object EdgePathFactory {
 
     /**
      * Create a straight edge path.
      *
-     * @param from Start point of the edge
-     * @param to End point of the edge
+     * @param from Start point of the edge, in pixels
+     * @param to End point of the edge, in pixels
+     * @param density Resolves the dp sizes against the current density
      * @param showArrow Whether the edge will have an arrow (affects pathEndpoint)
      * @param strokeWidth Width of the edge line (affects arrow gap calculation)
      * @return EdgePath.Straight with calculated endpoint and length
@@ -25,16 +32,16 @@ object EdgePathFactory {
     fun createStraightPath(
         from: Offset,
         to: Offset,
+        density: Density,
         showArrow: Boolean = true,
-        strokeWidth: Float = 3f
+        strokeWidth: Dp = 3.dp
     ): EdgePath.Straight {
         val direction = Offset(to.x - from.x, to.y - from.y)
         val distance = sqrt(direction.x * direction.x + direction.y * direction.y)
 
         val pathEndpoint = if (showArrow && distance > 0f) {
             val normalized = Offset(direction.x / distance, direction.y / distance)
-            val lineGap = strokeWidth / 2f + EdgeDrawingDefaults.ARROW_GAP_FROM_LINE
-            val shortenBy = EdgeDrawingDefaults.ARROW_OFFSET + lineGap
+            val shortenBy = density.arrowShortenPx(strokeWidth)
             Offset(
                 to.x - normalized.x * shortenBy,
                 to.y - normalized.y * shortenBy
@@ -57,8 +64,9 @@ object EdgePathFactory {
      * The control point is calculated perpendicular to the edge direction,
      * offset proportionally to the edge length to maintain consistent curvature.
      *
-     * @param from Start point of the edge
-     * @param to End point of the edge
+     * @param from Start point of the edge, in pixels
+     * @param to End point of the edge, in pixels
+     * @param density Resolves the dp sizes against the current density
      * @param showArrow Whether the edge will have an arrow
      * @param strokeWidth Width of the edge line
      * @return EdgePath.Curved with calculated control point and endpoint
@@ -66,8 +74,9 @@ object EdgePathFactory {
     fun createCurvedPath(
         from: Offset,
         to: Offset,
+        density: Density,
         showArrow: Boolean = true,
-        strokeWidth: Float = 3f
+        strokeWidth: Dp = 3.dp
     ): EdgePath.Curved {
         // Calculate direction and distance
         val direction = Offset(to.x - from.x, to.y - from.y)
@@ -104,10 +113,10 @@ object EdgePathFactory {
 
         val pathEndpoint = if (showArrow && tangentDist > 0f) {
             val normalized = Offset(tangent.x / tangentDist, tangent.y / tangentDist)
-            val lineGap = strokeWidth / 2f + EdgeDrawingDefaults.ARROW_GAP_FROM_LINE
+            val shortenBy = density.arrowShortenPx(strokeWidth)
             Offset(
-                to.x - normalized.x * (EdgeDrawingDefaults.ARROW_OFFSET + lineGap),
-                to.y - normalized.y * (EdgeDrawingDefaults.ARROW_OFFSET + lineGap)
+                to.x - normalized.x * shortenBy,
+                to.y - normalized.y * shortenBy
             )
         } else {
             to
@@ -130,8 +139,9 @@ object EdgePathFactory {
      *
      * The control point is positioned above the node to create a visible arc.
      *
-     * @param from Start point of the self-loop
-     * @param to End point of the self-loop (typically close to from)
+     * @param from Start point of the self-loop, in pixels
+     * @param to End point of the self-loop (typically close to from), in pixels
+     * @param density Resolves the dp sizes against the current density
      * @param loopRadius Radius that determines the height of the loop
      * @param showArrow Whether the edge will have an arrow
      * @param strokeWidth Width of the edge line
@@ -140,18 +150,18 @@ object EdgePathFactory {
     fun createSelfLoopPath(
         from: Offset,
         to: Offset,
-        loopRadius: Float = 40f,
+        density: Density,
+        loopRadius: Dp = 40.dp,
         showArrow: Boolean = true,
-        strokeWidth: Float = 3f
+        strokeWidth: Dp = 3.dp
     ): EdgePath.SelfLoop {
         // Calculate center point between from and to
         val center = Offset((from.x + to.x) / 2f, (from.y + to.y) / 2f)
 
         // Control point well above the node
-        val controlPoint = Offset(
-            center.x,
-            center.y - (loopRadius * EdgeDrawingDefaults.SELF_LOOP_HEIGHT_MULTIPLIER)
-        )
+        val loopHeight = with(density) { loopRadius.toPx() } *
+            EdgeDrawingDefaults.SELF_LOOP_HEIGHT_MULTIPLIER
+        val controlPoint = Offset(center.x, center.y - loopHeight)
 
         // Calculate tangent at the end for arrow direction
         val direction = Offset(to.x - controlPoint.x, to.y - controlPoint.y)
@@ -159,10 +169,10 @@ object EdgePathFactory {
 
         val pathEndpoint = if (showArrow && distance > 0f) {
             val normalizedDirection = Offset(direction.x / distance, direction.y / distance)
-            val lineGap = strokeWidth / 2f + EdgeDrawingDefaults.ARROW_GAP_FROM_LINE
+            val shortenBy = density.arrowShortenPx(strokeWidth)
             Offset(
-                to.x - normalizedDirection.x * (EdgeDrawingDefaults.ARROW_OFFSET + lineGap),
-                to.y - normalizedDirection.y * (EdgeDrawingDefaults.ARROW_OFFSET + lineGap)
+                to.x - normalizedDirection.x * shortenBy,
+                to.y - normalizedDirection.y * shortenBy
             )
         } else {
             to
@@ -185,8 +195,9 @@ object EdgePathFactory {
      * The control points create horizontal tangents at both start and end,
      * resulting in a smooth S-shaped curve ideal for hierarchical layouts.
      *
-     * @param from Start point of the edge
-     * @param to End point of the edge
+     * @param from Start point of the edge, in pixels
+     * @param to End point of the edge, in pixels
+     * @param density Resolves the dp sizes against the current density
      * @param curveFactor How far the control points extend horizontally (0.0 to 1.0)
      * @param showArrow Whether the edge will have an arrow
      * @param strokeWidth Width of the edge line
@@ -195,9 +206,10 @@ object EdgePathFactory {
     fun createOrthogonalPath(
         from: Offset,
         to: Offset,
+        density: Density,
         curveFactor: Float = 0.5f,
         showArrow: Boolean = true,
-        strokeWidth: Float = 3f
+        strokeWidth: Dp = 3.dp
     ): EdgePath.Orthogonal {
         val dx = to.x - from.x
 
@@ -216,8 +228,7 @@ object EdgePathFactory {
 
         val pathEndpoint = if (showArrow && tangentDist > 0f) {
             val normalized = Offset(tangent.x / tangentDist, tangent.y / tangentDist)
-            val lineGap = strokeWidth / 2f + EdgeDrawingDefaults.ARROW_GAP_FROM_LINE
-            val shortenBy = EdgeDrawingDefaults.ARROW_OFFSET + lineGap
+            val shortenBy = density.arrowShortenPx(strokeWidth)
             Offset(
                 to.x - normalized.x * shortenBy,
                 to.y - normalized.y * shortenBy
@@ -305,9 +316,10 @@ object EdgePathFactory {
      * Creates paths with only horizontal and vertical segments, connected
      * at right angles. The routing strategy determines how the path is laid out.
      *
-     * @param from Start point of the edge
-     * @param to End point of the edge
+     * @param from Start point of the edge, in pixels
+     * @param to End point of the edge, in pixels
      * @param routing The routing strategy for the edge segments
+     * @param density Resolves the dp sizes against the current density
      * @param showArrow Whether the edge will have an arrow
      * @param strokeWidth Width of the edge line
      * @return EdgePath.RightAngle with calculated waypoints and endpoint
@@ -316,8 +328,9 @@ object EdgePathFactory {
         from: Offset,
         to: Offset,
         routing: RightAngleRouting,
+        density: Density,
         showArrow: Boolean = true,
-        strokeWidth: Float = 3f
+        strokeWidth: Dp = 3.dp
     ): EdgePath.RightAngle {
         // Calculate waypoints based on routing
         val waypoints = when (routing) {
@@ -366,8 +379,7 @@ object EdgePathFactory {
 
         // Calculate path endpoint (shortened for arrow)
         val pathEndpoint = if (showArrow && arrowDirection != null) {
-            val lineGap = strokeWidth / 2f + EdgeDrawingDefaults.ARROW_GAP_FROM_LINE
-            val shortenBy = EdgeDrawingDefaults.ARROW_OFFSET + lineGap
+            val shortenBy = density.arrowShortenPx(strokeWidth)
             Offset(
                 to.x - arrowDirection.x * shortenBy,
                 to.y - arrowDirection.y * shortenBy
@@ -397,3 +409,11 @@ object EdgePathFactory {
         )
     }
 }
+
+/**
+ * Pixel distance the line stops short of the arrow tip, leaving room for the arrow head plus a
+ * small gap that scales with the line so thick lines don't touch the head.
+ */
+internal fun Density.arrowShortenPx(strokeWidth: Dp): Float =
+    (EdgeDrawingDefaults.ARROW_OFFSET + strokeWidth / 2f + EdgeDrawingDefaults.ARROW_GAP_FROM_LINE)
+        .toPx()

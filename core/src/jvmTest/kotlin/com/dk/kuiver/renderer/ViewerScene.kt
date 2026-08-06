@@ -108,9 +108,9 @@ internal class ViewerScene(
             edges = when (edgeMode) {
                 EdgeMode.BATCHED -> EdgeRendering.Batched { edge ->
                     EdgeStyle(
-                        arrowDrawer = { arrowTip, direction, color ->
+                        arrowDrawer = { arrowTip, direction, color, arrowSize ->
                             edgeArrowTips["${edge.fromId}->${edge.toId}"] = arrowTip
-                            DefaultArrowDrawer(arrowTip, direction, color)
+                            DefaultArrowDrawer(arrowTip, direction, color, arrowSize)
                         }
                     )
                 }
