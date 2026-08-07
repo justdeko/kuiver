@@ -67,6 +67,7 @@ import kotlin.math.exp
  * [KuiverViewerState.zoomOut]
  * @property panVelocity scroll pan sensitivity in dp per scroll unit, with a platform-specific
  * default
+ * @property zoomVelocity scroll zoom sensitivity per scroll unit, scale changes exponentially
  * @property selectionMode whether and how tapping a node selects it
  * @property nodeDragEnabled whether nodes can be dragged to a new position
  * @property hoverEnabled whether the pointer entering a node updates
@@ -88,6 +89,7 @@ data class KuiverViewerConfig(
     val maxScale: Float = 5f,
     val zoomStep: Float = 1.2f,
     val panVelocity: Float = PlatformDefaults.defaultPanVelocity,
+    val zoomVelocity: Float = PlatformDefaults.defaultZoomVelocity,
     val selectionMode: SelectionMode = SelectionMode.NONE,
     val nodeDragEnabled: Boolean = false,
     val hoverEnabled: Boolean = false,
@@ -435,7 +437,7 @@ internal fun ViewerRenderer(
                             change.consume()
 
                             if (currentConfig.zoomConditionDesktop(event)) {
-                                val zoomFactor = exp(-scrollDelta.y * 0.05f)
+                                val zoomFactor = exp(-scrollDelta.y * currentConfig.zoomVelocity)
                                 val newScale = (state.scale * zoomFactor).coerceIn(
                                     currentConfig.minScale,
                                     currentConfig.maxScale

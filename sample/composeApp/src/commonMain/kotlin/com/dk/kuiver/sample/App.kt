@@ -29,6 +29,8 @@ import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -87,21 +89,39 @@ fun App() {
     var isDarkTheme by rememberSaveable { mutableStateOf(systemInDarkTheme) }
     var currentScreen by rememberSaveable { mutableStateOf(Screen.GRAPH_BUILDER) }
 
+    // Scrolling pans on desktop and web, so the zoom gesture needs pointing out once
+    val zoomHintHostState = remember { SnackbarHostState() }
+    LaunchedEffect(Unit) {
+        if (usesCtrlScrollZoom) {
+            zoomHintHostState.showSnackbar("Hold Ctrl and scroll to zoom in and out")
+        }
+    }
+
     AppTheme(darkTheme = isDarkTheme) {
-        when (currentScreen) {
-            Screen.GRAPH_BUILDER -> GraphBuilderScreen(
-                isDarkTheme = isDarkTheme,
-                onThemeToggle = { isDarkTheme = !isDarkTheme },
-                onNavigateToProcessDemo = { currentScreen = Screen.PROCESS_DIAGRAM },
-                onNavigateToStressTest = { currentScreen = Screen.STRESS_TEST },
-            )
+        Box(modifier = Modifier.fillMaxSize()) {
+            when (currentScreen) {
+                Screen.GRAPH_BUILDER -> GraphBuilderScreen(
+                    isDarkTheme = isDarkTheme,
+                    onThemeToggle = { isDarkTheme = !isDarkTheme },
+                    onNavigateToProcessDemo = { currentScreen = Screen.PROCESS_DIAGRAM },
+                    onNavigateToStressTest = { currentScreen = Screen.STRESS_TEST },
+                )
 
-            Screen.PROCESS_DIAGRAM -> ProcessDiagramDemo(
-                onNavigateBack = { currentScreen = Screen.GRAPH_BUILDER }
-            )
+                Screen.PROCESS_DIAGRAM -> ProcessDiagramDemo(
+                    onNavigateBack = { currentScreen = Screen.GRAPH_BUILDER }
+                )
 
-            Screen.STRESS_TEST -> StressTestScreen(
-                onNavigateBack = { currentScreen = Screen.GRAPH_BUILDER }
+                Screen.STRESS_TEST -> StressTestScreen(
+                    onNavigateBack = { currentScreen = Screen.GRAPH_BUILDER }
+                )
+            }
+
+            SnackbarHost(
+                hostState = zoomHintHostState,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .systemBarsPadding()
+                    .padding(16.dp)
             )
         }
     }
