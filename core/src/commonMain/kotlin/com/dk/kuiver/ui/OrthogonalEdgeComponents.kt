@@ -4,6 +4,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.dk.kuiver.model.KuiverEdge
 
 /**
@@ -20,16 +23,20 @@ fun OrthogonalEdgeContent(
     from: Offset,
     to: Offset,
     color: Color = LocalKuiverColors.current.edge,
-    strokeWidth: Float = 3f,
+    strokeWidth: Dp = 3.dp,
     showArrow: Boolean = true,
     dashed: Boolean = false,
-    dashLength: Float = 10f,
-    gapLength: Float = 5f,
+    dashLength: Dp = 10.dp,
+    gapLength: Dp = 5.dp,
     curveFactor: Float = 0.5f,
+    arrowSize: Dp = 16.dp,
     arrowDrawer: ArrowDrawer = DefaultArrowDrawer
 ) {
-    val edgePath = remember(from, to, curveFactor, showArrow, strokeWidth) {
-        EdgePathFactory.createOrthogonalPath(from, to, curveFactor, showArrow, strokeWidth)
+    val density = LocalDensity.current
+    val edgePath = remember(from, to, density, curveFactor, showArrow, strokeWidth) {
+        EdgePathFactory.createOrthogonalPath(
+            from, to, density, curveFactor, showArrow, strokeWidth
+        )
     }
 
     EdgePathCanvas(
@@ -40,6 +47,7 @@ fun OrthogonalEdgeContent(
         dashed = dashed,
         dashLength = dashLength,
         gapLength = gapLength,
+        arrowSize = arrowSize,
         arrowDrawer = arrowDrawer
     )
 }
@@ -69,6 +77,7 @@ fun OrthogonalEdgeContent(
  * @param dashLength Length of dashes (if dashed)
  * @param gapLength Length of gaps between dashes (if dashed)
  * @param curveFactor How far control points extend horizontally (0.0-1.0, default 0.5)
+ * @param arrowSize Size of the arrow head
  * @param arrowDrawer Custom arrow drawing function
  * @param minEdgeLengthForLabel Minimum edge length to show label. Must be non-negative
  */
@@ -82,27 +91,31 @@ fun OrthogonalEdgeContentWithLabel(
     labelStyle: EdgeLabelStyle = KuiverDefaults.edgeLabelStyle(),
     labelContent: (@Composable (String) -> Unit)? = null,
     color: Color = LocalKuiverColors.current.edge,
-    strokeWidth: Float = 3f,
+    strokeWidth: Dp = 3.dp,
     showArrow: Boolean = true,
     dashed: Boolean = false,
-    dashLength: Float = 10f,
-    gapLength: Float = 5f,
+    dashLength: Dp = 10.dp,
+    gapLength: Dp = 5.dp,
     curveFactor: Float = 0.5f,
+    arrowSize: Dp = 16.dp,
     arrowDrawer: ArrowDrawer = DefaultArrowDrawer,
-    minEdgeLengthForLabel: Float = 50f
+    minEdgeLengthForLabel: Dp = 50.dp
 ) {
     require(labelOffset == null || labelOffset in 0f..1f) {
         "labelOffset must be in range [0, 1], got $labelOffset"
     }
-    require(strokeWidth > 0f) { "strokeWidth must be positive, got $strokeWidth" }
-    require(minEdgeLengthForLabel >= 0f) {
+    require(strokeWidth > 0.dp) { "strokeWidth must be positive, got $strokeWidth" }
+    require(minEdgeLengthForLabel >= 0.dp) {
         "minEdgeLengthForLabel must be non-negative, got $minEdgeLengthForLabel"
     }
 
     val offset = labelPlacement?.offset ?: labelOffset ?: 0.5f
 
-    val edgePath = remember(from, to, curveFactor, showArrow, strokeWidth) {
-        EdgePathFactory.createOrthogonalPath(from, to, curveFactor, showArrow, strokeWidth)
+    val density = LocalDensity.current
+    val edgePath = remember(from, to, density, curveFactor, showArrow, strokeWidth) {
+        EdgePathFactory.createOrthogonalPath(
+            from, to, density, curveFactor, showArrow, strokeWidth
+        )
     }
 
     LabeledEdge(
@@ -113,6 +126,7 @@ fun OrthogonalEdgeContentWithLabel(
         dashed = dashed,
         dashLength = dashLength,
         gapLength = gapLength,
+        arrowSize = arrowSize,
         arrowDrawer = arrowDrawer,
         label = label,
         labelOffset = offset,
@@ -248,6 +262,7 @@ enum class RightAngleRouting {
  * @param dashLength Length of dashes (if dashed)
  * @param gapLength Length of gaps between dashes (if dashed)
  * @param routing The routing strategy for the edge segments
+ * @param arrowSize Size of the arrow head
  * @param arrowDrawer Custom arrow drawing function
  */
 @Composable
@@ -255,16 +270,18 @@ fun RightAngleEdgeContent(
     from: Offset,
     to: Offset,
     color: Color = LocalKuiverColors.current.edge,
-    strokeWidth: Float = 3f,
+    strokeWidth: Dp = 3.dp,
     showArrow: Boolean = true,
     dashed: Boolean = false,
-    dashLength: Float = 10f,
-    gapLength: Float = 5f,
+    dashLength: Dp = 10.dp,
+    gapLength: Dp = 5.dp,
     routing: RightAngleRouting,
+    arrowSize: Dp = 16.dp,
     arrowDrawer: ArrowDrawer = DefaultArrowDrawer
 ) {
-    val edgePath = remember(from, to, routing, showArrow, strokeWidth) {
-        EdgePathFactory.createRightAnglePath(from, to, routing, showArrow, strokeWidth)
+    val density = LocalDensity.current
+    val edgePath = remember(from, to, density, routing, showArrow, strokeWidth) {
+        EdgePathFactory.createRightAnglePath(from, to, routing, density, showArrow, strokeWidth)
     }
 
     EdgePathCanvas(
@@ -275,6 +292,7 @@ fun RightAngleEdgeContent(
         dashed = dashed,
         dashLength = dashLength,
         gapLength = gapLength,
+        arrowSize = arrowSize,
         arrowDrawer = arrowDrawer
     )
 }
@@ -302,6 +320,7 @@ fun RightAngleEdgeContent(
  * @param dashLength Length of dashes (if dashed)
  * @param gapLength Length of gaps between dashes (if dashed)
  * @param routing The routing strategy for the edge segments
+ * @param arrowSize Size of the arrow head
  * @param arrowDrawer Custom arrow drawing function
  * @param minEdgeLengthForLabel Minimum edge length to show label. Must be non-negative
  */
@@ -315,27 +334,29 @@ fun RightAngleEdgeContentWithLabel(
     labelStyle: EdgeLabelStyle = KuiverDefaults.edgeLabelStyle(),
     labelContent: (@Composable (String) -> Unit)? = null,
     color: Color = LocalKuiverColors.current.edge,
-    strokeWidth: Float = 3f,
+    strokeWidth: Dp = 3.dp,
     showArrow: Boolean = true,
     dashed: Boolean = false,
-    dashLength: Float = 10f,
-    gapLength: Float = 5f,
+    dashLength: Dp = 10.dp,
+    gapLength: Dp = 5.dp,
     routing: RightAngleRouting,
+    arrowSize: Dp = 16.dp,
     arrowDrawer: ArrowDrawer = DefaultArrowDrawer,
-    minEdgeLengthForLabel: Float = 50f
+    minEdgeLengthForLabel: Dp = 50.dp
 ) {
     require(labelOffset == null || labelOffset in 0f..1f) {
         "labelOffset must be in range [0, 1], got $labelOffset"
     }
-    require(strokeWidth > 0f) { "strokeWidth must be positive, got $strokeWidth" }
-    require(minEdgeLengthForLabel >= 0f) {
+    require(strokeWidth > 0.dp) { "strokeWidth must be positive, got $strokeWidth" }
+    require(minEdgeLengthForLabel >= 0.dp) {
         "minEdgeLengthForLabel must be non-negative, got $minEdgeLengthForLabel"
     }
 
     val offset = labelPlacement?.offset ?: labelOffset ?: 0.5f
 
-    val edgePath = remember(from, to, routing, showArrow, strokeWidth) {
-        EdgePathFactory.createRightAnglePath(from, to, routing, showArrow, strokeWidth)
+    val density = LocalDensity.current
+    val edgePath = remember(from, to, density, routing, showArrow, strokeWidth) {
+        EdgePathFactory.createRightAnglePath(from, to, routing, density, showArrow, strokeWidth)
     }
 
     LabeledEdge(
@@ -346,6 +367,7 @@ fun RightAngleEdgeContentWithLabel(
         dashed = dashed,
         dashLength = dashLength,
         gapLength = gapLength,
+        arrowSize = arrowSize,
         arrowDrawer = arrowDrawer,
         label = label,
         labelOffset = offset,
@@ -379,6 +401,7 @@ fun RightAngleEdgeContentWithLabel(
  * @param dashed Whether the edge should be dashed
  * @param dashLength Length of dashes (if dashed)
  * @param gapLength Length of gaps between dashes (if dashed)
+ * @param arrowSize Size of the arrow head
  * @param arrowDrawer Custom arrow drawing function
  * @param label Optional label text to display on the edge
  * @param labelOffset Position along the edge (0.0 = from, 1.0 = to)
@@ -392,11 +415,12 @@ fun StyledRightAngleEdgeContent(
     from: Offset,
     to: Offset,
     color: Color = LocalKuiverColors.current.edge,
-    strokeWidth: Float = 3f,
+    strokeWidth: Dp = 3.dp,
     showArrow: Boolean = true,
     dashed: Boolean = false,
-    dashLength: Float = 10f,
-    gapLength: Float = 5f,
+    dashLength: Dp = 10.dp,
+    gapLength: Dp = 5.dp,
+    arrowSize: Dp = 16.dp,
     arrowDrawer: ArrowDrawer = DefaultArrowDrawer,
     label: String? = null,
     labelOffset: Float? = null,
@@ -426,6 +450,7 @@ fun StyledRightAngleEdgeContent(
         dashLength = dashLength,
         gapLength = gapLength,
         routing = routing,
+        arrowSize = arrowSize,
         arrowDrawer = arrowDrawer
     )
 }

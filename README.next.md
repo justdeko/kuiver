@@ -46,7 +46,7 @@ For multiplatform projects, add to your common source set:
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.justdeko:kuiver:0.4.0")
+            implementation("io.github.justdeko:kuiver:0.4.1")
         }
     }
 }
@@ -58,10 +58,10 @@ Or for a specific platform only:
 kotlin {
     sourceSets {
         androidMain.dependencies {
-            implementation("io.github.justdeko:kuiver-android:0.4.0")
+            implementation("io.github.justdeko:kuiver-android:0.4.1")
         }
         iosMain.dependencies {
-            implementation("io.github.justdeko:kuiver-iosarm64:0.4.0")
+            implementation("io.github.justdeko:kuiver-iosarm64:0.4.1")
         }
         // etc.
     }
@@ -149,14 +149,17 @@ edgeContent = { edge, from, to ->
         to = to,
         baseColor = Color.Black,
         backEdgeColor = Color(0xFFFF6B6B),
-        strokeWidth = 3f
+        strokeWidth = 3.dp
     )
 }
 
 // Custom edge rendering
 edgeContent = { edge, from, to ->
-    val path = remember(from, to) { EdgePathFactory.createStraightPath(from, to) }
-    EdgeCanvas(remember(path) { path.boundingRect() }) {
+    val density = LocalDensity.current
+    val path = remember(from, to, density) {
+        EdgePathFactory.createStraightPath(from, to, density)
+    }
+    EdgeCanvas(remember(path, density) { path.boundingRect(density) }) {
         drawLine(
             color = Color.Blue,
             start = path.from,
@@ -627,7 +630,7 @@ KuiverViewer(
 edgeStyle = { edge ->
     EdgeStyle(
         color = if (edge.type == EdgeType.BACK) Color.Red else Color.Gray,
-        strokeWidth = 2f,
+        strokeWidth = 2.dp,
         dashed = edge.type == EdgeType.BACK,
         shape = EdgeShape.ORTHOGONAL // AUTO, STRAIGHT, CURVED, ORTHOGONAL, RIGHT_ANGLE
     )

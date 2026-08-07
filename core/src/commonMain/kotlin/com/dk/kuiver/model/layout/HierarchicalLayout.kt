@@ -103,12 +103,19 @@ internal fun hierarchical(
         it.dimensions?.height ?: layoutConfig.nodeSize
     } ?: layoutConfig.nodeSize
 
+    val indexInLevelById = buildMap {
+        adjustedNodes.values.forEach { entries ->
+            entries.forEachIndexed { index, entry ->
+                if (entry is LevelEntry.Node) put(entry.id, index)
+            }
+        }
+    }
+    val widestLevel = nodesByLevel.values.maxOfOrNull { it.size } ?: 1
+
     val updatedNodes = kuiver.nodes.mapValues { (nodeId, node) ->
         val level = levels[nodeId] ?: 0
-        val nodesInLevel = adjustedNodes[level] ?: emptyList()
-        val indexInLevel = nodesInLevel
-            .indexOfFirst { it is LevelEntry.Node && it.id == nodeId }
-            .takeIf { it >= 0 } ?: 0
+        val levelSize = adjustedNodes[level]?.size ?: 0
+        val indexInLevel = indexInLevelById[nodeId] ?: 0
 
         val (x, y) = when (layoutConfig.direction) {
             LayoutDirection.HORIZONTAL -> {
@@ -118,11 +125,11 @@ internal fun hierarchical(
 
                 // Dp only multiplies with the count on the right, hence the operand order
                 val layoutWidth = levelSpacing * maxLevel
-                val layoutHeight = nodeSpacing * (nodesByLevel.values.maxOfOrNull { it.size } ?: 1)
+                val layoutHeight = nodeSpacing * widestLevel
                 val centerX = centeringOffset(layoutConfig.width, layoutWidth)
                 val centerY = centeringOffset(layoutConfig.height, layoutHeight)
 
-                val levelHeight = nodeSpacing * nodesInLevel.size
+                val levelHeight = nodeSpacing * levelSize
                 val xPos = levelSpacing * level + centerX
                 val yPos =
                     nodeSpacing * indexInLevel - levelHeight / 2f + nodeSpacing / 2f + centerY
@@ -134,12 +141,12 @@ internal fun hierarchical(
                     maxOf(layoutConfig.levelSpacing, maxNodeHeight + LEVEL_CLEARANCE)
                 val nodeSpacing = maxOf(layoutConfig.nodeSpacing, maxNodeWidth + NODE_CLEARANCE)
 
-                val layoutWidth = nodeSpacing * (nodesByLevel.values.maxOfOrNull { it.size } ?: 1)
+                val layoutWidth = nodeSpacing * widestLevel
                 val layoutHeight = levelSpacing * maxLevel
                 val centerX = centeringOffset(layoutConfig.width, layoutWidth)
                 val centerY = centeringOffset(layoutConfig.height, layoutHeight)
 
-                val levelWidth = nodeSpacing * nodesInLevel.size
+                val levelWidth = nodeSpacing * levelSize
                 val xPos = nodeSpacing * indexInLevel - levelWidth / 2f + nodeSpacing / 2f + centerX
                 val yPos = levelSpacing * level + centerY
                 Pair(xPos, yPos)
@@ -154,6 +161,10 @@ internal fun hierarchical(
         originalEdges = kuiver.edges
     )
 }
+
+/** Positions of the node ids in a level, for barycenter lookups that would otherwise scan it. */
+private fun List<String>.indexById(): Map<String, Int> =
+    withIndex().associate { (index, id) -> id to index }
 
 /**
  * Phase 3: Crossing Minimization using barycenter heuristic
@@ -173,11 +184,11 @@ private fun minimizeCrossings(
         // Downward sweep
         for (level in 1..maxLevel) {
             val current = result[level] ?: continue
-            val prev = result[level - 1] ?: continue
+            val prev = result[level - 1]?.indexById() ?: continue
 
             result[level] = current.sortedBy { nodeId ->
                 val parents = parentMap[nodeId] ?: emptySet()
-                val positions = parents.mapNotNull { prev.indexOf(it).takeIf { i -> i >= 0 } }
+                val positions = parents.mapNotNull { prev[it] }
                 positions.average().takeIf { !it.isNaN() } ?: Double.MAX_VALUE
             }
         }
@@ -185,11 +196,11 @@ private fun minimizeCrossings(
         // Upward sweep
         for (level in maxLevel - 1 downTo 0) {
             val current = result[level] ?: continue
-            val next = result[level + 1] ?: continue
+            val next = result[level + 1]?.indexById() ?: continue
 
             result[level] = current.sortedBy { nodeId ->
                 val children = childrenMap[nodeId] ?: emptySet()
-                val positions = children.mapNotNull { next.indexOf(it).takeIf { i -> i >= 0 } }
+                val positions = children.mapNotNull { next[it] }
                 positions.average().takeIf { !it.isNaN() } ?: Double.MAX_VALUE
             }
         }

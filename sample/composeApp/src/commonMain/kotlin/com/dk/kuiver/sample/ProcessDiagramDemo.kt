@@ -517,7 +517,7 @@ fun ProcessDiagramDemo(
                             OrthogonalEdgeContentWithLabel(
                                 from = from,
                                 to = to,
-                                strokeWidth = 2.5f,
+                                strokeWidth = 2.5.dp,
                                 label = edgeLabel,
                                 labelStyle = labelStyle.copy(rotateWithEdge = true)
                             )
@@ -527,7 +527,7 @@ fun ProcessDiagramDemo(
                                 edge = edge,
                                 from = from,
                                 to = to,
-                                strokeWidth = 2.5f,
+                                strokeWidth = 2.5.dp,
                                 label = edgeLabel,
                                 labelStyle = labelStyle
                             )
@@ -536,7 +536,7 @@ fun ProcessDiagramDemo(
                             edge = edge,
                             from = from,
                             to = to,
-                            strokeWidth = 2.5f,
+                            strokeWidth = 2.5.dp,
                             label = edgeLabel,
                             labelStyle = labelStyle
                         )
