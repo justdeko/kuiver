@@ -8,9 +8,13 @@ import androidx.compose.ui.unit.Dp
 import com.dk.kuiver.KuiverInteractionState
 import com.dk.kuiver.model.AnchorOffset
 import com.dk.kuiver.model.DEFAULT_NODE_SIZE
+import com.dk.kuiver.model.EdgeType
 import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
+import com.dk.kuiver.ui.EdgeDrawingDefaults
 import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlin.math.sqrt
 
 private const val EDGE_PADDING = 4f
@@ -149,7 +153,8 @@ internal fun calculateEdgeEndpointsWithAnchors(
                 targetCenter = toCenter,
                 targetWidth = toNodeWidth,
                 targetHeight = toNodeHeight,
-                outbound = false
+                outbound = false,
+                curveAngle = edge.curveTangentAngle
             )
             Pair(edgeStart, calculatedEnd)
         }
@@ -160,7 +165,8 @@ internal fun calculateEdgeEndpointsWithAnchors(
                 targetCenter = fromCenter,
                 targetWidth = fromNodeWidth,
                 targetHeight = fromNodeHeight,
-                outbound = true
+                outbound = true,
+                curveAngle = edge.curveTangentAngle
             )
             Pair(calculatedStart, edgeEnd)
         }
@@ -172,9 +178,27 @@ internal fun calculateEdgeEndpointsWithAnchors(
             fromNodeHeight = fromNodeHeight,
             toNodeWidth = toNodeWidth,
             toNodeHeight = toNodeHeight,
-            isSelfLoop = isSelfLoop
+            isSelfLoop = isSelfLoop,
+            curveAngle = edge.curveTangentAngle
         )
     }
+}
+
+private val KuiverEdge.curveTangentAngle: Float
+    get() = if (type == EdgeType.BACK && fromId != toId) {
+        EdgeDrawingDefaults.CURVE_TANGENT_ANGLE
+    } else {
+        0f
+    }
+
+private fun rotate(direction: Offset, radians: Float): Offset {
+    if (radians == 0f) return direction
+    val c = cos(radians)
+    val s = sin(radians)
+    return Offset(
+        direction.x * c - direction.y * s,
+        direction.x * s + direction.y * c
+    )
 }
 
 fun calculateAbsoluteAnchorPosition(
@@ -204,13 +228,15 @@ fun calculateAbsoluteAnchorPosition(
  * @param targetWidth Width of the target node
  * @param targetHeight Height of the target node
  * @param outbound If true, calculates outbound endpoint (from anchor); if false, inbound (to anchor)
+ * @param curveAngle Angle of edge path curve. Zero for straight edges
  */
 internal fun calculateGeometricEndpoint(
     from: Offset,
     targetCenter: Offset,
     targetWidth: Float,
     targetHeight: Float,
-    outbound: Boolean
+    outbound: Boolean,
+    curveAngle: Float = 0f
 ): Offset {
     val direction = if (outbound) {
         Offset(from.x - targetCenter.x, from.y - targetCenter.y)
@@ -222,7 +248,10 @@ internal fun calculateGeometricEndpoint(
 
     if (distance == 0f) return targetCenter
 
-    val normalizedDirection = Offset(direction.x / distance, direction.y / distance)
+    val normalizedDirection = rotate(
+        Offset(direction.x / distance, direction.y / distance),
+        if (outbound) curveAngle else -curveAngle
+    )
     val nodeRadius = calculateNodeRadius(
         normalizedDirection,
         targetWidth / 2f,
@@ -254,7 +283,8 @@ private fun calculateEdgeEndpoints(
     fromNodeHeight: Float,
     toNodeWidth: Float,
     toNodeHeight: Float,
-    isSelfLoop: Boolean = false
+    isSelfLoop: Boolean = false,
+    curveAngle: Float = 0f
 ): Pair<Offset, Offset> {
     // Handle self-loops specially
     if (isSelfLoop) {
@@ -272,6 +302,10 @@ private fun calculateEdgeEndpoints(
 
     val normalizedDirection = Offset(direction.x / distance, direction.y / distance)
 
+    // Calculate start and end directions of a curved edge
+    val startDirection = rotate(normalizedDirection, curveAngle)
+    val endDirection = rotate(normalizedDirection, -curveAngle)
+
     // Calculate intersection with rectangle edges based on direction
     val fromHalfWidth = fromNodeWidth / 2f
     val fromHalfHeight = fromNodeHeight / 2f
@@ -279,18 +313,18 @@ private fun calculateEdgeEndpoints(
     val toHalfHeight = toNodeHeight / 2f
 
     // Calculate which edge of the rectangle the line intersects
-    val fromNodeRadius = calculateNodeRadius(normalizedDirection, fromHalfWidth, fromHalfHeight)
-    val toNodeRadius = calculateNodeRadius(normalizedDirection, toHalfWidth, toHalfHeight)
+    val fromNodeRadius = calculateNodeRadius(startDirection, fromHalfWidth, fromHalfHeight)
+    val toNodeRadius = calculateNodeRadius(endDirection, toHalfWidth, toHalfHeight)
 
     // Calculate edge start and end points at node boundaries (with padding)
     val edgeStart = Offset(
-        fromCenter.x + normalizedDirection.x * (fromNodeRadius + EDGE_PADDING),
-        fromCenter.y + normalizedDirection.y * (fromNodeRadius + EDGE_PADDING)
+        fromCenter.x + startDirection.x * (fromNodeRadius + EDGE_PADDING),
+        fromCenter.y + startDirection.y * (fromNodeRadius + EDGE_PADDING)
     )
 
     val edgeEnd = Offset(
-        toCenter.x - normalizedDirection.x * (toNodeRadius + EDGE_PADDING),
-        toCenter.y - normalizedDirection.y * (toNodeRadius + EDGE_PADDING)
+        toCenter.x - endDirection.x * (toNodeRadius + EDGE_PADDING),
+        toCenter.y - endDirection.y * (toNodeRadius + EDGE_PADDING)
     )
 
     return Pair(edgeStart, edgeEnd)

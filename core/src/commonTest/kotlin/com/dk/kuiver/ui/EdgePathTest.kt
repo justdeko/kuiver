@@ -3,6 +3,11 @@ package com.dk.kuiver.ui
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import com.dk.kuiver.model.EdgeType
+import com.dk.kuiver.model.KuiverEdge
+import com.dk.kuiver.model.KuiverNode
+import com.dk.kuiver.renderer.AnchorPositionRegistry
+import com.dk.kuiver.renderer.calculateEdgeEndpointsWithAnchors
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.test.Test
@@ -60,6 +65,32 @@ class EdgePathTest {
         assertEquals(expectedOffset, abs(path.controlPoint.y), 0.01f)
 
         assertTrue(path.pathEndpoint.x < path.to.x)
+    }
+
+    @Test
+    fun `curved path points at node centers`() {
+        val toCenter = Offset(100f, 100f)
+
+        val (start, end) = calculateEdgeEndpointsWithAnchors(
+            edge = KuiverEdge("node1", "node2", type = EdgeType.BACK),
+            fromNode = KuiverNode("node1"),
+            toNode = KuiverNode("node2"),
+            fromCenter = Offset(300f, 100f),
+            toCenter = toCenter,
+            fromNodeWidth = 50f,
+            fromNodeHeight = 50f,
+            toNodeWidth = 50f,
+            toNodeHeight = 50f,
+            anchorRegistry = AnchorPositionRegistry(),
+            isSelfLoop = false,
+            density = density
+        )
+
+        val path = EdgePathFactory.createCurvedPath(start, end, density)
+        val tangent = (path.to - path.controlPoint).let { it / it.getDistance() }
+        val aimedAt = path.to + tangent * (toCenter - path.to).getDistance()
+        assertEquals(toCenter.x, aimedAt.x, 0.01f)
+        assertEquals(toCenter.y, aimedAt.y, 0.01f)
     }
 
     @Test

@@ -28,23 +28,17 @@ typealias ArrowDrawer = DrawScope.(
  */
 val DefaultArrowDrawer: ArrowDrawer = { arrowTip, direction, color, arrowSize ->
     val angle = atan2(direction.y.toDouble(), direction.x.toDouble()).toFloat()
-    val arrowOffset = EdgeDrawingDefaults.ARROW_OFFSET.toPx()
     val arrowAngleSpread = EdgeDrawingDefaults.ARROW_ANGLE_SPREAD
 
-    val arrowBasePoint = Offset(
-        arrowTip.x - direction.x * arrowOffset,
-        arrowTip.y - direction.y * arrowOffset
-    )
-
     val arrowPath = Path().apply {
-        moveTo(arrowBasePoint.x, arrowBasePoint.y)
+        moveTo(arrowTip.x, arrowTip.y)
         lineTo(
-            arrowBasePoint.x - arrowSize * cos(angle - arrowAngleSpread),
-            arrowBasePoint.y - arrowSize * sin(angle - arrowAngleSpread)
+            arrowTip.x - arrowSize * cos(angle - arrowAngleSpread),
+            arrowTip.y - arrowSize * sin(angle - arrowAngleSpread)
         )
         lineTo(
-            arrowBasePoint.x - arrowSize * cos(angle + arrowAngleSpread),
-            arrowBasePoint.y - arrowSize * sin(angle + arrowAngleSpread)
+            arrowTip.x - arrowSize * cos(angle + arrowAngleSpread),
+            arrowTip.y - arrowSize * sin(angle + arrowAngleSpread)
         )
         close()
     }
