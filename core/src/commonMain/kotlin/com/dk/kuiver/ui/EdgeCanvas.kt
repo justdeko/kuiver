@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.constrainWidth
 import kotlin.math.ceil
 import kotlin.math.floor
 
-/** Cap on the canvas size, so an edge spanning an extreme graph still fits in [Constraints]. */
+/** Cap on the canvas size, keeps extreme edges within [Constraints]. */
 private const val MAX_EDGE_EXTENT_PX = 30_000
 
 /**

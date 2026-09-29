@@ -51,8 +51,8 @@ internal fun RenderEdge(
 }
 
 /**
- * Reads node positions from [transition] and the live drag from [interaction], so a caller in the
- * draw or layout phase keeps a moving edge out of composition.
+ * Reads node positions from [transition] and the live drag from [interaction]. Called from the
+ * draw or layout phase to keep a moving edge out of composition.
  */
 internal fun Density.resolveEdgeEndpoints(
     edge: KuiverEdge,

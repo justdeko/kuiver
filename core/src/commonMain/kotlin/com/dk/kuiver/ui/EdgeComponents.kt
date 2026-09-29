@@ -197,7 +197,7 @@ internal fun LabeledEdge(
 
     val density: Density = LocalDensity.current
     val labelPosition = remember(path, density, labelOffset, minEdgeLengthForLabel) {
-        // edgeLength is in pixels, so the dp threshold is resolved before comparing
+        // edgeLength is in pixels
         path.calculateLabelPosition(
             labelOffset,
             with(density) { minEdgeLengthForLabel.toPx() }

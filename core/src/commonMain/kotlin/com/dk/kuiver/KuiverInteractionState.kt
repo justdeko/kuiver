@@ -14,7 +14,7 @@ enum class SelectionMode {
     /** A tap selects the node and deselects everything else. */
     SINGLE,
 
-    /** A tap toggles the node, so several nodes can be selected at once. */
+    /** A tap toggles the node. */
     MULTIPLE
 }
 
@@ -23,7 +23,7 @@ enum class RelayoutPolicy {
     /** Moved nodes keep where the user left them, the rest is laid out as usual. */
     KEEP_MANUAL,
 
-    /** Layout owns every position, so a move survives only until the next layout pass. */
+    /** A move survives only until the next layout pass. */
     RELAYOUT_ALL
 }
 
@@ -53,10 +53,7 @@ class KuiverInteractionState internal constructor() {
 
     /**
      * How far the dragged node has travelled since the drag started, in the dp space the graph is
-     * laid out in. It changes every frame of a drag, and the node it belongs to is placed at its
-     * laid out position plus this, so the node itself moves through placement alone and never
-     * recomposes. The batched edge layer reads it while drawing and holds still too; per-edge
-     * `edgeContent` takes its endpoints by value, so those do recompose once per frame.
+     * laid out in. Applied during placement so the node never recomposes mid-drag.
      */
     internal var dragOffset: DpOffset by mutableStateOf(DpOffset.Zero)
         private set

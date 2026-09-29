@@ -51,16 +51,13 @@ fun calculateStraightEdgeLabelPosition(
     to: Offset,
     offset: Float = 0.5f
 ): EdgeLabelPosition {
-    // Clamp offset to [0, 1]
     val t = offset.coerceIn(0f, 1f)
 
-    // Linear interpolation
     val position = Offset(
         from.x + (to.x - from.x) * t,
         from.y + (to.y - from.y) * t
     )
 
-    // Calculate angle from direction vector
     val direction = Offset(to.x - from.x, to.y - from.y)
     val angle = atan2(direction.y, direction.x)
 
@@ -87,7 +84,6 @@ fun calculateCurvedEdgeLabelPosition(
     controlPoint: Offset,
     offset: Float = 0.5f
 ): EdgeLabelPosition {
-    // Clamp offset to [0, 1]
     val t = offset.coerceIn(0f, 1f)
 
     // Quadratic Bezier curve formula: B(t) = (1-t)²P₀ + 2(1-t)tP₁ + t²P₂
@@ -183,7 +179,6 @@ fun calculateRightAngleLabelPosition(
     val t = offset.coerceIn(0f, 1f)
     val targetDistance = totalLength * t
 
-    // Build list of all points
     val points = buildList {
         add(from)
         addAll(waypoints)
@@ -216,7 +211,6 @@ fun calculateRightAngleLabelPosition(
         accumulatedDistance += segmentLength
     }
 
-    // Fallback: return the end point
     val lastSegmentStart = if (points.size >= 2) points[points.size - 2] else from
     val dx = to.x - lastSegmentStart.x
     val dy = to.y - lastSegmentStart.y

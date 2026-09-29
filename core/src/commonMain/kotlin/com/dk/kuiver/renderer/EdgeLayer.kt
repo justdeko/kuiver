@@ -15,8 +15,7 @@ import com.dk.kuiver.ui.drawStyledEdge
 /**
  * Draws every edge of [kuiver] from a single canvas.
  *
- * Endpoints are resolved in the draw lambda, so a layout change invalidates the draw instead of
- * recomposing.
+ * Endpoints are resolved in the draw lambda. A layout change invalidates the draw only.
  */
 @Composable
 internal fun EdgeLayer(

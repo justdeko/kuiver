@@ -6,13 +6,12 @@ import androidx.compose.runtime.Immutable
  * Immutable graph data structure that supports cycles and self-loops.
  *
  * Create one with [buildKuiver] and derive new ones with [withNode], [withNodes], [withEdge],
- * [withEdges], [withoutNode], [withoutEdge] or [rebuild]. Instances compare structurally, so they
+ * [withEdges], [withoutNode], [withoutEdge] or [rebuild]. Instances compare structurally and
  * behave as snapshot state and as `remember` keys: a graph with the same nodes and edges is the
  * same value, and any change produces a new instance that triggers recomposition and re-layout.
  *
- * Nodes are unique by id and edges by their `(fromId, toId)` pair, so two nodes are connected at
- * most once per direction. Parallel edges are not supported yet, and the ones that would create
- * them are rejected rather than half-added.
+ * Nodes are unique by id and edges by their `(fromId, toId)` pair. Two nodes are connected at
+ * most once per direction. Parallel edges are not supported yet and are rejected outright.
  */
 @Immutable
 class Kuiver internal constructor(
@@ -26,8 +25,6 @@ class Kuiver internal constructor(
      */
     constructor() : this(emptyMap(), emptySet(), emptyMap(), emptyMap())
 
-    // Graphs are compared on every recomposition that keys off them, so the hash is computed once
-    // and reused to keep unequal graphs an O(1) comparison
     private val cachedHashCode: Int by lazy(LazyThreadSafetyMode.PUBLICATION) {
         31 * nodes.hashCode() + edges.hashCode()
     }
@@ -184,8 +181,8 @@ class Kuiver internal constructor(
     private fun hasPath(from: String, to: String): Boolean = adjacency.hasPath(from, to)
 
     /**
-     * Classifies a single edge. Classifies the whole graph to do so, so prefer
-     * [classifyAllEdges] when more than one edge is needed.
+     * Classifies a single edge. Classifies the whole graph to do so: prefer [classifyAllEdges]
+     * when more than one edge is needed.
      *
      * @return the [EdgeType] of [edge]
      */
@@ -364,7 +361,7 @@ class Kuiver internal constructor(
     }
 
     /**
-     * Returns the node ids in topological order. Nodes on a cycle are left out, so the result
+     * Returns the node ids in topological order. Nodes on a cycle are left out. The result
      * contains every node only for acyclic graphs.
      */
     fun getTopologicalOrder(): List<String> {
@@ -415,7 +412,6 @@ class Kuiver internal constructor(
                 node.copy(dimensions = dimensions)
             }
         }
-        // Only the nodes change, so the edges and the derived structure carry over as they are
         return if (changed) Kuiver(updatedNodes, edges, adjacency, edgeMap) else this
     }
 
@@ -504,8 +500,7 @@ class KuiverBuilder {
 }
 
 /**
- * Iterative reachability check over an adjacency map, shared by the graph and the builder. Runs on
- * an explicit stack, so a chain of any depth is safe.
+ * Iterative reachability check over an adjacency map
  */
 private fun Map<String, Set<String>>.hasPath(from: String, to: String): Boolean {
     val visited = mutableSetOf<String>()

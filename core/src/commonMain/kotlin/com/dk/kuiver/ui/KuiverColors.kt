@@ -13,11 +13,6 @@ import com.dk.kuiver.model.KuiverEdge
 /**
  * Color palette for graph elements rendered without an explicit color override.
  *
- * kuiver depends on compose `runtime` + `foundation` + `ui` only, so this is a
- * foundation-only theming seam rather than a read from `MaterialTheme`. The
- * defaults reproduce kuiver's original hardcoded colors, so providing no
- * [LocalKuiverColors] value is source- and behavior-compatible with prior versions.
- *
  * @property edge Color for forward/tree edges (default: black)
  * @property backEdge Color for back edges and self-loops (default: red)
  * @property labelText Color of edge label text (default: black)

@@ -21,8 +21,8 @@ import kotlin.math.roundToInt
  *
  * Nodes without explicit dimensions are measured with unbounded constraints and their sizes
  * reported through [onMeasured] on every change, including sizes that settle late (web fonts).
- * Positions are read in the placement block only, so a layout transition re-places the nodes
- * without recomposing or re-measuring them.
+ * Positions are read in the placement block only: a layout transition re-places without
+ * recomposing or re-measuring.
  *
  * @param kuiver the laid out graph to host
  * @param source the graph as the caller supplied it; a node is auto-sized exactly when it has no
@@ -53,7 +53,6 @@ internal fun NodeLayer(
     onMeasured: (Map<String, NodeDimensions>) -> Unit,
     nodeContent: @Composable KuiverNodeScope.(KuiverNode) -> Unit
 ) {
-    // Plain map, not snapshot state: only compared to decide whether to report
     val reported = remember { mutableMapOf<String, NodeDimensions>() }
     val interaction = state.interaction
 
@@ -70,13 +69,12 @@ internal fun NodeLayer(
                 } else {
                     Modifier
                 }
-                // Remembered, so the content is not handed a new receiver on every measure pass
+                // Remembered: the content keeps the same receiver across measure passes
                 val scope = remember(nodeId) { NodeScope(nodeId, interaction) }
                 Box(sizeModifier.nodeInteraction(node, state, config, callbacks)) {
                     scope.nodeContent(node)
                 }
             }
-            // The box above is the single root of the slot
             val placeable = content.firstOrNull()?.measure(Constraints()) ?: return@forEach
             placed.add(PlacedNode(nodeId, placeable))
             if (explicit == null) {
@@ -92,7 +90,6 @@ internal fun NodeLayer(
 
         val centerXPx = centerX.toPx()
         val centerYPx = centerY.toPx()
-        // The placement block is not a Density, so capture this pass's for the toPx calls
         val measureScope = this
 
         // Fills the viewport; nodes may reach outside it, which the viewer clips
@@ -103,8 +100,7 @@ internal fun NodeLayer(
         layout(width, height) {
             with(measureScope) {
                 placed.forEach { (nodeId, placeable) ->
-                    // The live drag offset is added here rather than written into the graph, so a
-                    // node follows the pointer through placement alone, without recomposing
+                    // Drag offset applied in placement only, never written into the graph
                     val position = transition.positionOf(nodeId, targets, skipAnimation) +
                             interaction.dragOffsetOf(nodeId)
                     placeable.place(

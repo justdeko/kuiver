@@ -36,7 +36,6 @@ data class Bounds(
 fun Collection<KuiverNode>.calculateBounds(includeDimensions: Boolean = true): Bounds {
     if (isEmpty()) return Bounds.EMPTY
 
-    // Signed infinities, so a graph that sits entirely on one side of the origin still bounds it
     var minX = Dp.Infinity
     var maxX = -Dp.Infinity
     var minY = Dp.Infinity
@@ -44,7 +43,6 @@ fun Collection<KuiverNode>.calculateBounds(includeDimensions: Boolean = true): B
 
     for (node in this) {
         if (includeDimensions) {
-            // Include node dimensions in bounds calculation
             val nodeWidth = node.dimensions?.width ?: DEFAULT_NODE_SIZE
             val nodeHeight = node.dimensions?.height ?: DEFAULT_NODE_SIZE
 
@@ -58,7 +56,6 @@ fun Collection<KuiverNode>.calculateBounds(includeDimensions: Boolean = true): B
             minY = minOf(minY, nodeMinY)
             maxY = maxOf(maxY, nodeMaxY)
         } else {
-            // Only use node positions
             minX = minOf(minX, node.position.x)
             maxX = maxOf(maxX, node.position.x)
             minY = minOf(minY, node.position.y)

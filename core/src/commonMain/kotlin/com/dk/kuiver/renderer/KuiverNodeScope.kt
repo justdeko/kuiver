@@ -14,9 +14,6 @@ import com.dk.kuiver.KuiverInteractionState
  *     Box(Modifier.border(border, if (isHovered) Color.Blue else Color.Gray)) { Text(node.id) }
  * }
  * ```
- *
- * Each flag is read where it is used, so a node recomposes only when a flag it actually reads
- * changes.
  */
 @Stable
 interface KuiverNodeScope {
@@ -30,10 +27,6 @@ interface KuiverNodeScope {
     val isDragging: Boolean
 }
 
-/**
- * Reads the flags straight off the interaction state through getters, so a node subscribes to the
- * ones its content touches instead of to all of them.
- */
 internal class NodeScope(
     private val nodeId: String,
     private val interaction: KuiverInteractionState

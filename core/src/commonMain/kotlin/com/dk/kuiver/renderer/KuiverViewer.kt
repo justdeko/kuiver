@@ -73,7 +73,7 @@ import kotlin.math.exp
  * @property hoverEnabled whether the pointer entering a node updates
  * [com.dk.kuiver.KuiverInteractionState.hoveredNodeId]
  * @property relayoutPolicy what happens to dragged nodes when the graph is laid out again
- * @property zoomConditionDesktop when a scroll event zooms instead of pans, Ctrl+scroll by default
+ * @property zoomConditionDesktop when a scroll event zooms instead of panning, Ctrl+scroll by default
  * @property scaleAnimationSpec spec for animated zoom
  * @property offsetAnimationSpec spec for animated pan
  * @property layoutAnimationSpec spec for node movement when the layout changes
@@ -234,12 +234,10 @@ internal fun ViewerRenderer(
 ) {
     val density = LocalDensity.current
     val interaction = state.interaction
-    // Read from the gesture loops, which must not restart when a callback changes
     val currentConfig by rememberUpdatedState(config)
     val currentCallbacks by rememberUpdatedState(callbacks)
     // Single progress animation for all node positions, see LayoutTransition
     val layoutTransition = remember { LayoutTransition() }
-    // Stable, so a new generation of node targets does not re-measure the node layer
     val reportMeasured = remember(state) { state::updateMeasuredDimensions }
 
     // run before LaunchedEffect so the initial auto-fit already has config
@@ -294,24 +292,19 @@ internal fun ViewerRenderer(
         val graphCenterX = bounds.centerX
         val graphCenterY = bounds.centerY
 
-        // Immutable target generation, so placement lambdas can capture it
         val nodeTargets = remember(kuiver.nodes) {
             kuiver.nodePositionsRelativeTo(graphCenterX, graphCenterY)
         }
 
         val isContentReady = state.hasFittedInitially || kuiver.nodes.isEmpty()
 
-        // initialSnapDone lags one effects-phase behind hasFittedInitially, so the frame
-        // where positions first settle (same snapshot as hasFittedInitially=true) still
-        // uses snap(), then spring kicks in for all subsequent layout changes.
+        // initialSnapDone lags one effects-phase behind hasFittedInitially: the frame where
+        // positions first settle still snaps, later layout changes spring
         var initialSnapDone by remember { mutableStateOf(state.hasFittedInitially) }
         LaunchedEffect(state.hasFittedInitially) {
             if (state.hasFittedInitially) initialSnapDone = true
         }
         val skipInitialAnimation = !initialSnapDone && !config.animateInitialPlacement
-        // Decided here rather than inside the effect below: the effect runs after this frame has
-        // already been placed, and the transition still holds the previous generation until it
-        // does, which would render the moved nodes back where they started for a frame
         val skipAnimation = skipInitialAnimation || state.isManualLayout(kuiver)
 
         LaunchedEffect(nodeTargets, skipAnimation) {
@@ -340,21 +333,15 @@ internal fun ViewerRenderer(
                         state.canvasHeight = size.height.toDp()
                     }
                 }
-                // One awaitPointerEventScope for the whole gesture: leaving and re-entering the
-                // scope between events loses the ones dispatched in between, which drops every
-                // other gesture
+                // One awaitPointerEventScope per gesture, re-entering it between events drops them
                 .pointerInput(state) {
                     awaitEachGesture {
                         awaitFirstDown(requireUnconsumed = false)
 
-                        // A press is only a pan/zoom past touch slop. Consuming earlier would
-                        // cancel taps on nodes, which check the final pass for consumption,
-                        // and a physical click nearly always moves a pixel before release
+                        // Consume only past touch slop, earlier would cancel taps on nodes
                         var pastSlop = false
                         var slopPan = Offset.Zero
                         var slopZoom = 1f
-                        // A node handling the press consumes it, which is what tells the canvas
-                        // the press was not its own
                         var handledByNode = false
 
                         while (true) {
@@ -364,8 +351,7 @@ internal fun ViewerRenderer(
 
                             val event = awaitPointerEvent()
                             if (event.changes.any { it.isConsumed }) {
-                                // Checked before this handler consumes anything itself, so
-                                // only a child's consumption lands here
+                                // Consumed by a node, this handler has not consumed anything yet
                                 if (!pastSlop) handledByNode = true
                             } else {
                                 if (!pastSlop) {
@@ -377,7 +363,6 @@ internal fun ViewerRenderer(
                                         slopPan.getDistance() > viewConfiguration.touchSlop ||
                                                 zoomMotion > viewConfiguration.touchSlop
                                     if (pastSlop) {
-                                        // The motion accumulated while still under slop
                                         panChange = slopPan
                                         zoomChange = slopZoom
                                     }
@@ -398,8 +383,7 @@ internal fun ViewerRenderer(
                                     currentConfig.maxScale
                                 )
                                 val actualZoom = newScale / state.scale
-                                // Pointer values arrive in pixels, the transform lives in dp:
-                                // convert the two inputs, then the whole expression is dp
+                                // Pointer values are pixels, the transform is dp
                                 val pivot = DpOffset(
                                     (centroid.x - size.width / 2f).toDp(),
                                     (centroid.y - size.height / 2f).toDp()
@@ -413,8 +397,7 @@ internal fun ViewerRenderer(
                             }
 
                             if (event.changes.none { it.pressed }) {
-                                // Released without ever becoming a pan or reaching a node: a tap
-                                // on the empty canvas
+                                // A tap on the empty canvas
                                 if (!pastSlop && !handledByNode) {
                                     if (currentConfig.selectionMode != SelectionMode.NONE) {
                                         interaction.clearSelection()

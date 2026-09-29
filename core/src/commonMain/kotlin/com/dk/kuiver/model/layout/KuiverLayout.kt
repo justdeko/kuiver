@@ -25,12 +25,8 @@ enum class LayoutDirection {
 /**
  * Configuration for graph layout algorithms.
  *
- * This sealed class provides type-safe configuration for different layout algorithms.
- * Each algorithm has its own specific configuration with relevant parameters.
- *
  * Every length here is a [Dp], the coordinate space layouts work in: canvas size, spacing, node
- * dimensions and the node positions a layout produces. `150.dp` of spacing is therefore the same
- * physical distance on every screen density.
+ * dimensions and the node positions a layout produces.
  *
  * @see Hierarchical for DAG and tree layouts
  * @see ForceDirected for general graph layouts
@@ -59,8 +55,7 @@ sealed class LayoutConfig {
     /**
      * Hierarchical layout configuration.
      *
-     * This layout arranges nodes in levels based on their depth in the graph hierarchy.
-     * Automatically handles cycles by classifying back edges.
+     * Arranges nodes in levels by depth. Cycles are handled by classifying back edges.
      *
      * @param direction The flow direction of the layout (HORIZONTAL or VERTICAL)
      * @param levelSpacing Distance between hierarchy levels
@@ -89,13 +84,11 @@ sealed class LayoutConfig {
     /**
      * Force-directed layout configuration.
      *
-     * This layout uses a basic physics simulation to create layouts.
      * Nodes repel each other while edges act as springs pulling connected nodes together.
      *
-     * @param iterations Number of simulation steps (more = better layout but slower),
-     *   also sets the cooling schedule so differing counts give unrelated layouts
-     * @param repulsionStrength How strongly nodes push each other apart. A force, not a length,
-     *   so it stays a plain [Float]
+     * @param iterations Number of simulation steps (more = better layout but slower), also sets
+     *   the cooling schedule
+     * @param repulsionStrength How strongly nodes push each other apart
      * @param attractionStrength How strongly connected nodes pull together
      * @param damping Velocity damping factor (0-1). Higher values = more stability, slower convergence
      * @param width Canvas width (usually set automatically by the viewer)
@@ -123,9 +116,6 @@ sealed class LayoutConfig {
 
     /**
      * Custom layout configuration using a user-provided layout algorithm.
-     *
-     * This allows you to implement your own layout logic while still integrating
-     * with the Kuiver framework.
      *
      * @param provider Function that takes a Kuiver graph and config, returns positioned Kuiver
      * @param width Canvas width (usually set automatically by the viewer)

@@ -19,11 +19,11 @@ private const val MAX_REPULSION_DISTANCE_FACTOR = 3.0f
 // Minimum pair separation, as a fraction of the two nodes' combined average size
 private const val MIN_DISTANCE_FACTOR = 0.9f
 
-// Below this node count the grid costs more than it saves, so a single cell is used
+// Below this node count the grid costs more than it saves
 private const val GRID_MIN_NODE_COUNT = 128
 
 // Cell width as a fraction of the largest interaction radius
-// The scanned box is 2 * radius + cellSize wide, so cells near the radius waste most of it
+// The scanned box is 2 * radius + cellSize wide
 private const val GRID_CELLS_PER_RADIUS = 4f
 
 // Cell count ceiling, as a multiple of the node count
@@ -33,17 +33,15 @@ private const val MAX_CELLS_PER_NODE = 8f
 private const val FINAL_COOLING_FACTOR = 0.1f
 
 // Cancellation polling interval, in nodes
-// Checking only between iterations leaves a superseded layout running a full O(n^2) pass
 private const val CANCELLATION_CHECK_INTERVAL = 256
 
 // Room the bounds grant each node, as a multiple of its average size
-// Enough for the packing the centering force settles into, plus slack
 private const val NODE_ROOM_FACTOR = 2.5f
 
 /**
  * Factor by which the canvas grows into the simulation bounds. 1 while the graph has room on the
- * canvas; beyond that the bounds grow with the node count, so the boundary clamp does not fold
- * a large graph into overlap. The viewer's initial fit zooms out to match.
+ * canvas; beyond that the bounds grow with the node count. The viewer's initial fit zooms out
+ * to match.
  */
 internal fun forceDirectedBoundsScale(
     nodeCount: Int,
@@ -66,7 +64,7 @@ internal fun forceDirectedBoundsScale(
  * The algorithm iteratively applies forces until the system reaches equilibrium,
  * producing an organic layout that reveals graph structure.
  *
- * Every distance is a dp value, so the same graph lays out the same on every screen density.
+ * Every distance is a dp value.
  *
  * The canvas sets the aspect ratio and the minimum size of the simulation bounds. A graph with
  * more nodes than the canvas has room for is laid out over proportionally larger bounds, see
@@ -99,8 +97,7 @@ internal fun forceDirected(
     val canvasHeight = layoutConfig.height.value
     val fallbackNodeSize = layoutConfig.nodeSize.value
 
-    // avoid Map<String, Offset> lookups and inline-class boxing
-    // for large graphs (no JIT, no escape analysis to elide the boxing).
+    // Index-based arrays avoid map lookups and inline-class boxing
     val idToIndex = HashMap<String, Int>(n).apply {
         nodeIds.forEachIndexed { i, id -> put(id, i) }
     }
@@ -113,7 +110,6 @@ internal fun forceDirected(
     val forceY = FloatArray(n)
     val sizeAvg = FloatArray(n)
 
-    // Pre-calculate node dimensions for all nodes (optimization: avoid recalculating in loops)
     var sizeSum = 0f
     var sizeMax = 0f
     for (i in 0 until n) {
@@ -152,7 +148,6 @@ internal fun forceDirected(
 
     val maxVelocity = 10f
 
-    // Distribute nodes in a circle initially with good spacing
     if (n == 1) {
         posX[0] = centerX
         posY[0] = centerY
@@ -176,7 +171,7 @@ internal fun forceDirected(
     // Spatial grid over the repulsion pass, skipping only pairs the cutoff already discards
     val maxInteractionDistance =
         2f * sizeMax * MIN_DISTANCE_FACTOR * MAX_REPULSION_DISTANCE_FACTOR
-    // margin can exceed the canvas when it is tiny, so size the grid off the reachable extent
+    // margin can exceed a tiny canvas
     val extentX = max(width, margin) + 1f
     val extentY = max(height, margin) + 1f
     val cellSize = if (n <= GRID_MIN_NODE_COUNT) {
@@ -184,7 +179,6 @@ internal fun forceDirected(
     } else {
         max(
             max(maxInteractionDistance / GRID_CELLS_PER_RADIUS, 1f),
-            // growing cells is safe, the ring count shrinks to match
             sqrt(extentX * extentY / (MAX_CELLS_PER_NODE * n))
         )
     }
@@ -216,7 +210,6 @@ internal fun forceDirected(
     val gridForceY = FloatArray(n)
 
     val iterations = layoutConfig.iterations
-    // Linear cooling, so late iterations refine the layout instead of overshooting it
     val coolingStep =
         if (iterations > 1) (1f - FINAL_COOLING_FACTOR) / (iterations - 1) else 0f
 
@@ -270,7 +263,6 @@ internal fun forceDirected(
             val maxCellX = min(cols - 1, cellX + ring)
 
             for (ny in minCellY..maxCellY) {
-                // Cells in a row are consecutive buckets, so a row is one contiguous range
                 val rowBase = ny * cols
                 var slot = cellStart[rowBase + minCellX]
                 val slotEnd = cellStart[rowBase + maxCellX + 1]

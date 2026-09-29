@@ -5,9 +5,7 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 
 /**
- * Saver for the node positions a user has set by hand, which are otherwise lost on the next layout
- * pass after the state is restored. Flattened to a list of primitives, which every platform's
- * saveable bundle takes.
+ * Saver for the node positions a user has set by hand, flattened to a list of primitives.
  */
 internal fun manualPositionsSaver(): Saver<Map<String, DpOffset>, Any> = Saver(
     save = { positions ->

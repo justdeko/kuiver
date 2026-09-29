@@ -31,17 +31,16 @@ internal fun Kuiver.nodePositionsRelativeTo(centerX: Dp, centerY: Dp): NodePosit
 internal class LayoutTransition {
     private var progress by mutableFloatStateOf(1f)
 
-    // Snapshot state, so consumers that read a position without reading progress still see a swap
     private var start by mutableStateOf<NodePositions>(emptyMap())
     private var end by mutableStateOf<NodePositions>(emptyMap())
 
     /**
      * Position of [nodeId] at the current point of the transition. Progress is only read while a
-     * node moves, so a node that holds still is invalidated once by the swap and then left alone.
+     * node moves. A node that holds still is invalidated once by the swap and then left alone.
      *
      * @param nodeId id of the node to place
      * @param targets the caller's layout generation, used for nodes the transition has not adopted
-     * @param snapToTarget bypasses the transition, so initial placement renders no stale frame
+     * @param snapToTarget bypasses the transition, for initial placement
      * @return the interpolated position, relative to the graph center
      */
     fun positionOf(
@@ -63,7 +62,7 @@ internal class LayoutTransition {
      *
      * @param targets the layout generation to animate to
      * @param spec spec driving the shared progress
-     * @param snap jumps to [targets] instead of animating, as initial placement does
+     * @param snap jumps straight to [targets] without animating, as initial placement does
      */
     suspend fun animateTo(targets: NodePositions, spec: AnimationSpec<Float>, snap: Boolean) {
         if (snap || start.isEmpty()) {
@@ -74,7 +73,7 @@ internal class LayoutTransition {
         }
         start = targets.keys.associateWith { positionOf(it, targets) }
         end = targets
-        // Reset before suspending, so it lands in the same frame as the new generation
+        // Reset before suspending to land in the same frame as the new generation
         progress = 0f
         animate(initialValue = 0f, targetValue = 1f, animationSpec = spec) { value, _ ->
             progress = value

@@ -39,7 +39,7 @@ internal data class AnimationRequest(val scale: Float, val offset: DpOffset, val
  *
  * The graph coordinate space is [Dp] end to end: node positions, layout spacing, node dimensions,
  * [canvasWidth]/[canvasHeight] and the [offset] half of the view transform, which makes a graph
- * look the same on every screen density. [scale] is a ratio, so it needs no unit. Pixels appear
+ * look the same on every screen density. [scale] is a unitless ratio. Pixels appear
  * only where the platform hands them over, in gestures and in `graphicsLayer`, and are converted
  * at that boundary.
  *
@@ -87,7 +87,7 @@ class KuiverViewerState internal constructor(
 
     /**
      * Renderer-measured sizes of the nodes without explicit dimensions. Applied on top of
-     * [kuiver] before layout, so [kuiver] stays the caller's graph.
+     * [kuiver] before layout.
      */
     internal var measuredDimensions: Map<String, NodeDimensions> by mutableStateOf(emptyMap())
         private set
@@ -97,8 +97,6 @@ class KuiverViewerState internal constructor(
 
     internal var config: KuiverViewerConfig = KuiverViewerConfig()
 
-    // The layout generation a by-hand move produced, held by identity. Read during composition, so
-    // the frame that adopts the move already places the nodes rather than animating them there
     private var manualLayout: Kuiver? by mutableStateOf(null, referentialEqualityPolicy())
 
     // Bumped to ask for a layout pass that nothing else would have triggered
@@ -115,7 +113,7 @@ class KuiverViewerState internal constructor(
         internal set
 
     /**
-     * Swaps in a new graph, which lays it out again. [Kuiver] is immutable, so derive the new graph
+     * Swaps in a new graph, which lays it out again. [Kuiver] is immutable: derive the new graph
      * with [Kuiver.withNode], [Kuiver.withEdge] or [Kuiver.rebuild] and pass the result here. A
      * graph equal to the current one is a no-op.
      *
@@ -126,8 +124,8 @@ class KuiverViewerState internal constructor(
     }
 
     /**
-     * Adopts node sizes from the renderer. Called from the measure phase, so it writes nothing when
-     * the sizes are unchanged.
+     * Adopts node sizes from the renderer. Called from the measure phase. Writes nothing when the
+     * sizes are unchanged.
      *
      * @param dimensions sizes of all auto-sized nodes, keyed by node id
      */
@@ -167,8 +165,7 @@ class KuiverViewerState internal constructor(
         // This generation is the move itself, which the caller already performed
         manualLayout = moved
 
-        // Nodes are placed around the center of the graph bounds, so moving one shifts every other
-        // node on screen. Take that shift back out of the view transform, so only the node moves.
+        // Moving a node shifts the graph center. Cancel that shift in the view transform
         offset += DpOffset(
             after.centerX - before.centerX,
             after.centerY - before.centerY
@@ -184,8 +181,8 @@ class KuiverViewerState internal constructor(
 
     /**
      * Lays the graph out again from scratch. The viewer does this on its own whenever the graph,
-     * the node sizes or the canvas change, so this is for the times nothing observable changed and
-     * you still want the algorithm to have another go.
+     * the node sizes or the canvas change. Use this when nothing observable changed and you still
+     * want the algorithm to have another go.
      */
     fun relayout() {
         layoutGeneration++
@@ -226,9 +223,8 @@ class KuiverViewerState internal constructor(
     }
 
     /**
-     * Whether [candidate] is a generation that came from [moveNode] rather than from the layout
-     * algorithm. Those are placed outright: the node is already where the caller put it, and
-     * animating to it would first render it back at where it started.
+     * Whether [candidate] is a generation produced by [moveNode] and not by the layout
+     * algorithm. Those are placed without animating.
      */
     internal fun isManualLayout(candidate: Kuiver): Boolean = manualLayout === candidate
 
@@ -245,7 +241,6 @@ class KuiverViewerState internal constructor(
         }
         val bounds = layoutedKuiver.nodes.values.calculateNodeBounds()
         val padding = config.contentPadding
-        // Graph bounds and canvas are the same space, so dividing them out gives the scale directly
         val targetScaleX = if (bounds.width > 0.dp) (canvasWidth * padding) / bounds.width else 1f
         val targetScaleY = if (bounds.height > 0.dp) (canvasHeight * padding) / bounds.height else 1f
         updateTransform(clampScale(min(targetScaleX, targetScaleY)), centeringOffset, animated)
@@ -355,8 +350,7 @@ fun rememberSaveableKuiverViewerState(
         launch { snapshotFlow { state.hasFittedInitially }.collect { savedHasFitted = it } }
         launch { snapshotFlow { state.manualPositions }.collect { savedManualPositions = it } }
         launch {
-            // Stored as dp, so a density change across the restore leaves the pan where the
-            // user left it rather than drifting with the graph
+            // Stored as dp to survive a density change across the restore
             snapshotFlow { state.offset }.collect {
                 savedOffsetX = it.x.value; savedOffsetY = it.y.value
             }
@@ -370,11 +364,7 @@ fun rememberSaveableKuiverViewerState(
 @Suppress("ComposableNaming")
 @Composable
 private fun setupLayout(state: KuiverViewerState, layoutConfig: LayoutConfig) {
-    // Capture at composition time so the effect body uses the snapshot values that
-    // triggered this composition, not values written during the measure and layout
-    // phases (canvasWidth from onSizeChanged, measuredDimensions from the node layer).
-    // Without this, Frame 1's effect would see canvasWidth > 0 and run layout with the
-    // still-unmeasured kuiver.
+    // Captured here so the effect sees the composition values instead of those written during measure
     val kuiver = state.kuiver
     val measuredDimensions = state.measuredDimensions
     val canvasWidth = state.canvasWidth
@@ -404,17 +394,13 @@ private fun setupLayout(state: KuiverViewerState, layoutConfig: LayoutConfig) {
                 )
             }
             withContext(Dispatchers.Default) {
-                // The layout loop never suspends, so a superseded layout would otherwise
-                // run to completion before its replacement starts
+                // The layout loop never suspends, cancellation needs an explicit check
                 val layoutContext = coroutineContext
                 layout(sizedKuiver, configWithDimensions) { layoutContext.ensureActive() }
             }
         } else {
             sizedKuiver
         }
-        // Read here rather than captured above: manual positions come from event handlers, so the
-        // freshest set is the right one, and reading them in composition would recompose the
-        // caller on every drop
         state.layoutedKuiver = state.withRelayoutPolicyApplied(laid)
         state.applyInitialFit(canvasWidth, canvasHeight)
     }
