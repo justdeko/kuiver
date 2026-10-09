@@ -4,10 +4,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.dk.kuiver.model.AnchorOffset
+import com.dk.kuiver.model.EdgeType
 import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
+import com.dk.kuiver.ui.EdgeDrawingDefaults
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class AnchorEdgeRenderingTest {
 
@@ -125,5 +128,58 @@ class AnchorEdgeRenderingTest {
         assertEquals(100f, start.y, 0.01f)
         assertEquals(171f, end.x, 0.01f)
         assertEquals(100f, end.y, 0.01f)
+    }
+
+    @Test
+    fun `parallel edges fan out symmetrically in id order`() {
+        val bends = listOf(
+            KuiverEdge("A", "B", id = "c"),
+            KuiverEdge("A", "B", id = "a"),
+            KuiverEdge("A", "B", id = "b"),
+            KuiverEdge("B", "A"),
+            KuiverEdge("A", "B", fromAnchor = "right", id = "anchored")
+        ).parallelBends(STEP)
+
+        assertEquals(setOf("a", "b", "c"), bends.keys, "lone edges and directions got a bend")
+        assertEquals(listOf(-STEP, 0f, STEP), listOf("a", "b", "c").map { bends.getValue(it).amount })
+    }
+
+    @Test
+    fun `parallel back edges fan out around their usual curve`() {
+        val bends = listOf("a", "b", "c")
+            .map { KuiverEdge("B", "A", type = EdgeType.BACK, id = it) }
+            .parallelBends(STEP)
+
+        assertTrue(bends.values.all { it.amount > 0f }, "a back edge went straight or flipped")
+        assertEquals(
+            EdgeDrawingDefaults.CURVE_PROPORTIONAL_OFFSET,
+            bends.getValue("b").amount,
+            0.0001f
+        )
+    }
+
+    @Test
+    fun `many parallel back edges stay on the side of their curve`() {
+        val bends = (1..6)
+            .map { KuiverEdge("B", "A", type = EdgeType.BACK, id = "e$it") }
+            .parallelBends(STEP)
+
+        assertTrue(bends.values.all { it.amount > 0f }, "a back edge went straight or flipped")
+        assertEquals(6, bends.values.map { it.amount }.distinct().size, "back edges overlap")
+    }
+
+    @Test
+    fun `parallel self-loops nest`() {
+        val bends = listOf(KuiverEdge("A", "A"), KuiverEdge("A", "A", id = "again"))
+            .parallelBends(STEP)
+
+        assertEquals(
+            listOf(0f, EdgeDrawingDefaults.SELF_LOOP_NESTED_GROWTH),
+            listOf("A->A", "again").map { bends.getValue(it).amount }
+        )
+    }
+
+    private companion object {
+        const val STEP = 0.15f
     }
 }

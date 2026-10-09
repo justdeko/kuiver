@@ -69,6 +69,8 @@ object EdgePathFactory {
      * @param density Resolves the dp sizes against the current density
      * @param showArrow Whether the edge will have an arrow
      * @param strokeWidth Width of the edge line
+     * @param bend Control point offset as a fraction of the edge length, 0.25 by default. Negative
+     * values curve to the other side
      * @return EdgePath.Curved with calculated control point and endpoint
      */
     fun createCurvedPath(
@@ -76,7 +78,8 @@ object EdgePathFactory {
         to: Offset,
         density: Density,
         showArrow: Boolean = true,
-        strokeWidth: Dp = 3.dp
+        strokeWidth: Dp = 3.dp,
+        bend: Float = EdgeDrawingDefaults.CURVE_PROPORTIONAL_OFFSET
     ): EdgePath.Curved {
         // Calculate direction and distance
         val direction = Offset(to.x - from.x, to.y - from.y)
@@ -98,8 +101,8 @@ object EdgePathFactory {
         // Calculate perpendicular direction (rotate 90 degrees)
         val perpendicular = Offset(-normalizedDir.y, normalizedDir.x)
 
-        // Control point offset proportional to edge length (25% of distance)
-        val proportionalOffset = distance * EdgeDrawingDefaults.CURVE_PROPORTIONAL_OFFSET
+        // Control point offset proportional to edge length
+        val proportionalOffset = distance * bend
 
         val midPoint = Offset((from.x + to.x) / 2f, (from.y + to.y) / 2f)
         val controlPoint = Offset(
@@ -145,6 +148,7 @@ object EdgePathFactory {
      * @param loopRadius Radius that determines the height of the loop
      * @param showArrow Whether the edge will have an arrow
      * @param strokeWidth Width of the edge line
+     * @param bend Extra loop height as a fraction of the default, 0 by default
      * @return EdgePath.SelfLoop with calculated control point and endpoint
      */
     fun createSelfLoopPath(
@@ -153,14 +157,16 @@ object EdgePathFactory {
         density: Density,
         loopRadius: Dp = 40.dp,
         showArrow: Boolean = true,
-        strokeWidth: Dp = 3.dp
+        strokeWidth: Dp = 3.dp,
+        bend: Float = 0f
     ): EdgePath.SelfLoop {
         // Calculate center point between from and to
         val center = Offset((from.x + to.x) / 2f, (from.y + to.y) / 2f)
 
-        // Control point well above the node
+        // Control point well above the node, higher for each nested loop
         val loopHeight = with(density) { loopRadius.toPx() } *
-            EdgeDrawingDefaults.SELF_LOOP_HEIGHT_MULTIPLIER
+            EdgeDrawingDefaults.SELF_LOOP_HEIGHT_MULTIPLIER *
+            (1f + bend)
         val controlPoint = Offset(center.x, center.y - loopHeight)
 
         // Calculate tangent at the end for arrow direction

@@ -13,7 +13,8 @@ import com.dk.kuiver.model.KuiverEdge
 /**
  * Shape of the path an edge takes between its endpoints.
  *
- * Self-loops ignore this and always draw as a loop.
+ * Self-loops ignore this and always draw as a loop. Edges that share their nodes, direction and
+ * anchors with other edges fan out as arcs with [AUTO], [STRAIGHT] or [CURVED].
  */
 enum class EdgeShape {
     /** Curved for [EdgeType.BACK], straight otherwise. */
@@ -86,29 +87,38 @@ data class EdgeStyle(
     }
 }
 
+internal val EdgeShape.fansOut: Boolean
+    get() = this == EdgeShape.AUTO || this == EdgeShape.STRAIGHT || this == EdgeShape.CURVED
+
 internal fun EdgeStyle.createPath(
     edge: KuiverEdge,
+    bend: Float?,
     from: Offset,
     to: Offset,
     density: Density
 ): EdgePath {
     if (edge.fromId == edge.toId) {
         return EdgePathFactory.createSelfLoopPath(
-            from, to, density, loopRadius, showArrow, strokeWidth
+            from, to, density, loopRadius, showArrow, strokeWidth, bend ?: 0f
         )
     }
     return when (shape) {
-        EdgeShape.AUTO -> if (edge.type == EdgeType.BACK) {
-            EdgePathFactory.createCurvedPath(from, to, density, showArrow, strokeWidth)
-        } else {
-            EdgePathFactory.createStraightPath(from, to, density, showArrow, strokeWidth)
+        EdgeShape.AUTO, EdgeShape.STRAIGHT -> when {
+            bend != null -> if (bend == 0f) {
+                straightPath(from, to, density)
+            } else {
+                curvedPath(from, to, density, bend)
+            }
+
+            shape == EdgeShape.AUTO && edge.type == EdgeType.BACK ->
+                curvedPath(from, to, density, EdgeDrawingDefaults.CURVE_PROPORTIONAL_OFFSET)
+
+            else -> straightPath(from, to, density)
         }
 
-        EdgeShape.STRAIGHT ->
-            EdgePathFactory.createStraightPath(from, to, density, showArrow, strokeWidth)
-
-        EdgeShape.CURVED ->
-            EdgePathFactory.createCurvedPath(from, to, density, showArrow, strokeWidth)
+        EdgeShape.CURVED -> curvedPath(
+            from, to, density, bend ?: EdgeDrawingDefaults.CURVE_PROPORTIONAL_OFFSET
+        )
 
         EdgeShape.ORTHOGONAL -> EdgePathFactory.createOrthogonalPath(
             from, to, density, curveFactor, showArrow, strokeWidth
@@ -128,14 +138,25 @@ internal fun EdgeStyle.createPath(
     }
 }
 
+private fun EdgeStyle.straightPath(from: Offset, to: Offset, density: Density): EdgePath =
+    EdgePathFactory.createStraightPath(from, to, density, showArrow, strokeWidth)
+
+private fun EdgeStyle.curvedPath(
+    from: Offset,
+    to: Offset,
+    density: Density,
+    bend: Float
+): EdgePath = EdgePathFactory.createCurvedPath(from, to, density, showArrow, strokeWidth, bend)
+
 internal fun DrawScope.drawStyledEdge(
     edge: KuiverEdge,
+    bend: Float?,
     from: Offset,
     to: Offset,
     style: EdgeStyle
 ) {
     drawEdgePath(
-        path = style.createPath(edge, from, to, this),
+        path = style.createPath(edge, bend, from, to, this),
         color = style.color,
         strokeWidth = style.strokeWidth,
         showArrow = style.showArrow,

@@ -127,12 +127,14 @@ internal fun forceDirected(
     val width = canvasWidth * boundsScale
     val height = canvasHeight * boundsScale
 
-    // resolve edge endpoints to indices once. Edges referencing missing nodes are skipped
-    val edgeCount = kuiver.edges.size
+    // resolve edge endpoints to indices once, one spring per connected pair. Edges referencing
+    // missing nodes are skipped
+    val springEdges = kuiver.edges.distinctBy { it.fromId to it.toId }
+    val edgeCount = springEdges.size
     val edgeFrom = IntArray(edgeCount)
     val edgeTo = IntArray(edgeCount)
     var validEdges = 0
-    kuiver.edges.forEach { edge ->
+    springEdges.forEach { edge ->
         val f = idToIndex[edge.fromId]
         val t = idToIndex[edge.toId]
         if (f != null && t != null) {

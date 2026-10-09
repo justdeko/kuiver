@@ -95,3 +95,25 @@ re-measuring them. What this change removes is on the first frame, which the ben
 time. Every node used to be composed three times before it settled - once to measure, twice to
 render - and is now composed twice, one per layout generation that reaches the renderer. See
 `NodeMeasurementTest.node content is composed once per layout generation`.
+
+## 2026-10-09, multiple edges per node pair
+
+Edges identified by id, parallel edges fanned out by a precomputed bend. The benchmark graph has no
+parallel edges, so this measures what the feature costs graphs that do not use it. Before is the
+parent commit `130700e`, without multiple edges. Apple M2 Pro, macOS 26.6.2, JDK 26.0.2, Compose
+Multiplatform 1.12.0, median of 5 interleaved runs.
+
+| build  | scenario             | median  | p90     | total  | node recomps | edge recomps |
+|--------|----------------------|---------|---------|--------|--------------|--------------|
+| before | 300 nodes, 300 edges | 1806 us | 2242 us | 77 ms  | 300          | 11400        |
+| after  | 300 nodes, 300 edges | 1931 us | 2316 us | 82 ms  | 300          | 11400        |
+| before | 300 nodes, no edges  | 445 us  | 604 us  | 21 ms  | 300          | 0            |
+| after  | 300 nodes, no edges  | 455 us  | 644 us  | 22 ms  | 300          | 0            |
+| before | 300 nodes, built-in  | 4830 us | 5624 us | 203 ms | 300          | 11400        |
+| after  | 300 nodes, built-in  | 5042 us | 5725 us | 205 ms | 300          | 11400        |
+| before | 300 nodes, batched   | 3119 us | 3554 us | 131 ms | 300          | 0            |
+| after  | 300 nodes, batched   | 3196 us | 3831 us | 136 ms | 300          | 0            |
+
+The edge scenarios are 2 to 7% slower in the median, with recompositions unchanged. The difference
+is within the run-to-run spread: the 300 edge median ranged from 1769 to 2136 us before and from
+1796 to 1996 us after.

@@ -232,8 +232,8 @@ private fun avoidBypassEdgeObstruction(
         .mapValues { (_, ids) -> ids.map { LevelEntry.Node(it) as LevelEntry } }
         .toMutableMap()
 
-    // Find bypass edges (edges spanning multiple levels)
-    val bypassEdges = kuiver.edges.filter { edge ->
+    // Find bypass edges (edges spanning multiple levels), one per connected pair
+    val bypassEdges = kuiver.edges.distinctBy { it.fromId to it.toId }.filter { edge ->
         val fromLevel = levels[edge.fromId] ?: 0
         val toLevel = levels[edge.toId] ?: 0
         toLevel - fromLevel > 1

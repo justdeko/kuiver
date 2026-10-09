@@ -79,9 +79,8 @@ internal class ViewerScene(
 
     private fun recordEdge(edge: KuiverEdge, from: Offset, to: Offset) {
         edgeCompositions++
-        val key = "${edge.fromId}->${edge.toId}"
-        edgeStarts[key] = from
-        edgeEnds[key] = to
+        edgeStarts[edge.id] = from
+        edgeEnds[edge.id] = to
     }
 
     @Composable
@@ -109,7 +108,7 @@ internal class ViewerScene(
                 EdgeMode.BATCHED -> EdgeRendering.Batched { edge ->
                     EdgeStyle(
                         arrowDrawer = { arrowTip, direction, color, arrowSize ->
-                            edgeArrowTips["${edge.fromId}->${edge.toId}"] = arrowTip
+                            edgeArrowTips[edge.id] = arrowTip
                             DefaultArrowDrawer(arrowTip, direction, color, arrowSize)
                         }
                     )

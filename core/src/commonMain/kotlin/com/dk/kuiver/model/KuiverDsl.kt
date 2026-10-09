@@ -70,7 +70,7 @@ fun KuiverBuilder.nodes(ids: Collection<String>) {
 }
 
 /**
- * Adds an edge between two nodes, unless they are already connected in that direction. See
+ * Adds an edge between two nodes, unless an edge with the same id is already there. See
  * [KuiverBuilder.addEdge], which returns whether the edge was taken.
  *
  * Example:
@@ -78,6 +78,7 @@ fun KuiverBuilder.nodes(ids: Collection<String>) {
  * buildKuiver {
  *     nodes("A", "B")
  *     edge("A", "B")
+ *     edge("A", "B", id = "retry")
  * }
  * ```
  *
@@ -85,14 +86,17 @@ fun KuiverBuilder.nodes(ids: Collection<String>) {
  * @param to The ID of the ending node
  * @param fromAnchor Optional anchor point on the starting node
  * @param toAnchor Optional anchor point on the ending node
+ * @param id The ID of the edge, `"$from->$to"` by default. Distinct ids connect the same nodes
+ * several times
  */
 fun KuiverBuilder.edge(
     from: String,
     to: String,
     fromAnchor: String? = null,
-    toAnchor: String? = null
+    toAnchor: String? = null,
+    id: String = "$from->$to"
 ) {
-    addEdge(KuiverEdge(from, to, fromAnchor = fromAnchor, toAnchor = toAnchor))
+    addEdge(KuiverEdge(from, to, fromAnchor = fromAnchor, toAnchor = toAnchor, id = id))
 }
 
 /**

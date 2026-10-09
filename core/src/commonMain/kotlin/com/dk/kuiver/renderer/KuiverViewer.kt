@@ -459,6 +459,10 @@ internal fun ViewerRenderer(
                             translationY = state.offset.y.toPx()
                         }
                 ) {
+                    val bends = remember(kuiver.edges) {
+                        if (kuiver.hasParallelEdges) kuiver.edges.parallelBends() else emptyMap()
+                    }
+
                     // Draw edges first so they are behind nodes
                     when (edges) {
                         is EdgeRendering.Batched -> EdgeLayer(
@@ -470,28 +474,32 @@ internal fun ViewerRenderer(
                             interaction = interaction,
                             anchorRegistry = anchorRegistry,
                             skipAnimation = skipAnimation,
+                            bends = bends,
                             edgeStyle = edges.style
                         )
 
-                        is EdgeRendering.PerEdge -> kuiver.edges.forEach { edge ->
-                            val fromNode = kuiver.nodes[edge.fromId]
-                            val toNode = kuiver.nodes[edge.toId]
+                        is EdgeRendering.PerEdge -> {
+                            kuiver.edges.forEach { edge ->
+                                val fromNode = kuiver.nodes[edge.fromId]
+                                val toNode = kuiver.nodes[edge.toId]
 
-                            if (fromNode != null && toNode != null) {
-                                key(edge.fromId, edge.toId, edge.fromAnchor, edge.toAnchor) {
-                                    RenderEdge(
-                                        edge = edge,
-                                        fromNode = fromNode,
-                                        toNode = toNode,
-                                        centerX = centerX,
-                                        centerY = centerY,
-                                        targets = nodeTargets,
-                                        transition = layoutTransition,
-                                        interaction = interaction,
-                                        anchorRegistry = anchorRegistry,
-                                        skipAnimation = skipAnimation,
-                                        edgeContent = edges.content
-                                    )
+                                if (fromNode != null && toNode != null) {
+                                    key(edge.id) {
+                                        RenderEdge(
+                                            edge = edge,
+                                            bend = bends[edge.id],
+                                            fromNode = fromNode,
+                                            toNode = toNode,
+                                            centerX = centerX,
+                                            centerY = centerY,
+                                            targets = nodeTargets,
+                                            transition = layoutTransition,
+                                            interaction = interaction,
+                                            anchorRegistry = anchorRegistry,
+                                            skipAnimation = skipAnimation,
+                                            edgeContent = edges.content
+                                        )
+                                    }
                                 }
                             }
                         }

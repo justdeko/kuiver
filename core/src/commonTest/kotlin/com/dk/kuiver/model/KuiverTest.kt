@@ -121,4 +121,27 @@ class KuiverTest {
         assertTrue(ring.hasCycles())
         assertEquals(length, ring.findStronglyConnectedComponents().single().size)
     }
+
+    @Test
+    fun `parallel edges share their classification and order`() {
+        val graph = buildKuiver {
+            nodes("A", "B", "C")
+            edge("A", "B")
+            edge("A", "B", id = "again")
+            edge("B", "A")
+            edge("B", "A", id = "back again")
+            edge("B", "C")
+        }
+
+        val types = graph.classifyAllEdges()
+        assertEquals(5, types.size)
+        assertEquals(EdgeType.FORWARD, types.getValue(KuiverEdge("A", "B", id = "again")))
+        assertEquals(EdgeType.BACK, types.getValue(KuiverEdge("B", "A")))
+        assertEquals(EdgeType.BACK, types.getValue(KuiverEdge("B", "A", id = "back again")))
+
+        val acyclic = graph.withoutEdge("B->A").withoutEdge("back again")
+        assertEquals(listOf("A", "B", "C"), acyclic.getTopologicalOrder())
+        assertTrue(graph.hasParallelEdges)
+        assertFalse(acyclic.withoutEdge("again").hasParallelEdges)
+    }
 }
