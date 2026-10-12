@@ -176,6 +176,7 @@ private fun GraphBuilderScreen(
         layoutConfig = layoutConfig
     )
     var nextNodeId by rememberSaveable { mutableStateOf(4) } // Start from 4 since we have 3 initial nodes
+    var nextEdgeId by rememberSaveable { mutableStateOf(1) }
     var newNodeData by rememberSaveable { mutableStateOf("") }
     var fromNodeLabel by rememberSaveable { mutableStateOf("") }
     var toNodeLabel by rememberSaveable { mutableStateOf("") }
@@ -291,10 +292,15 @@ private fun GraphBuilderScreen(
                                     // Second click - complete the connection
                                     val fromNode = connectionState.sourceNode
                                     if (fromNode != null) {
-                                        val newEdge = KuiverEdge(fromNode.id, node.id)
+                                        val newEdge = KuiverEdge(
+                                            fromId = fromNode.id,
+                                            toId = node.id,
+                                            id = "e$nextEdgeId"
+                                        )
                                         kuiverViewerState.updateKuiver(
                                             kuiverViewerState.kuiver.withEdge(newEdge)
                                         )
+                                        nextEdgeId++
                                     }
                                     // Reset connection state
                                     connectionState.reset()
@@ -307,7 +313,7 @@ private fun GraphBuilderScreen(
                     }
                 },
                 edgeContent = { edge, from, to ->
-                    val data = edgeData[edge.fromId edgeTo edge.toId]
+                    val data = edgeData[edge.id]
                     StyledEdgeContent(
                         edge = edge,
                         from = from,
@@ -497,15 +503,19 @@ private fun GraphBuilderScreen(
                                     nodeData.entries.find { it.value.label == toNodeLabel }
 
                                 if (fromNodeEntry != null && toNodeEntry != null) {
-                                    val newEdge = KuiverEdge(fromNodeEntry.key, toNodeEntry.key)
+                                    val newEdge = KuiverEdge(
+                                        fromId = fromNodeEntry.key,
+                                        toId = toNodeEntry.key,
+                                        id = "e$nextEdgeId"
+                                    )
                                     kuiverViewerState.updateKuiver(
                                         kuiverViewerState.kuiver.withEdge(newEdge)
                                     )
+                                    nextEdgeId++
 
                                     if (newEdgeLabel.isNotBlank()) {
                                         edgeData = edgeData + (
-                                                (fromNodeEntry.key edgeTo toNodeEntry.key) to
-                                                        EdgeData(newEdgeLabel, newEdgeLabelPosition)
+                                                newEdge.id to EdgeData(newEdgeLabel, newEdgeLabelPosition)
                                                 )
                                     }
 

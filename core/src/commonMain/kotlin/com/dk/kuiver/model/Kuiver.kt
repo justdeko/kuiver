@@ -10,15 +10,15 @@ import androidx.compose.runtime.Immutable
  * behave as snapshot state and as `remember` keys: a graph with the same nodes and edges is the
  * same value, and any change produces a new instance that triggers recomposition and re-layout.
  *
- * Nodes are unique by id and edges by their `(fromId, toId)` pair. Two nodes are connected at
- * most once per direction. Parallel edges are not supported yet and are rejected outright.
+ * Nodes are unique by id and edges by [KuiverEdge.id]. Edges with the default id connect two nodes
+ * at most once per direction. Edges with their own ids can connect the same nodes several times.
  */
 @Immutable
 class Kuiver internal constructor(
     val nodes: Map<String, KuiverNode>,
     val edges: Set<KuiverEdge>,
     private val adjacency: Map<String, Set<String>>,
-    private val edgeMap: Map<Pair<String, String>, KuiverEdge>
+    private val edgeMap: Map<String, KuiverEdge>
 ) {
     /**
      * Creates an empty graph.
@@ -28,6 +28,16 @@ class Kuiver internal constructor(
     private val cachedHashCode: Int by lazy(LazyThreadSafetyMode.PUBLICATION) {
         31 * nodes.hashCode() + edges.hashCode()
     }
+
+    private val edgesByPair: Map<Pair<String, String>, List<KuiverEdge>> by lazy(
+        LazyThreadSafetyMode.PUBLICATION
+    ) {
+        edges.groupBy { it.fromId to it.toId }
+    }
+
+    // Whether any two edges share their start and end node
+    internal val hasParallelEdges: Boolean
+        get() = adjacency.values.sumOf { it.size } < edges.size
 
     /**
      * Returns a copy of this graph with [node] added, replacing any existing node with the same id.
@@ -61,29 +71,35 @@ class Kuiver internal constructor(
     /**
      * Returns a copy of this graph with [edge] added.
      *
-     * A graph holds at most one edge per `(fromId, toId)` pair. If one is already there, this
-     * returns the graph unchanged, anchors and type included: adding does not replace. Drop the
-     * existing edge with [withoutEdge] first to connect the same two nodes differently.
+     * A graph holds at most one edge per [KuiverEdge.id]. If one is already there, this returns
+     * the graph unchanged, anchors and type included: adding does not replace. Drop the existing
+     * edge with [withoutEdge] first to replace it.
      *
-     * @throws IllegalArgumentException if either endpoint is not part of the graph
+     * @throws IllegalArgumentException if either endpoint is not part of the graph, or if the id
+     * already belongs to an edge between other nodes
      */
     fun withEdge(edge: KuiverEdge): Kuiver {
         requireEndpoints(edge)
-        if (edgeMap.containsKey(edge.fromId to edge.toId)) return this
+        val existing = edgeMap[edge.id]
+        if (existing != null) {
+            requireSameEndpoints(existing, edge)
+            return this
+        }
         val neighbors = adjacency[edge.fromId].orEmpty() + edge.toId
         return Kuiver(
             nodes,
             edges + edge,
             adjacency + (edge.fromId to neighbors),
-            edgeMap + ((edge.fromId to edge.toId) to edge)
+            edgeMap + (edge.id to edge)
         )
     }
 
     /**
-     * Returns a copy of this graph with all of [newEdges] added, skipping the ones whose
-     * `(fromId, toId)` pair is already connected. See [withEdge].
+     * Returns a copy of this graph with all of [newEdges] added, skipping the ones whose id is
+     * already taken. See [withEdge].
      *
-     * @throws IllegalArgumentException if any endpoint is not part of the graph
+     * @throws IllegalArgumentException if any endpoint is not part of the graph, or if an id
+     * already belongs to an edge between other nodes
      */
     fun withEdges(newEdges: Collection<KuiverEdge>): Kuiver {
         if (newEdges.isEmpty()) return this
@@ -92,11 +108,14 @@ class Kuiver internal constructor(
         val updatedAdjacency = adjacency.toMutableMap()
         val updatedEdgeMap = edgeMap.toMutableMap()
         newEdges.forEach { edge ->
-            val key = edge.fromId to edge.toId
-            if (updatedEdgeMap.containsKey(key)) return@forEach
+            val existing = updatedEdgeMap[edge.id]
+            if (existing != null) {
+                requireSameEndpoints(existing, edge)
+                return@forEach
+            }
             updatedEdges.add(edge)
             updatedAdjacency[edge.fromId] = updatedAdjacency[edge.fromId].orEmpty() + edge.toId
-            updatedEdgeMap[key] = edge
+            updatedEdgeMap[edge.id] = edge
         }
         if (updatedEdges.size == edges.size) return this
         return Kuiver(nodes, updatedEdges, updatedAdjacency, updatedEdgeMap)
@@ -116,32 +135,50 @@ class Kuiver internal constructor(
     }
 
     /**
-     * Returns a copy of this graph without the edge connecting the two nodes, whatever its anchors
-     * and type are. Nodes are left untouched.
+     * Returns a copy of this graph without the edge with the default id `"$fromId->$toId"`,
+     * whatever its anchors and type are. Other edges between the two nodes and the nodes are left
+     * untouched.
      *
      * @param fromId id of the edge's start node
      * @param toId id of the edge's end node
      */
-    fun withoutEdge(fromId: String, toId: String): Kuiver {
-        val edge = edgeMap[fromId to toId] ?: return this
-        return withoutEdge(edge)
-    }
+    @Deprecated(
+        "Edges are identified by id",
+        ReplaceWith("withoutEdge(\"\$fromId->\$toId\")")
+    )
+    fun withoutEdge(fromId: String, toId: String): Kuiver = withoutEdge("$fromId->$toId")
 
     /**
      * Returns a copy of this graph without [edge]. Nodes are left untouched.
      *
-     * @param edge the edge to drop, matched in full: anchors and [KuiverEdge.type] included. A
-     * rebuilt edge therefore drops nothing from a laid out graph, whose edges carry a type.
+     * @param edge the edge to drop, matched by [KuiverEdge.id]
      */
-    fun withoutEdge(edge: KuiverEdge): Kuiver {
-        if (edge !in edges) return this
+    fun withoutEdge(edge: KuiverEdge): Kuiver = withoutEdge(edge.id)
+
+    /**
+     * Returns a copy of this graph without the edge [id]. Nodes are left untouched.
+     *
+     * @param id [KuiverEdge.id] of the edge to drop. Unknown ids are ignored
+     */
+    fun withoutEdge(id: String): Kuiver {
+        if (!edgeMap.containsKey(id)) return this
         val keptNodes = nodes.values
-        val keptEdges = edges.filter { it != edge }
+        val keptEdges = edges.filter { it.id != id }
         return buildKuiver {
             keptNodes.forEach { addNode(it) }
             keptEdges.forEach { addEdge(it) }
         }
     }
+
+    /**
+     * Returns the edges from [fromId] to [toId], in the order they were added. Edges in the
+     * opposite direction are not included.
+     *
+     * @param fromId id of the edges' start node
+     * @param toId id of the edges' end node
+     */
+    fun edgesBetween(fromId: String, toId: String): List<KuiverEdge> =
+        edgesByPair[fromId to toId].orEmpty()
 
     /**
      * Reopens this graph in a [KuiverBuilder] and returns the result, for changes that are easier
@@ -191,7 +228,8 @@ class Kuiver internal constructor(
     }
 
     /**
-     * Classifies every edge of the graph in a single O(V + E) pass.
+     * Classifies every edge of the graph in a single O(V + E) pass. Edges between the same two
+     * nodes in the same direction share a type.
      *
      * @return the [EdgeType] of each edge
      */
@@ -212,6 +250,10 @@ class Kuiver internal constructor(
 
         val iterStack = ArrayDeque<Pair<String, Iterator<String>>>()
 
+        fun classify(pairEdges: List<KuiverEdge>, type: EdgeType) {
+            pairEdges.forEach { result[it] = type }
+        }
+
         fun enter(nodeId: String) {
             discoveryTime[nodeId] = ++time
             inPath.add(nodeId)
@@ -231,15 +273,15 @@ class Kuiver internal constructor(
                     continue
                 }
                 val neighbor = iter.next()
-                val edge = edgeMap[nodeId to neighbor]
-                if (edge == null || result.containsKey(edge)) continue
+                val pairEdges = edgesByPair[nodeId to neighbor]
+                if (pairEdges == null || result.containsKey(pairEdges.first())) continue
 
                 when {
                     // Back edge: points to an ancestor currently in the path
-                    inPath.contains(neighbor) -> result[edge] = EdgeType.BACK
+                    inPath.contains(neighbor) -> classify(pairEdges, EdgeType.BACK)
                     // Tree/Forward edge: neighbor not yet visited
                     !discoveryTime.containsKey(neighbor) -> {
-                        result[edge] = EdgeType.FORWARD
+                        classify(pairEdges, EdgeType.FORWARD)
                         enter(neighbor)
                     }
                     // Cross edge or forward edge to already-visited descendant
@@ -249,13 +291,14 @@ class Kuiver internal constructor(
                         val currentDiscovery = discoveryTime[nodeId]!!
                         // If neighbor was discovered after current node and already finished,
                         // it's a forward edge to a descendant in our subtree
-                        result[edge] = if (neighborFinish != null &&
+                        val type = if (neighborFinish != null &&
                             neighborDiscovery > currentDiscovery
                         ) {
                             EdgeType.FORWARD
                         } else {
                             EdgeType.CROSS
                         }
+                        classify(pairEdges, type)
                     }
                 }
             }
@@ -369,10 +412,10 @@ class Kuiver internal constructor(
         val queue = ArrayDeque<String>()
         val result = mutableListOf<String>()
 
-        // Initialize in-degrees
+        // Initialize in-degrees, counted per neighbor like the decrements below
         nodes.keys.forEach { inDegree[it] = 0 }
-        edges.forEach { edge ->
-            inDegree[edge.toId] = (inDegree[edge.toId] ?: 0) + 1
+        adjacency.values.forEach { neighbors ->
+            neighbors.forEach { inDegree[it] = (inDegree[it] ?: 0) + 1 }
         }
 
         // Find nodes with no incoming edges
@@ -435,7 +478,7 @@ class KuiverBuilder {
     private val nodes = mutableMapOf<String, KuiverNode>()
     private val edges = mutableSetOf<KuiverEdge>()
     private val adjacency = mutableMapOf<String, MutableSet<String>>()
-    private val edgeMap = mutableMapOf<Pair<String, String>, KuiverEdge>()
+    private val edgeMap = mutableMapOf<String, KuiverEdge>()
 
     /**
      * Adds [node] unless a node with the same id is already present.
@@ -450,22 +493,26 @@ class KuiverBuilder {
     }
 
     /**
-     * Adds [edge], ignoring it when either endpoint is missing from the graph or when the two
-     * nodes are already connected in that direction. A builder holds at most one edge per
-     * `(fromId, toId)` pair, and the first one added wins, anchors and type included.
+     * Adds [edge], ignoring it when either endpoint is missing from the graph or when its
+     * [KuiverEdge.id] is already taken. A builder holds at most one edge per id, and the first one
+     * added wins, anchors and type included.
      *
      * @return `true` if the edge was added
+     * @throws IllegalArgumentException if the id already belongs to an edge between other nodes
      */
     fun addEdge(edge: KuiverEdge): Boolean {
         if (!nodes.containsKey(edge.fromId) || !nodes.containsKey(edge.toId)) {
             return false
         }
-        val key = edge.fromId to edge.toId
-        if (edgeMap.containsKey(key)) return false
+        val existing = edgeMap[edge.id]
+        if (existing != null) {
+            requireSameEndpoints(existing, edge)
+            return false
+        }
 
         edges.add(edge)
         adjacency[edge.fromId]?.add(edge.toId)
-        edgeMap[key] = edge
+        edgeMap[edge.id] = edge
         return true
     }
 
@@ -497,6 +544,12 @@ class KuiverBuilder {
         adjacency.mapValues { (_, neighbors) -> neighbors.toSet() },
         edgeMap.toMap()
     )
+}
+
+private fun requireSameEndpoints(existing: KuiverEdge, edge: KuiverEdge) {
+    require(existing.fromId == edge.fromId && existing.toId == edge.toId) {
+        "Edge id ${edge.id} already connects ${existing.fromId} -> ${existing.toId}"
+    }
 }
 
 /**

@@ -58,11 +58,21 @@ enum class EdgeType {
 /**
  * Kuiver edge connecting two nodes, optionally via specific anchors.
  *
+ * A graph holds one edge per [id]. Edges without an explicit id connect two nodes at most once per
+ * direction, and explicit ids allow several edges between the same nodes:
+ * ```kotlin
+ * KuiverEdge("A", "B", id = "a-to-b-primary")
+ * KuiverEdge("A", "B", id = "a-to-b-fallback")
+ * ```
+ *
  * @property fromId start node ID
  * @property toId target node ID
  * @property type optional edge classification, computed during layout, see [EdgeType]
  * @property fromAnchor optional anchor ID on source node
  * @property toAnchor optional anchor ID on target node
+ * @property id identity of the edge within a graph, `"$fromId->$toId"` by default. `copy` keeps
+ * the id. Pass a new one when changing [fromId] or [toId]. Node ids containing `->` can produce
+ * the same default id for different pairs. Give those edges explicit ids.
  */
 @Immutable
 data class KuiverEdge(
@@ -70,5 +80,6 @@ data class KuiverEdge(
     val toId: String,
     val type: EdgeType? = null,
     val fromAnchor: String? = null,
-    val toAnchor: String? = null
+    val toAnchor: String? = null,
+    val id: String = "$fromId->$toId"
 )

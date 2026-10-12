@@ -304,4 +304,18 @@ class HierarchicalLayoutTest {
         val withBackEdge = kuiver.withEdge(KuiverEdge(fromId = "n${length - 1}", toId = "n0"))
         assertEquals(length, layout(withBackEdge, LayoutConfig.Hierarchical()).nodes.size)
     }
+
+    @Test
+    fun `a parallel edge keeps its id and moves no node`() {
+        val single = buildKuiver {
+            nodes("A", "B", "C", "D")
+            edges("A" to "B", "A" to "C", "B" to "D", "A" to "D")
+        }
+        val doubled = single.rebuild { edge("A", "D", id = "again") }
+        val config = LayoutConfig.Hierarchical(width = 800.dp, height = 600.dp)
+
+        val result = layout(doubled, config)
+        assertEquals(layout(single, config).nodes, result.nodes)
+        assertTrue(result.edges.any { it.id == "again" })
+    }
 }

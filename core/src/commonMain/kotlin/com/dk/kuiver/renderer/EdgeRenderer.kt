@@ -1,6 +1,7 @@
 package com.dk.kuiver.renderer
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
@@ -12,6 +13,7 @@ import com.dk.kuiver.model.EdgeType
 import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
 import com.dk.kuiver.ui.EdgeDrawingDefaults
+import com.dk.kuiver.ui.LocalEdgeBend
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
@@ -22,6 +24,7 @@ private const val EDGE_PADDING = 4f
 @Composable
 internal fun RenderEdge(
     edge: KuiverEdge,
+    bend: EdgeBend?,
     fromNode: KuiverNode,
     toNode: KuiverNode,
     centerX: Dp,
@@ -36,6 +39,7 @@ internal fun RenderEdge(
     // edgeContent takes endpoints by value so a moving edge has to resolve them in composition
     val (edgeStart, edgeEnd) = LocalDensity.current.resolveEdgeEndpoints(
         edge = edge,
+        bend = bend,
         fromNode = fromNode,
         toNode = toNode,
         centerX = centerX,
@@ -47,7 +51,13 @@ internal fun RenderEdge(
         skipAnimation = skipAnimation
     )
 
-    edgeContent(edge, edgeStart, edgeEnd)
+    if (bend == null) {
+        edgeContent(edge, edgeStart, edgeEnd)
+    } else {
+        CompositionLocalProvider(LocalEdgeBend provides bend.amount) {
+            edgeContent(edge, edgeStart, edgeEnd)
+        }
+    }
 }
 
 /**
@@ -56,6 +66,7 @@ internal fun RenderEdge(
  */
 internal fun Density.resolveEdgeEndpoints(
     edge: KuiverEdge,
+    bend: EdgeBend?,
     fromNode: KuiverNode,
     toNode: KuiverNode,
     centerX: Dp,
@@ -89,6 +100,7 @@ internal fun Density.resolveEdgeEndpoints(
 
     return calculateEdgeEndpointsWithAnchors(
         edge = edge,
+        bend = bend,
         fromNode = fromNode,
         toNode = toNode,
         fromCenter = fromCenter,
@@ -109,6 +121,7 @@ internal fun Density.resolveEdgeEndpoints(
  */
 internal fun calculateEdgeEndpointsWithAnchors(
     edge: KuiverEdge,
+    bend: EdgeBend? = null,
     fromNode: KuiverNode,
     toNode: KuiverNode,
     fromCenter: Offset,
@@ -121,6 +134,7 @@ internal fun calculateEdgeEndpointsWithAnchors(
     isSelfLoop: Boolean,
     density: Density
 ): Pair<Offset, Offset> {
+    val curveAngle = edge.curveTangentAngle(bend)
     val fromAnchorOffset = edge.fromAnchor?.let { anchorRegistry.getAnchorOffset(fromNode.id, it) }
     val toAnchorOffset = edge.toAnchor?.let { anchorRegistry.getAnchorOffset(toNode.id, it) }
 
@@ -154,7 +168,7 @@ internal fun calculateEdgeEndpointsWithAnchors(
                 targetWidth = toNodeWidth,
                 targetHeight = toNodeHeight,
                 outbound = false,
-                curveAngle = edge.curveTangentAngle
+                curveAngle = curveAngle
             )
             Pair(edgeStart, calculatedEnd)
         }
@@ -166,7 +180,7 @@ internal fun calculateEdgeEndpointsWithAnchors(
                 targetWidth = fromNodeWidth,
                 targetHeight = fromNodeHeight,
                 outbound = true,
-                curveAngle = edge.curveTangentAngle
+                curveAngle = curveAngle
             )
             Pair(calculatedStart, edgeEnd)
         }
@@ -179,17 +193,18 @@ internal fun calculateEdgeEndpointsWithAnchors(
             toNodeWidth = toNodeWidth,
             toNodeHeight = toNodeHeight,
             isSelfLoop = isSelfLoop,
-            curveAngle = edge.curveTangentAngle
+            curveAngle = curveAngle,
+            loopBend = bend?.amount ?: 0f
         )
     }
 }
 
-private val KuiverEdge.curveTangentAngle: Float
-    get() = if (type == EdgeType.BACK && fromId != toId) {
-        EdgeDrawingDefaults.CURVE_TANGENT_ANGLE
-    } else {
-        0f
-    }
+private fun KuiverEdge.curveTangentAngle(bend: EdgeBend?): Float = when {
+    fromId == toId -> 0f
+    bend != null -> bend.tangentAngle
+    type == EdgeType.BACK -> EdgeDrawingDefaults.CURVE_TANGENT_ANGLE
+    else -> 0f
+}
 
 private fun rotate(direction: Offset, radians: Float): Offset {
     if (radians == 0f) return direction
@@ -274,7 +289,7 @@ internal fun calculateGeometricEndpoint(
 /**
  * Calculate where the edge should start and end based on rectangle intersections.
  * Returns a pair of (start, end) offsets at the boundaries of the node rectangles.
- * For self-loops, returns special endpoints at the top of the node.
+ * For self-loops, returns special endpoints at the top of the node, wider apart for nested loops.
  */
 private fun calculateEdgeEndpoints(
     fromCenter: Offset,
@@ -284,14 +299,16 @@ private fun calculateEdgeEndpoints(
     toNodeWidth: Float,
     toNodeHeight: Float,
     isSelfLoop: Boolean = false,
-    curveAngle: Float = 0f
+    curveAngle: Float = 0f,
+    loopBend: Float = 0f
 ): Pair<Offset, Offset> {
     // Handle self-loops specially
     if (isSelfLoop) {
         return calculateSelfLoopEndpoints(
             center = fromCenter,
             nodeWidth = fromNodeWidth,
-            nodeHeight = fromNodeHeight
+            nodeHeight = fromNodeHeight,
+            loopBend = loopBend
         )
     }
 
@@ -332,26 +349,31 @@ private fun calculateEdgeEndpoints(
 
 /**
  * Calculate endpoints for a self-loop edge.
- * Returns start and end points at the top of the node where the loop should connect.
+ * Returns start and end points at the top of the node where the loop should connect, spread
+ * further apart for each nested loop.
  */
 private fun calculateSelfLoopEndpoints(
     center: Offset,
     nodeWidth: Float,
-    nodeHeight: Float
+    nodeHeight: Float,
+    loopBend: Float
 ): Pair<Offset, Offset> {
     // Place self-loop at the top of the node
     val halfWidth = nodeWidth / 2f
     val halfHeight = nodeHeight / 2f
+    val spread = (EdgeDrawingDefaults.SELF_LOOP_SPREAD +
+            loopBend * EdgeDrawingDefaults.SELF_LOOP_SPREAD_PER_BEND)
+        .coerceAtMost(EdgeDrawingDefaults.SELF_LOOP_MAX_SPREAD)
 
     // Start point: top-left of node
     val startPoint = Offset(
-        center.x - halfWidth * 0.3f,
+        center.x - halfWidth * spread,
         center.y - halfHeight
     )
 
     // End point: top-right of node
     val endPoint = Offset(
-        center.x + halfWidth * 0.3f,
+        center.x + halfWidth * spread,
         center.y - halfHeight
     )
 

@@ -11,6 +11,7 @@ import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.ui.EdgeStyle
 import com.dk.kuiver.ui.drawStyledEdge
+import com.dk.kuiver.ui.fansOut
 
 /**
  * Draws every edge of [kuiver] from a single canvas.
@@ -27,6 +28,7 @@ internal fun EdgeLayer(
     interaction: KuiverInteractionState,
     anchorRegistry: AnchorPositionRegistry,
     skipAnimation: Boolean,
+    bends: Map<String, EdgeBend>,
     edgeStyle: (KuiverEdge) -> EdgeStyle
 ) {
     Spacer(
@@ -37,8 +39,13 @@ internal fun EdgeLayer(
                     val fromNode = kuiver.nodes[edge.fromId] ?: return@forEach
                     val toNode = kuiver.nodes[edge.toId] ?: return@forEach
 
+                    val style = edgeStyle(edge)
+                    val bend = bends[edge.id]?.takeIf {
+                        edge.fromId == edge.toId || style.shape.fansOut
+                    }
                     val (from, to) = resolveEdgeEndpoints(
                         edge = edge,
+                        bend = bend,
                         fromNode = fromNode,
                         toNode = toNode,
                         centerX = centerX,
@@ -50,7 +57,7 @@ internal fun EdgeLayer(
                         skipAnimation = skipAnimation
                     )
 
-                    drawStyledEdge(edge, from, to, edgeStyle(edge))
+                    drawStyledEdge(edge, bend?.amount, from, to, style)
                 }
             }
     )

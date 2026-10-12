@@ -14,4 +14,9 @@ internal object EdgeDrawingDefaults {
     const val CURVE_PROPORTIONAL_OFFSET = 0.25f
     const val SELF_LOOP_HEIGHT_MULTIPLIER = 2f
     val CURVE_TANGENT_ANGLE: Float = atan(2f * CURVE_PROPORTIONAL_OFFSET)
+    const val SELF_LOOP_SPREAD = 0.3f
+    const val SELF_LOOP_SPREAD_PER_BEND = 0.5f
+    const val SELF_LOOP_MAX_SPREAD = 0.9f
+    const val SELF_LOOP_NESTED_GROWTH = 0.5f
+    const val PARALLEL_EDGE_BEND = 0.15f
 }

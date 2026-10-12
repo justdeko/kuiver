@@ -4,6 +4,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.v2.runComposeUiTest
+import com.dk.kuiver.model.edge
 import kotlin.math.hypot
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -102,7 +103,9 @@ class LayoutTransitionTest {
     @Test
     fun batchedEdgesDrawWhereTheEdgeComposablesDo() {
         // Endpoints resolved in the draw phase against the same math run in composition
-        val graph = ringGraph(NODE_COUNT, withEdges = true, seed = 1)
+        val graph = ringGraph(NODE_COUNT, withEdges = true, seed = 1).rebuild {
+            edge("0", "3", id = "twin")
+        }
 
         val composed = mutableMapOf<String, Offset>()
         runComposeUiTest {
@@ -123,6 +126,10 @@ class LayoutTransitionTest {
         }
 
         assertTrue(composed.isNotEmpty(), "no edges were composed")
+        assertTrue(
+            (composed.getValue("0->3") - composed.getValue("twin")).getDistance() > 1f,
+            "parallel edges end at the same point"
+        )
         assertEquals(composed.keys, drawn.keys, "batched layer drew a different set of edges")
         composed.forEach { (edgeKey, end) ->
             val distance = (drawn.getValue(edgeKey) - end).getDistance()

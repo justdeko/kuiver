@@ -42,7 +42,8 @@ fun kuiverSaver(): Saver<Kuiver, Any> = Saver(
                     "toId" to edge.toId,
                     "type" to edge.type?.name,
                     "fromAnchor" to edge.fromAnchor,
-                    "toAnchor" to edge.toAnchor
+                    "toAnchor" to edge.toAnchor,
+                    "id" to edge.id
                 )
             }
         )
@@ -83,6 +84,7 @@ fun kuiverSaver(): Saver<Kuiver, Any> = Saver(
                 val typeName = edgeMap["type"] as? String
                 val fromAnchor = edgeMap["fromAnchor"] as? String
                 val toAnchor = edgeMap["toAnchor"] as? String
+                val id = edgeMap["id"] as? String ?: "$fromId->$toId"
 
                 val type = typeName?.let { EdgeType.valueOf(it) }
 
@@ -92,7 +94,8 @@ fun kuiverSaver(): Saver<Kuiver, Any> = Saver(
                         toId = toId,
                         type = type,
                         fromAnchor = fromAnchor,
-                        toAnchor = toAnchor
+                        toAnchor = toAnchor,
+                        id = id
                     )
                 )
             }

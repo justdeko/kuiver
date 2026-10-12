@@ -86,6 +86,16 @@ class KuiverSaverTest {
         assertEquals(emptyMap(), manualPositionsSaver().roundTrip(emptyMap()))
     }
 
+    @Test
+    fun `parallel edges keep their ids`() {
+        val graph = buildKuiver {
+            nodes("A", "B")
+            edge("A", "B")
+            edge("A", "B", id = "second")
+        }
+        assertEquals(graph, kuiverSaver().roundTrip(graph))
+    }
+
     /** Puts [value] through the saver the way `rememberSaveable` does. */
     private fun <T> Saver<T, Any>.roundTrip(value: T): T? =
         restore(assertNotNull(SaverScope { true }.save(value)))

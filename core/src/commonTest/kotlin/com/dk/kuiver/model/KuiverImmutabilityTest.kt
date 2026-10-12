@@ -144,6 +144,33 @@ class KuiverImmutabilityTest {
     }
 
     @Test
+    fun `explicit ids connect the same pair several times`() {
+        val original = chain()
+        val single = original.withEdge(KuiverEdge("A", "B", id = "second"))
+        val batch = original.withEdges(
+            listOf(KuiverEdge("A", "B", id = "second"), KuiverEdge("A", "B", id = "second"))
+        )
+
+        assertEquals(listOf("A->B", "second"), single.edgesBetween("A", "B").map { it.id })
+        assertTrue(single.edgesBetween("B", "A").isEmpty(), "edgesBetween is directed")
+        assertEquals(single, batch)
+    }
+
+    @Test
+    fun `an id already connecting other nodes is rejected`() {
+        val original = chain()
+        val stale = KuiverEdge("A", "C", id = "A->B")
+
+        val error = assertFailsWith<IllegalArgumentException> { original.withEdge(stale) }
+        assertEquals("Edge id A->B already connects A -> B", error.message)
+        assertFailsWith<IllegalArgumentException> { original.withEdges(listOf(stale)) }
+        assertFailsWith<IllegalArgumentException> { original.rebuild { addEdge(stale) } }
+        assertFailsWith<IllegalArgumentException> {
+            original.withEdges(listOf(KuiverEdge("A", "C", id = "x"), KuiverEdge("B", "C", id = "x")))
+        }
+    }
+
+    @Test
     fun `a rejected edge leaves no shadow in the classification`() {
         val graph = buildKuiver {
             nodes("A", "B", "C")
@@ -178,31 +205,48 @@ class KuiverImmutabilityTest {
     }
 
     @Test
-    fun `withoutEdge by endpoints drops the edge whatever it carries`() {
+    fun `withoutEdge by edge matches the id whatever the edge carries`() {
         val original = buildKuiver {
             nodes("A", "B", "C")
             addEdge(KuiverEdge("A", "B", type = EdgeType.FORWARD, fromAnchor = "right"))
             edge("B", "C")
         }
 
-        assertSame(
-            original,
-            original.withoutEdge(KuiverEdge("A", "B")),
-            "a rebuilt edge should not match one that carries a type and an anchor"
-        )
-
-        val trimmed = original.withoutEdge("A", "B")
+        val trimmed = original.withoutEdge(KuiverEdge("A", "B"))
         assertEquals(original.nodes, trimmed.nodes)
         assertEquals(setOf(KuiverEdge("B", "C")), trimmed.edges)
     }
 
     @Test
-    fun `withoutEdge by endpoints leaves a graph without that pair alone`() {
+    fun `withoutEdge by id leaves a graph without that id alone`() {
         val original = chain()
 
-        assertSame(original, original.withoutEdge("A", "C"))
-        assertSame(original, original.withoutEdge("B", "A"), "the pair is directed")
-        assertSame(original, original.withoutEdge("Z", "A"))
+        assertSame(original, original.withoutEdge("A->C"))
+        assertSame(original, original.withoutEdge("B->A"), "the default id is directed")
+        assertSame(original, original.withoutEdge("nope"))
+    }
+
+    @Test
+    fun `withoutEdge by id drops only that parallel edge`() {
+        val original = chain().rebuild { edge("A", "B", id = "second") }
+
+        val trimmed = original.withoutEdge("second")
+        assertEquals(chain(), trimmed)
+        assertTrue(trimmed.wouldCreateCycle("B", "A"), "the pair is still connected")
+        assertFalse(trimmed.withoutEdge("A->B").wouldCreateCycle("B", "A"))
+    }
+
+    @Suppress("DEPRECATION")
+    @Test
+    fun `withoutEdge by endpoints only drops the edge with the default id`() {
+        val original = buildKuiver {
+            nodes("A", "B")
+            edge("A", "B")
+            edge("A", "B", id = "second")
+        }
+
+        val trimmed = original.withoutEdge("A", "B")
+        assertEquals(listOf("second"), trimmed.edges.map { it.id })
     }
 
     @Test

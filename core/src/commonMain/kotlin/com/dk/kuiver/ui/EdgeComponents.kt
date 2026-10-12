@@ -2,7 +2,9 @@ package com.dk.kuiver.ui
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
@@ -11,6 +13,23 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.dk.kuiver.model.EdgeType
 import com.dk.kuiver.model.KuiverEdge
+
+/**
+ * Bend of the edge currently drawn by `edgeContent`, for custom edges to fan out like the built-in
+ * ones when several edges share their nodes, direction and anchors.
+ *
+ * The value is the control point offset as a fraction of the edge length, with the sign picking the
+ * side, or the extra height for a self-loop. It is `null` for an edge without such twins. The
+ * endpoints passed to `edgeContent` already account for it.
+ *
+ * ```kotlin
+ * edgeContent = { edge, from, to ->
+ *     val bend = LocalEdgeBend.current
+ *     EdgeContent(from, to, enableCurve = bend != null, bend = bend)
+ * }
+ * ```
+ */
+val LocalEdgeBend: ProvidableCompositionLocal<Float?> = staticCompositionLocalOf { null }
 
 /** An edge drawn on a canvas bounded to its geometry, see [EdgeCanvas]. */
 @Composable
@@ -27,10 +46,12 @@ fun EdgeContent(
     loopRadius: Dp = 40.dp,
     enableCurve: Boolean = false,
     arrowSize: Dp = 16.dp,
-    arrowDrawer: ArrowDrawer = DefaultArrowDrawer
+    arrowDrawer: ArrowDrawer = DefaultArrowDrawer,
+    bend: Float? = null
 ) {
-    val edgePath =
-        rememberEdgePath(from, to, isSelfLoop, enableCurve, loopRadius, showArrow, strokeWidth)
+    val edgePath = rememberEdgePath(
+        from, to, isSelfLoop, enableCurve, loopRadius, showArrow, strokeWidth, bend
+    )
 
     EdgePathCanvas(
         path = edgePath,
@@ -53,11 +74,12 @@ private fun rememberEdgePath(
     enableCurve: Boolean,
     loopRadius: Dp,
     showArrow: Boolean,
-    strokeWidth: Dp
+    strokeWidth: Dp,
+    bend: Float?
 ): EdgePath {
     val density = LocalDensity.current
     return remember(
-        from, to, density, isSelfLoop, enableCurve, loopRadius, showArrow, strokeWidth
+        from, to, density, isSelfLoop, enableCurve, loopRadius, showArrow, strokeWidth, bend
     ) {
         when {
             isSelfLoop -> EdgePathFactory.createSelfLoopPath(
@@ -66,11 +88,18 @@ private fun rememberEdgePath(
                 density,
                 loopRadius,
                 showArrow,
-                strokeWidth
+                strokeWidth,
+                bend ?: 0f
             )
 
-            enableCurve ->
-                EdgePathFactory.createCurvedPath(from, to, density, showArrow, strokeWidth)
+            enableCurve -> EdgePathFactory.createCurvedPath(
+                from,
+                to,
+                density,
+                showArrow,
+                strokeWidth,
+                bend ?: EdgeDrawingDefaults.CURVE_PROPORTIONAL_OFFSET
+            )
 
             else -> EdgePathFactory.createStraightPath(from, to, density, showArrow, strokeWidth)
         }
@@ -104,6 +133,8 @@ private fun rememberEdgePath(
  * @param arrowSize Size of the arrow head
  * @param arrowDrawer Custom arrow drawing function
  * @param minEdgeLengthForLabel Minimum edge length to show label. Must be non-negative
+ * @param bend Control point offset as a fraction of the edge length, or extra height for a
+ * self-loop. The regular curve and loop when `null`
  */
 @Composable
 fun EdgeContentWithLabel(
@@ -125,7 +156,8 @@ fun EdgeContentWithLabel(
     enableCurve: Boolean = false,
     arrowSize: Dp = 16.dp,
     arrowDrawer: ArrowDrawer = DefaultArrowDrawer,
-    minEdgeLengthForLabel: Dp = 50.dp
+    minEdgeLengthForLabel: Dp = 50.dp,
+    bend: Float? = null
 ) {
     require(labelOffset == null || labelOffset in 0f..1f) {
         "labelOffset must be in range [0, 1], got $labelOffset"
@@ -138,8 +170,9 @@ fun EdgeContentWithLabel(
 
     val offset = labelPlacement?.offset ?: labelOffset ?: 0.5f
 
-    val edgePath =
-        rememberEdgePath(from, to, isSelfLoop, enableCurve, loopRadius, showArrow, strokeWidth)
+    val edgePath = rememberEdgePath(
+        from, to, isSelfLoop, enableCurve, loopRadius, showArrow, strokeWidth, bend
+    )
 
     LabeledEdge(
         path = edgePath,
@@ -219,6 +252,7 @@ internal fun LabeledEdge(
  * Enhanced EdgeContent that styles edges based on their type.
  * Self-loops are rendered as arcs above nodes.
  * Back edges (cycle-creating) are dashed and curved.
+ * Edges sharing their nodes, direction and anchors fan out as arcs.
  *
  * @param edge The edge to render
  * @param from Start point of the edge
@@ -259,6 +293,7 @@ fun StyledEdgeContent(
     }
 
     val isSelfLoop = edge.fromId == edge.toId
+    val bend = LocalEdgeBend.current
 
     EdgeContentWithLabel(
         from = from,
@@ -273,8 +308,9 @@ fun StyledEdgeContent(
         dashed = dashed,
         isSelfLoop = isSelfLoop,
         loopRadius = loopRadius,
-        enableCurve = edge.type == EdgeType.BACK,
+        enableCurve = bend?.let { it != 0f } ?: (edge.type == EdgeType.BACK),
         arrowSize = arrowSize,
-        arrowDrawer = arrowDrawer
+        arrowDrawer = arrowDrawer,
+        bend = bend
     )
 }
