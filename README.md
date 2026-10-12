@@ -321,29 +321,6 @@ buildKuiver {
 
 See `ProcessDiagramDemo.kt` for a complete example with multiple anchors per side.
 
-### Multiple Edges
-
-Edges are identified by `id`, `"$fromId->$toId"` by default. Give edges their own ids to connect the
-same nodes several times. They are drawn as fanned out arcs. Node ids containing `->` can collide on
-the default id, which throws an exception. Give those edges explicit ids.
-
-```kotlin
-buildKuiver {
-    nodes("A", "B")
-    edge("A", "B")
-    edge("A", "B", id = "retry")
-}
-```
-
-Custom edges read the bend of the edge being drawn from `LocalEdgeBend` to fan out the same way.
-
-```kotlin
-edgeContent = { edge, from, to ->
-    val bend = LocalEdgeBend.current
-    EdgeContent(from, to, enableCurve = bend != null, bend = bend)
-}
-```
-
 ## Layout Algorithms
 
 > **Note:** The layout algorithms are simple implementations based on established graph layouting
@@ -604,7 +581,7 @@ val graph = buildKuiver {
 val withNode = graph.withNode(KuiverNode("C"))
 val withEdge = withNode.withEdge(KuiverEdge("B", "C"))
 val trimmed = withEdge.withoutNode("A")     // also drops the edges touching A
-val unlinked = withEdge.withoutEdge("A->B")
+val unlinked = withEdge.withoutEdge("A", "B")
 
 // Batches, back in the builder
 val extended = graph.rebuild {
@@ -619,11 +596,11 @@ viewerState.updateKuiver(extended)
 you move a node or give it explicit dimensions. `withEdge` throws if either endpoint is missing from
 the graph.
 
-`withoutEdge` drops an edge from the graph by its id. It takes either the id or an edge:
+`withoutEdge` drops an edge from the graph. It takes either endpoints or an edge:
 
 ```kotlin
-graph.withoutEdge("A->B")                   // the default id of an edge from A to B
-graph.withoutEdge(someEdgeFromTheGraph)     // matched by id
+graph.withoutEdge("A", "B")                 // whatever edge connects them
+graph.withoutEdge(someEdgeFromTheGraph)     // that exact edge
 ```
 
 ## Advanced Features
@@ -759,6 +736,11 @@ The library implements several web-specific adjustments to handle browser limita
   `preloadFont` from `compose.components.resources` (web only) and a
   `<link rel="preload" as="fetch">` in your `index.html`
 
+### General Limitations
+
+- **Multiple Edges**: The library does not currently support multiple edges between the same pair of
+  nodes
+
 ### API Stability
 
 As an alpha release, the public API may change between versions. Breaking changes will be noted in
@@ -783,3 +765,5 @@ From Wikipedia:
 > "a quiver is another name for a multidigraph; that is, a directed graph where loops and multiple
 > arrows between two vertices are allowed."
 
+Technically this library is not quite a "true" quiver, as it doesn't support multiple edges between
+the same two nodes.
