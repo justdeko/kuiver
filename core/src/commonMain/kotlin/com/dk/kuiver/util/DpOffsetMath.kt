@@ -9,6 +9,8 @@ import androidx.compose.ui.unit.DpOffset
 internal operator fun DpOffset.times(factor: Float): DpOffset =
     DpOffset(x * factor, y * factor)
 
-/** Divides a [DpOffset] by [factor]. See [times]. */
+/**
+ * Divides a [DpOffset] by [factor]. See [times].
+ */
 internal operator fun DpOffset.div(factor: Float): DpOffset =
     DpOffset(x / factor, y / factor)

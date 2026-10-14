@@ -113,5 +113,7 @@ internal fun NodeLayer(
     }
 }
 
-/** A node's subcomposition, measured and waiting to be placed. */
+/**
+ * A node's subcomposition, measured and waiting to be placed.
+ */
 private data class PlacedNode(val nodeId: String, val placeable: Placeable)

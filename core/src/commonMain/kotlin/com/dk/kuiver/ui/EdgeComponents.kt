@@ -31,7 +31,25 @@ import com.dk.kuiver.model.KuiverEdge
  */
 val LocalEdgeBend: ProvidableCompositionLocal<Float?> = staticCompositionLocalOf { null }
 
-/** An edge drawn on a canvas bounded to its geometry, see [EdgeCanvas]. */
+/**
+ * Draws an edge on a canvas bounded to its geometry, see [EdgeCanvas]
+ *
+ * @param from Start point of the edge
+ * @param to End point of the edge
+ * @param color Edge line color
+ * @param strokeWidth Width of the edge line
+ * @param showArrow Whether to show an arrow at the end
+ * @param dashed Whether the edge should be dashed
+ * @param dashLength Length of dashes (if dashed)
+ * @param gapLength Length of gaps between dashes (if dashed)
+ * @param isSelfLoop Whether this is a self-loop edge
+ * @param loopRadius Radius for self-loop arcs
+ * @param enableCurve Whether to curve the edge (for back edges)
+ * @param arrowSize Size of the arrow head
+ * @param arrowDrawer Custom arrow drawing function
+ * @param bend Control point offset as a fraction of the edge length, or extra height for a
+ * self-loop. The regular curve and loop when `null`
+ */
 @Composable
 fun EdgeContent(
     from: Offset,

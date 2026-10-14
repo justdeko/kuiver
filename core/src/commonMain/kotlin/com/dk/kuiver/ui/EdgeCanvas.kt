@@ -2,6 +2,8 @@ package com.dk.kuiver.ui
 
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -15,10 +17,13 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.constrainWidth
+import com.dk.kuiver.renderer.LocalEdgePathReporter
 import kotlin.math.ceil
 import kotlin.math.floor
 
-/** Cap on the canvas size, keeps extreme edges within [Constraints]. */
+/**
+ * Cap on the canvas size, keeps extreme edges within [Constraints].
+ */
 private const val MAX_EDGE_EXTENT_PX = 30_000
 
 /**
@@ -31,17 +36,25 @@ private const val MAX_EDGE_EXTENT_PX = 30_000
  *     val path = remember(from, to, density) {
  *         EdgePathFactory.createStraightPath(from, to, density)
  *     }
- *     EdgeCanvas(remember(path, density) { path.boundingRect(density) }) {
+ *     EdgeCanvas(remember(path, density) { path.boundingRect(density) }, hitPath = path) {
  *         drawLine(Color.Blue, path.from, path.pathEndpoint, strokeWidth = 2.dp.toPx())
  *     }
  * }
  * ```
  *
  * @param bounds area the edge draws into in pixels, see [boundingRect]
+ * @param hitPath hit path for edge tap and hover detection, the edge can't be tapped or hovered
+ * when null
  * @param onDraw draws the edge
  */
 @Composable
-fun EdgeCanvas(bounds: Rect, onDraw: DrawScope.() -> Unit) {
+fun EdgeCanvas(bounds: Rect, hitPath: EdgePath? = null, onDraw: DrawScope.() -> Unit) {
+    val reporter = LocalEdgePathReporter.current
+    if (reporter != null && hitPath != null) {
+        SideEffect { reporter.report(hitPath) }
+        DisposableEffect(reporter) { onDispose { reporter.report(null) } }
+    }
+
     val left = floor(bounds.left)
     val top = floor(bounds.top)
     val width = (ceil(bounds.right) - left).toInt().coerceIn(0, MAX_EDGE_EXTENT_PX)
@@ -85,7 +98,7 @@ internal fun EdgePathCanvas(
         )
     }
 
-    EdgeCanvas(bounds) {
+    EdgeCanvas(bounds, hitPath = path) {
         drawEdgePath(
             path = path,
             color = color,

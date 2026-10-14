@@ -148,15 +148,9 @@ private fun EdgeStyle.curvedPath(
     bend: Float
 ): EdgePath = EdgePathFactory.createCurvedPath(from, to, density, showArrow, strokeWidth, bend)
 
-internal fun DrawScope.drawStyledEdge(
-    edge: KuiverEdge,
-    bend: Float?,
-    from: Offset,
-    to: Offset,
-    style: EdgeStyle
-) {
+internal fun DrawScope.drawStyledEdge(path: EdgePath, style: EdgeStyle) {
     drawEdgePath(
-        path = style.createPath(edge, bend, from, to, this),
+        path = path,
         color = style.color,
         strokeWidth = style.strokeWidth,
         showArrow = style.showArrow,

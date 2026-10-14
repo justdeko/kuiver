@@ -12,6 +12,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.DpOffset
 import com.dk.kuiver.KuiverViewerState
 import com.dk.kuiver.SelectionMode
+import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
 
 /**
@@ -26,9 +27,10 @@ import com.dk.kuiver.model.KuiverNode
  * @property onNodeDrag the dragged node moved, with its total displacement so far in graph dp
  * @property onNodeDragEnd the drag finished, with the total displacement it covered. The node has
  * already been moved by then, see [com.dk.kuiver.RelayoutPolicy] for how long that survives
- * @property onCanvasClick the canvas was tapped, the usual place to deselect. A tap a node handled
- * does not reach it. This fires for taps on nodes only when no node interaction is enabled at
- * all
+ * @property onEdgeClick an edge was tapped or clicked. Setting this makes edges tappable without
+ * [KuiverViewerConfig.edgeSelectionMode]
+ * @property onCanvasClick the canvas was tapped (nodes/edges excluded).
+ * This fires for taps on nodes only when no node interaction is enabled
  */
 @Immutable
 data class KuiverInteractionCallbacks(
@@ -37,12 +39,15 @@ data class KuiverInteractionCallbacks(
     val onNodeDragStart: ((KuiverNode) -> Unit)? = null,
     val onNodeDrag: ((KuiverNode, DpOffset) -> Unit)? = null,
     val onNodeDragEnd: ((KuiverNode, DpOffset) -> Unit)? = null,
+    val onEdgeClick: ((KuiverEdge) -> Unit)? = null,
     val onCanvasClick: (() -> Unit)? = null
 ) {
     internal val handlesNodeTap: Boolean get() = onNodeClick != null || onNodeLongPress != null
 
     companion object {
-        /** No callbacks at all, the default of every [KuiverViewer]. */
+        /**
+         * No callbacks at all, the default of every [KuiverViewer]
+         */
         val None = KuiverInteractionCallbacks()
     }
 }
@@ -83,7 +88,8 @@ internal fun Modifier.nodeInteraction(
                     when (awaitPointerEvent().type) {
                         PointerEventType.Enter -> interaction.hoveredNodeId = nodeId
                         PointerEventType.Exit ->
-                            if (interaction.hoveredNodeId == nodeId) interaction.hoveredNodeId = null
+                            if (interaction.hoveredNodeId == nodeId) interaction.hoveredNodeId =
+                                null
                     }
                 }
             }

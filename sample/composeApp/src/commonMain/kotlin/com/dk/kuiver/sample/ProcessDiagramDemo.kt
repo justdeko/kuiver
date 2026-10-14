@@ -487,7 +487,9 @@ fun ProcessDiagramDemo(
                     offsetAnimationSpec = tween(ZoomDurationMillis, easing = FastOutSlowInEasing),
                     selectionMode = SelectionMode.SINGLE,
                     nodeDragEnabled = true,
-                    hoverEnabled = true
+                    hoverEnabled = true,
+                    edgeSelectionMode = SelectionMode.SINGLE,
+                    edgeHoverEnabled = true
                 ),
                 modifier = Modifier
                     .fillMaxSize()
@@ -511,13 +513,18 @@ fun ProcessDiagramDemo(
 
                     val isBackOrSelfLoop =
                         edge.type == EdgeType.BACK || edge.type == EdgeType.SELF_LOOP
+                    val strokeWidth = when {
+                        isSelected -> 5.dp
+                        isHovered -> 3.5.dp
+                        else -> 2.5.dp
+                    }
 
                     when (selectedEdgeStyle) {
                         EdgeStyle.ORTHOGONAL if !isBackOrSelfLoop ->
                             OrthogonalEdgeContentWithLabel(
                                 from = from,
                                 to = to,
-                                strokeWidth = 2.5.dp,
+                                strokeWidth = strokeWidth,
                                 label = edgeLabel,
                                 labelStyle = labelStyle.copy(rotateWithEdge = true)
                             )
@@ -527,7 +534,7 @@ fun ProcessDiagramDemo(
                                 edge = edge,
                                 from = from,
                                 to = to,
-                                strokeWidth = 2.5.dp,
+                                strokeWidth = strokeWidth,
                                 label = edgeLabel,
                                 labelStyle = labelStyle
                             )
@@ -536,7 +543,7 @@ fun ProcessDiagramDemo(
                             edge = edge,
                             from = from,
                             to = to,
-                            strokeWidth = 2.5.dp,
+                            strokeWidth = strokeWidth,
                             label = edgeLabel,
                             labelStyle = labelStyle
                         )

@@ -162,7 +162,9 @@ internal fun hierarchical(
     )
 }
 
-/** Positions of the node ids in a level, for barycenter lookups that would otherwise scan it. */
+/**
+ * Positions of the node ids in a level, for barycenter lookups that would otherwise scan it.
+ */
 private fun List<String>.indexById(): Map<String, Int> =
     withIndex().associate { (index, id) -> id to index }
 
