@@ -20,7 +20,7 @@
 
 </div>
 
-> **ALPHA RELEASE** - This library is in early development. The API is subject to change and may
+> **BETA RELEASE** - The core API is stable, but may still change between versions and may
 > contain bugs.
 > Feedback and bug reports are welcome
 > at [GitHub Issues](https://github.com/justdeko/kuiver/issues).
@@ -32,7 +32,7 @@
 - Customizable nodes and edges
 - Edge labels
 - Zooming and panning
-- Node selection, hover and drag to reposition
+- Node and edge selection, hover and node drag to reposition
 - Resizable canvas
 - Layout animations
 
@@ -46,7 +46,7 @@ For multiplatform projects, add to your common source set:
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.justdeko:kuiver:0.4.2")
+            implementation("io.github.justdeko:kuiver:0.5.0")
         }
     }
 }
@@ -58,10 +58,10 @@ Or for a specific platform only:
 kotlin {
     sourceSets {
         androidMain.dependencies {
-            implementation("io.github.justdeko:kuiver-android:0.4.2")
+            implementation("io.github.justdeko:kuiver-android:0.5.0")
         }
         iosMain.dependencies {
-            implementation("io.github.justdeko:kuiver-iosarm64:0.4.2")
+            implementation("io.github.justdeko:kuiver-iosarm64:0.5.0")
         }
         // etc.
     }
@@ -170,6 +170,9 @@ edgeContent = { edge, from, to ->
     }
 }
 ```
+
+Pass the path as `hitPath` to `EdgeCanvas` to make a custom edge tappable and hoverable, see
+[Selecting, Hovering and Dragging](#selecting-hovering-and-dragging).
 
 ### Edge Labels
 
@@ -434,6 +437,8 @@ KuiverViewer(
         selectionMode = SelectionMode.NONE,          // NONE, SINGLE or MULTIPLE
         nodeDragEnabled = false,           // Drag nodes to reposition them
         hoverEnabled = false,              // Track the node under the pointer
+        edgeSelectionMode = SelectionMode.NONE,      // NONE, SINGLE or MULTIPLE
+        edgeHoverEnabled = false,          // Track the edge under the pointer
         relayoutPolicy = RelayoutPolicy.KEEP_MANUAL, // What layout does to dragged nodes
 
         // Animations
@@ -486,9 +491,9 @@ in sync with gestures. `updateTransform` is unclamped by design — it sets exac
 - **Touch/Mobile:** Drag to pan, pinch to zoom
 - **Mouse/Desktop:** Drag to pan, scroll to pan, Ctrl+Scroll to zoom
 
-### Selecting, Hovering and Dragging Nodes
+### Selecting, Hovering and Dragging
 
-You can enable hovering and dragging nodes, then respond to them with `KuiverInteractionCallbacks`:
+You can enable selecting and hovering nodes and edges and dragging nodes, then respond to them with `KuiverInteractionCallbacks`:
 
 ```kotlin
 KuiverViewer(
@@ -496,10 +501,13 @@ KuiverViewer(
     config = KuiverViewerConfig(
         selectionMode = SelectionMode.SINGLE,
         nodeDragEnabled = true,
-        hoverEnabled = true
+        hoverEnabled = true,
+        edgeSelectionMode = SelectionMode.SINGLE,
+        edgeHoverEnabled = true
     ),
     callbacks = KuiverInteractionCallbacks(
         onNodeClick = { node -> println("clicked ${node.id}") },
+        onEdgeClick = { edge -> println("clicked ${edge.id}") },
         onNodeLongPress = { node -> showMenuFor(node) },
         onNodeDragEnd = { node, travelled -> println("${node.id} moved by $travelled") },
         onCanvasClick = { println("deselected") }
@@ -524,7 +532,9 @@ nodeContent = { node ->
 }
 ```
 
-`isHovered` is always false on touch, which has no hover.
+`edgeContent` has `KuiverEdgeScope` with `isSelected` and `isHovered`. `isHovered` is always false
+on touch, which has no hover. Nodes and edges share one selection, so selecting an edge clears the
+selected nodes and the other way around.
 
 The same state is readable and writable from `viewerState.interaction`:
 
@@ -535,6 +545,7 @@ val dragging = viewerState.interaction.isDragging
 
 viewerState.interaction.select("A")
 viewerState.interaction.toggleSelection("B")
+viewerState.interaction.selectEdge("A->B")
 viewerState.interaction.clearSelection()
 ```
 
@@ -581,7 +592,7 @@ val graph = buildKuiver {
 val withNode = graph.withNode(KuiverNode("C"))
 val withEdge = withNode.withEdge(KuiverEdge("B", "C"))
 val trimmed = withEdge.withoutNode("A")     // also drops the edges touching A
-val unlinked = withEdge.withoutEdge("A", "B")
+val unlinked = withEdge.withoutEdge("A->B")
 
 // Batches, back in the builder
 val extended = graph.rebuild {
@@ -596,11 +607,18 @@ viewerState.updateKuiver(extended)
 you move a node or give it explicit dimensions. `withEdge` throws if either endpoint is missing from
 the graph.
 
-`withoutEdge` drops an edge from the graph. It takes either endpoints or an edge:
+Edges are identified by `id`, `"$fromId->$toId"` by default. Give edges their own ids to connect
+the same nodes several times, drawn as fanned out arcs. Custom edges read the bend from
+`LocalEdgeBend`. Use `withoutEdge` to drop an edge by its id:
 
 ```kotlin
-graph.withoutEdge("A", "B")                 // whatever edge connects them
-graph.withoutEdge(someEdgeFromTheGraph)     // that exact edge
+val graph = buildKuiver {
+    nodes("A", "B")
+    edge("A", "B")
+    edge("A", "B", id = "retry")
+}
+graph.withoutEdge("A->B")                   // the default id of an edge from A to B
+graph.withoutEdge(someEdgeFromTheGraph)     // matched by id
 ```
 
 ## Advanced Features
@@ -637,7 +655,8 @@ edgeStyle = { edge ->
 ```
 
 Edges are values rather than composables here, so they cannot hold composable content. No edge
-labels in this mode.
+labels in this mode. Edge selection and hover work as usual, read them from
+`viewerState.interaction` inside `edgeStyle`.
 
 The `edgeStyle` lambda also runs while drawing rather than while composing, so it cannot read
 `LocalKuiverColors` itself. `KuiverDefaults.edgeStyle()` reads the colors in composition and returns
@@ -736,14 +755,9 @@ The library implements several web-specific adjustments to handle browser limita
   `preloadFont` from `compose.components.resources` (web only) and a
   `<link rel="preload" as="fetch">` in your `index.html`
 
-### General Limitations
-
-- **Multiple Edges**: The library does not currently support multiple edges between the same pair of
-  nodes
-
 ### API Stability
 
-As an alpha release, the public API may change between versions. Breaking changes will be noted in
+As a beta release, the public API may still change between versions. Breaking changes will be noted in
 the changelog.
 
 ## Contributing
@@ -765,5 +779,3 @@ From Wikipedia:
 > "a quiver is another name for a multidigraph; that is, a directed graph where loops and multiple
 > arrows between two vertices are allowed."
 
-Technically this library is not quite a "true" quiver, as it doesn't support multiple edges between
-the same two nodes.
