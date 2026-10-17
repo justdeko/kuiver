@@ -12,7 +12,9 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.lerp
 import com.dk.kuiver.model.Kuiver
 
-/** Node positions of one layout generation, relative to the center of the graph bounds. */
+/**
+ * Node positions of one layout generation, relative to the center of the graph bounds.
+ */
 internal typealias NodePositions = Map<String, DpOffset>
 
 /**

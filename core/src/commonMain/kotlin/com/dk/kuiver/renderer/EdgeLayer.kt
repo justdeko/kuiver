@@ -10,6 +10,7 @@ import com.dk.kuiver.KuiverInteractionState
 import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.ui.EdgeStyle
+import com.dk.kuiver.ui.createPath
 import com.dk.kuiver.ui.drawStyledEdge
 import com.dk.kuiver.ui.fansOut
 
@@ -29,6 +30,7 @@ internal fun EdgeLayer(
     anchorRegistry: AnchorPositionRegistry,
     skipAnimation: Boolean,
     bends: Map<String, EdgeBend>,
+    hitRegistry: EdgeHitRegistry?,
     edgeStyle: (KuiverEdge) -> EdgeStyle
 ) {
     Spacer(
@@ -57,7 +59,9 @@ internal fun EdgeLayer(
                         skipAnimation = skipAnimation
                     )
 
-                    drawStyledEdge(edge, bend?.amount, from, to, style)
+                    val path = style.createPath(edge, bend?.amount, from, to, this)
+                    hitRegistry?.report(edge.id, path)
+                    drawStyledEdge(path, style)
                 }
             }
     )

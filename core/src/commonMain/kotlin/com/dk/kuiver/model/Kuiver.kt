@@ -39,6 +39,8 @@ class Kuiver internal constructor(
     internal val hasParallelEdges: Boolean
         get() = adjacency.values.sumOf { it.size } < edges.size
 
+    internal fun edgeById(id: String): KuiverEdge? = edgeMap[id]
+
     /**
      * Returns a copy of this graph with [node] added, replacing any existing node with the same id.
      * Edges are left untouched, which makes this the way to update a node's position or dimensions.

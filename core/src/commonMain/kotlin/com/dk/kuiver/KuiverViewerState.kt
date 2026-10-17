@@ -172,7 +172,12 @@ class KuiverViewerState internal constructor(
         ) * scale
     }
 
-    /** Moves [nodeId] by [delta] from where it currently is. See [moveNode]. */
+    /**
+     * Moves the node by a specific offset. Also see [moveNode]
+     *
+     * @param nodeId the node id
+     * @param delta how far to move the node, in graph dp
+     */
     fun moveNodeBy(nodeId: String, delta: DpOffset) {
         if (delta == DpOffset.Zero) return
         val node = layoutedKuiver.nodes[nodeId] ?: return
@@ -246,13 +251,17 @@ class KuiverViewerState internal constructor(
         updateTransform(clampScale(min(targetScaleX, targetScaleY)), centeringOffset, animated)
     }
 
-    /** Zooms in one [KuiverViewerConfig.zoomStep], animated. */
+    /**
+     * Zooms in one [KuiverViewerConfig.zoomStep], animated
+     */
     fun zoomIn() {
         val newScale = clampScale(scale * config.zoomStep)
         requestAnimation(newScale, offset * (newScale / scale))
     }
 
-    /** Zooms out one [KuiverViewerConfig.zoomStep], animated. */
+    /**
+     * Zooms out one [KuiverViewerConfig.zoomStep], animated
+     */
     fun zoomOut() {
         val newScale = clampScale(scale / config.zoomStep)
         requestAnimation(newScale, offset * (newScale / scale))

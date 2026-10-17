@@ -34,6 +34,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.isCtrlPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
@@ -55,8 +56,9 @@ import kotlin.math.exp
 /**
  * How a [KuiverViewer] looks and what it lets the user do.
  *
- * Every interaction beyond pan and zoom is off by default: [selectionMode], [nodeDragEnabled] and
- * [hoverEnabled] each add their gesture handling only when enabled.
+ * Every interaction beyond pan and zoom is off by default: [selectionMode], [nodeDragEnabled],
+ * [hoverEnabled], [edgeSelectionMode] and [edgeHoverEnabled] each add their gesture handling only
+ * when enabled.
  *
  * @property showDebugBounds whether to draw the graph and viewport bounds, for debugging
  * @property fitToContent whether the graph is scaled to fit the viewport once it is first laid out
@@ -72,6 +74,9 @@ import kotlin.math.exp
  * @property nodeDragEnabled whether nodes can be dragged to a new position
  * @property hoverEnabled whether the pointer entering a node updates
  * [com.dk.kuiver.KuiverInteractionState.hoveredNodeId]
+ * @property edgeSelectionMode whether and how tapping an edge selects it
+ * @property edgeHoverEnabled whether the pointer moving over an edge updates
+ * [com.dk.kuiver.KuiverInteractionState.hoveredEdgeId]
  * @property relayoutPolicy what happens to dragged nodes when the graph is laid out again
  * @property zoomConditionDesktop when a scroll event zooms instead of panning, Ctrl+scroll by default
  * @property scaleAnimationSpec spec for animated zoom
@@ -93,6 +98,8 @@ data class KuiverViewerConfig(
     val selectionMode: SelectionMode = SelectionMode.NONE,
     val nodeDragEnabled: Boolean = false,
     val hoverEnabled: Boolean = false,
+    val edgeSelectionMode: SelectionMode = SelectionMode.NONE,
+    val edgeHoverEnabled: Boolean = false,
     val relayoutPolicy: RelayoutPolicy = RelayoutPolicy.KEEP_MANUAL,
     val zoomConditionDesktop: (PointerEvent) -> Boolean = { event ->
         event.keyboardModifiers.isCtrlPressed
@@ -114,14 +121,18 @@ data class KuiverViewerConfig(
     val enterAnimationSpec: AnimationSpec<Float>? = null
 )
 
-/** How the viewer renders edges, one per [KuiverViewer] overload. */
+/**
+ * How the viewer renders edges, one per [KuiverViewer] overload.
+ */
 @Immutable
 internal sealed interface EdgeRendering {
-    /** One composable per edge. */
+    // One composable per edge
     @Immutable
-    class PerEdge(val content: @Composable (KuiverEdge, Offset, Offset) -> Unit) : EdgeRendering
+    class PerEdge(
+        val content: @Composable KuiverEdgeScope.(KuiverEdge, Offset, Offset) -> Unit
+    ) : EdgeRendering
 
-    /** All edges from one canvas. */
+    // All edges from one canvas
     @Immutable
     class Batched(val style: (KuiverEdge) -> EdgeStyle) : EdgeRendering
 }
@@ -138,7 +149,8 @@ internal sealed interface EdgeRendering {
  * @param callbacks what the viewer reports back about clicks, drags and long presses
  * @param nodeContent composable content for rendering nodes, with the node's selection, hover and
  * drag state as its [KuiverNodeScope] receiver
- * @param edgeContent composable content for rendering edges
+ * @param edgeContent composable content for rendering edges, with the edge's selection and hover
+ * state as its [KuiverEdgeScope] receiver
  */
 @Composable
 fun KuiverViewer(
@@ -147,7 +159,7 @@ fun KuiverViewer(
     config: KuiverViewerConfig = KuiverViewerConfig(),
     callbacks: KuiverInteractionCallbacks = KuiverInteractionCallbacks.None,
     nodeContent: @Composable KuiverNodeScope.(KuiverNode) -> Unit,
-    edgeContent: @Composable (KuiverEdge, Offset, Offset) -> Unit
+    edgeContent: @Composable KuiverEdgeScope.(KuiverEdge, Offset, Offset) -> Unit
 ) {
     KuiverViewer(
         state = state,
@@ -164,12 +176,16 @@ fun KuiverViewer(
  *
  * Edges are described by [EdgeStyle] values instead of composables, which renders large edge sets
  * much cheaper but supports no edge labels. Suited to graphs of several hundred nodes and up.
+ * [edgeStyle] can read edge selection and hover from [KuiverViewerState.interaction].
  *
  * ```kotlin
  * KuiverViewer(
  *     state = state,
  *     nodeContent = { node -> Text(node.id) },
- *     edgeStyle = { edge -> EdgeStyle.styled(edge, baseColor = Color.Gray) }
+ *     edgeStyle = { edge ->
+ *         val selected = state.interaction.isEdgeSelected(edge.id)
+ *         EdgeStyle.styled(edge, baseColor = if (selected) Color.Blue else Color.Gray)
+ *     }
  * )
  * ```
  *
@@ -239,6 +255,9 @@ internal fun ViewerRenderer(
     // Single progress animation for all node positions, see LayoutTransition
     val layoutTransition = remember { LayoutTransition() }
     val reportMeasured = remember(state) { state::updateMeasuredDimensions }
+    val edgeHitRegistry = remember { EdgeHitRegistry() }
+    val edgesInteractive = config.edgeSelectionMode != SelectionMode.NONE ||
+            config.edgeHoverEnabled || callbacks.onEdgeClick != null
 
     // run before LaunchedEffect so the initial auto-fit already has config
     SideEffect {
@@ -281,6 +300,21 @@ internal fun ViewerRenderer(
         )).forEach { nodeId ->
             if (nodeId !in currentNodeIds) interaction.forget(nodeId)
         }
+    }
+
+    // Remove interaction state and hit paths for edges that no longer exist
+    LaunchedEffect(state.layoutedKuiver.edges) {
+        val currentEdgeIds = state.layoutedKuiver.edges.mapTo(HashSet()) { it.id }
+        interaction.retainEdges(currentEdgeIds)
+        edgeHitRegistry.retain(currentEdgeIds)
+    }
+
+    // Clear hover when it is turned off
+    LaunchedEffect(config.hoverEnabled) {
+        if (!config.hoverEnabled) interaction.hoveredNodeId = null
+    }
+    LaunchedEffect(config.edgeHoverEnabled) {
+        if (!config.edgeHoverEnabled) interaction.hoveredEdgeId = null
     }
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
@@ -336,7 +370,7 @@ internal fun ViewerRenderer(
                 // One awaitPointerEventScope per gesture, re-entering it between events drops them
                 .pointerInput(state) {
                     awaitEachGesture {
-                        awaitFirstDown(requireUnconsumed = false)
+                        val down = awaitFirstDown(requireUnconsumed = false)
 
                         // Consume only past touch slop, earlier would cancel taps on nodes
                         var pastSlop = false
@@ -397,12 +431,30 @@ internal fun ViewerRenderer(
                             }
 
                             if (event.changes.none { it.pressed }) {
-                                // A tap on the empty canvas
                                 if (!pastSlop && !handledByNode) {
-                                    if (currentConfig.selectionMode != SelectionMode.NONE) {
-                                        interaction.clearSelection()
+                                    val edgeMode = currentConfig.edgeSelectionMode
+                                    val onEdgeClick = currentCallbacks.onEdgeClick
+                                    val edgeId = if (
+                                        edgeMode != SelectionMode.NONE || onEdgeClick != null
+                                    ) {
+                                        edgeAt(down.position, state, edgeHitRegistry)
+                                    } else {
+                                        null
                                     }
-                                    currentCallbacks.onCanvasClick?.invoke()
+                                    val edge = edgeId?.let { state.layoutedKuiver.edgeById(it) }
+
+                                    if (edge != null) {
+                                        // A tap on an edge
+                                        interaction.applyEdgeSelectionTap(edge.id, edgeMode)
+                                        onEdgeClick?.invoke(edge)
+                                    } else {
+                                        // A tap on the empty canvas
+                                        interaction.clearSelectionOnCanvasTap(
+                                            currentConfig.selectionMode,
+                                            edgeMode
+                                        )
+                                        currentCallbacks.onCanvasClick?.invoke()
+                                    }
                                 }
                                 break
                             }
@@ -447,6 +499,35 @@ internal fun ViewerRenderer(
                         }
                     }
                 }
+                .then(
+                    if (config.edgeHoverEnabled) {
+                        Modifier.pointerInput(state) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    interaction.hoveredEdgeId = when (event.type) {
+                                        PointerEventType.Exit -> null
+                                        PointerEventType.Enter, PointerEventType.Move ->
+                                            // Nodes are drawn over edges
+                                            if (interaction.hoveredNodeId != null) {
+                                                null
+                                            } else {
+                                                edgeAt(
+                                                    event.changes.first().position,
+                                                    state,
+                                                    edgeHitRegistry
+                                                )
+                                            }
+
+                                        else -> continue
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        Modifier
+                    }
+                )
         ) {
             CompositionLocalProvider(LocalAnchorRegistry provides anchorRegistry) {
                 Box(
@@ -475,6 +556,7 @@ internal fun ViewerRenderer(
                             anchorRegistry = anchorRegistry,
                             skipAnimation = skipAnimation,
                             bends = bends,
+                            hitRegistry = edgeHitRegistry.takeIf { edgesInteractive },
                             edgeStyle = edges.style
                         )
 
@@ -497,6 +579,9 @@ internal fun ViewerRenderer(
                                             interaction = interaction,
                                             anchorRegistry = anchorRegistry,
                                             skipAnimation = skipAnimation,
+                                            hitRegistry = edgeHitRegistry.takeIf {
+                                                edgesInteractive
+                                            },
                                             edgeContent = edges.content
                                         )
                                     }
@@ -535,3 +620,22 @@ internal fun ViewerRenderer(
     }
 }
 
+/**
+ * How far from an edge a tap still hits it, in screen dp.
+ */
+private val EDGE_HIT_TOLERANCE = 8.dp
+
+/**
+ * Returns the id of the edge under [position] in the viewer, or null if there is none.
+ */
+private fun PointerInputScope.edgeAt(
+    position: Offset,
+    state: KuiverViewerState,
+    registry: EdgeHitRegistry
+): String? {
+    // Map from the screen to the graph layer
+    val center = Offset(size.width / 2f, size.height / 2f)
+    val pan = Offset(state.offset.x.toPx(), state.offset.y.toPx())
+    val graphPoint = (position - center - pan) / state.scale + center
+    return registry.hitTest(graphPoint, EDGE_HIT_TOLERANCE.toPx() / state.scale)
+}

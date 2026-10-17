@@ -13,7 +13,9 @@ import androidx.compose.ui.unit.dp
 import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.util.calculateNodeBounds
 
-/** Draws the graph bounds in red and the viewport in blue. */
+/**
+ * Draws the graph bounds in red and the viewport in blue.
+ */
 @Composable
 internal fun RenderDebugBounds(
     kuiver: Kuiver,

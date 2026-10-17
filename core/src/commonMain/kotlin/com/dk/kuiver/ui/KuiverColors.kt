@@ -54,10 +54,16 @@ data class KuiverColors(
 val LocalKuiverColors: ProvidableCompositionLocal<KuiverColors> =
     staticCompositionLocalOf { KuiverColors() }
 
-/** Default values used by kuiver's edge composables, themeable via [LocalKuiverColors]. */
+/**
+ * Default values used by kuiver's edge composables, themeable via [LocalKuiverColors]
+ */
 object KuiverDefaults {
 
-    /** An [EdgeLabelStyle] built from the current [LocalKuiverColors]. */
+    /**
+     * Builds the default edge label style
+     *
+     * @return an [EdgeLabelStyle] built from the current [LocalKuiverColors]
+     */
     @Composable
     fun edgeLabelStyle(): EdgeLabelStyle = LocalKuiverColors.current.let { colors ->
         EdgeLabelStyle(

@@ -2,6 +2,7 @@ package com.dk.kuiver.renderer
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
@@ -34,10 +35,12 @@ internal fun RenderEdge(
     interaction: KuiverInteractionState,
     anchorRegistry: AnchorPositionRegistry,
     skipAnimation: Boolean,
-    edgeContent: @Composable (KuiverEdge, Offset, Offset) -> Unit
+    hitRegistry: EdgeHitRegistry?,
+    edgeContent: @Composable KuiverEdgeScope.(KuiverEdge, Offset, Offset) -> Unit
 ) {
+    val density = LocalDensity.current
     // edgeContent takes endpoints by value so a moving edge has to resolve them in composition
-    val (edgeStart, edgeEnd) = LocalDensity.current.resolveEdgeEndpoints(
+    val (edgeStart, edgeEnd) = density.resolveEdgeEndpoints(
         edge = edge,
         bend = bend,
         fromNode = fromNode,
@@ -51,11 +54,40 @@ internal fun RenderEdge(
         skipAnimation = skipAnimation
     )
 
+    val scope = remember(edge.id, interaction) { EdgeScope(edge.id, interaction) }
+
+    if (hitRegistry == null) {
+        scope.EdgeContentWithBend(edge, bend, edgeStart, edgeEnd, edgeContent)
+        return
+    }
+
+    val reporter = remember(edge.id, hitRegistry) {
+        EdgePathReporter { path ->
+            if (path == null) {
+                hitRegistry.clear(edge.id)
+            } else {
+                hitRegistry.report(edge.id, path)
+            }
+        }
+    }
+    CompositionLocalProvider(LocalEdgePathReporter provides reporter) {
+        scope.EdgeContentWithBend(edge, bend, edgeStart, edgeEnd, edgeContent)
+    }
+}
+
+@Composable
+private fun KuiverEdgeScope.EdgeContentWithBend(
+    edge: KuiverEdge,
+    bend: EdgeBend?,
+    from: Offset,
+    to: Offset,
+    edgeContent: @Composable KuiverEdgeScope.(KuiverEdge, Offset, Offset) -> Unit
+) {
     if (bend == null) {
-        edgeContent(edge, edgeStart, edgeEnd)
+        edgeContent(edge, from, to)
     } else {
         CompositionLocalProvider(LocalEdgeBend provides bend.amount) {
-            edgeContent(edge, edgeStart, edgeEnd)
+            edgeContent(edge, from, to)
         }
     }
 }

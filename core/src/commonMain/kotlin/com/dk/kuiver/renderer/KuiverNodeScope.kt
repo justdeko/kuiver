@@ -14,16 +14,15 @@ import com.dk.kuiver.KuiverInteractionState
  *     Box(Modifier.border(border, if (isHovered) Color.Blue else Color.Gray)) { Text(node.id) }
  * }
  * ```
+ *
+ * @property isSelected whether this node is selected. Denoted by being part of [KuiverInteractionState.selectedNodeIds].
+ * @property isHovered whether the pointer is over this node. Always false on touch, which has no hover.
+ * @property isDragging whether this node is the one currently being dragged.
  */
 @Stable
 interface KuiverNodeScope {
-    /** Whether this node is part of [KuiverInteractionState.selectedNodeIds]. */
     val isSelected: Boolean
-
-    /** Whether the pointer is over this node. Always false on touch, which has no hover. */
     val isHovered: Boolean
-
-    /** Whether this node is the one currently being dragged. */
     val isDragging: Boolean
 }
 
