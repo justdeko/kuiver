@@ -44,7 +44,8 @@ internal enum class EdgeMode {
 
 internal class ViewerScene(
     initial: Kuiver,
-    private val edgeMode: EdgeMode = EdgeMode.CUSTOM_CANVAS
+    private val edgeMode: EdgeMode = EdgeMode.CUSTOM_CANVAS,
+    private val config: KuiverViewerConfig = KuiverViewerConfig(fitToContent = false)
 ) {
     val state = KuiverViewerState(initial).apply {
         layoutedKuiver = initial
@@ -87,7 +88,7 @@ internal class ViewerScene(
     fun Content() {
         ViewerRenderer(
             state = state,
-            config = KuiverViewerConfig(fitToContent = false),
+            config = config,
             anchorRegistry = remember { AnchorPositionRegistry() },
             nodeContent = { node ->
                 nodeCompositions++

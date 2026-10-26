@@ -9,35 +9,20 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.AddCircle
-import androidx.compose.material.icons.filled.AddLink
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ButtonGroup
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
@@ -49,245 +34,45 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.dk.kuiver.model.layout.LayoutDirection
-import com.dk.kuiver.sample.LayoutAlgorithm
 import com.dk.kuiver.sample.NodeColorType
 import com.dk.kuiver.sample.NodeColors
 
 @Composable
-fun GraphBuilderHeader(
-    modifier: Modifier = Modifier,
-    nodeCount: Int,
-    edgeCount: Int,
-    isDarkTheme: Boolean,
-    onThemeToggle: () -> Unit
+internal fun <T> ConnectedToggleGroup(
+    options: List<T>,
+    selected: T,
+    label: (T) -> String,
+    icon: ((T) -> ImageVector)? = null,
+    onSelect: (T) -> Unit
 ) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Kuiver",
-                    style = MaterialTheme.typography.displayMedium.copy(
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = (-2).sp,
-                    ),
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = "Nodes: $nodeCount | Edges: $edgeCount",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-
-            IconButton(
-                onClick = onThemeToggle
-            ) {
-                Icon(
-                    imageVector = if (isDarkTheme) Icons.Filled.LightMode else Icons.Filled.DarkMode,
-                    contentDescription = if (isDarkTheme) "Switch to light mode" else "Switch to dark mode",
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-fun GraphControlMenu(
-    showNodeForm: Boolean,
-    showEdgeForm: Boolean,
-    selectedLayoutAlgorithm: LayoutAlgorithm,
-    selectedLayoutDirection: LayoutDirection,
-    isAutoGenerating: Boolean,
-    onToggleNodeForm: () -> Unit,
-    onToggleEdgeForm: () -> Unit,
-    onToggleDebugBounds: () -> Unit,
-    onToggleAutoGenerate: () -> Unit,
-    onLayoutAlgorithmChange: (LayoutAlgorithm) -> Unit,
-    onLayoutDirectionChange: (LayoutDirection) -> Unit,
-    onClearAll: () -> Unit,
-    onNavigateToDemo: () -> Unit,
-    onNavigateToStressTest: () -> Unit,
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(8.dp).fillMaxWidth(),
-        ) {
-            ButtonGroup(
-                expandedRatio = 0f, // TODO remove when this works
-                overflowIndicator = { menuState ->
-                    FilledIconButton(
-                        onClick = {
-                            if (menuState.isShowing) {
-                                menuState.dismiss()
-                            } else {
-                                menuState.show()
-                            }
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.MoreVert,
-                            contentDescription = "More options",
-                        )
-                    }
+    Row(horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)) {
+        options.forEachIndexed { index, option ->
+            ToggleButton(
+                checked = option == selected,
+                onCheckedChange = { onSelect(option) },
+                modifier = Modifier.semantics { role = Role.RadioButton },
+                shapes = when (index) {
+                    0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                    options.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                    else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
                 }
             ) {
-                clickableItem(
-                    onClick = onToggleNodeForm,
-                    label = "Node",
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Filled.AddCircle,
-                            contentDescription = "${if (showNodeForm) "Hide" else "Add"} Node"
-                        )
-                    }
-                )
-                clickableItem(
-                    onClick = onToggleEdgeForm,
-                    label = "Edge",
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Filled.AddLink,
-                            contentDescription = "${if (showEdgeForm) "Hide" else "Add"} Edge"
-                        )
-                    }
-                )
-                clickableItem(
-                    onClick = onClearAll,
-                    label = "Clear All",
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Filled.Delete,
-                            contentDescription = "Clear All"
-                        )
-                    }
-                )
-                clickableItem(
-                    onClick = onToggleAutoGenerate,
-                    label = if (isAutoGenerating) "Stop" else "Auto",
-                    icon = {
-                        Icon(
-                            imageVector = if (isAutoGenerating) Icons.Filled.Stop else Icons.Filled.PlayArrow,
-                            contentDescription = if (isAutoGenerating) "Stop auto-generation" else "Start auto-generation"
-                        )
-                    }
-                )
-                clickableItem(
-                    onClick = onNavigateToDemo,
-                    label = "Demo",
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Filled.Visibility,
-                            contentDescription = "View Process Demo"
-                        )
-                    }
-                )
-                clickableItem(
-                    onClick = onNavigateToStressTest,
-                    label = "Stress",
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Filled.Speed,
-                            contentDescription = "Stress Test"
-                        )
-                    }
-                )
-                clickableItem(
-                    onClick = onToggleDebugBounds,
-                    label = "Debug",
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Filled.Settings,
-                            contentDescription = "Debug"
-                        )
-                    }
-                )
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Layout:", fontWeight = FontWeight.Medium)
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
-                ) {
-                    LayoutAlgorithm.entries.forEachIndexed { index, algorithm ->
-                        ToggleButton(
-                            checked = selectedLayoutAlgorithm == algorithm,
-                            onCheckedChange = { onLayoutAlgorithmChange(algorithm) },
-                            modifier = Modifier.semantics { role = Role.RadioButton },
-                            shapes = when (index) {
-                                0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
-                                LayoutAlgorithm.entries.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
-                                else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
-                            },
-                        ) {
-                            Text(
-                                when (algorithm) {
-                                    LayoutAlgorithm.HIERARCHICAL -> "Hierarchical"
-                                    LayoutAlgorithm.FORCE_DIRECTED -> "Force"
-                                }
-                            )
-                        }
-                    }
+                if (icon != null) {
+                    Icon(
+                        icon(option),
+                        contentDescription = null,
+                        modifier = Modifier.size(ButtonDefaults.IconSize)
+                    )
+                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
                 }
-
-                AnimatedVisibility(selectedLayoutAlgorithm == LayoutAlgorithm.HIERARCHICAL) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
-                    ) {
-                        LayoutDirection.entries.forEachIndexed { index, direction ->
-                            ToggleButton(
-                                checked = selectedLayoutDirection == direction,
-                                onCheckedChange = { onLayoutDirectionChange(direction) },
-                                modifier = Modifier.semantics { role = Role.RadioButton },
-                                shapes = when (index) {
-                                    0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
-                                    LayoutDirection.entries.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
-                                    else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
-                                },
-                            ) {
-                                Icon(
-                                    imageVector = when (direction) {
-                                        LayoutDirection.HORIZONTAL -> Icons.AutoMirrored.Filled.ArrowForward
-                                        LayoutDirection.VERTICAL -> Icons.Filled.ArrowDownward
-                                    },
-                                    contentDescription = when (direction) {
-                                        LayoutDirection.HORIZONTAL -> "Horizontal layout"
-                                        LayoutDirection.VERTICAL -> "Vertical layout"
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
+                Text(label(option))
             }
         }
     }
@@ -555,5 +340,12 @@ fun ConnectionModeBanner(
                 Text("Cancel", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             }
         }
+    }
+}
+
+@Composable
+internal fun ToolbarButton(icon: ImageVector, description: String, onClick: () -> Unit) {
+    IconButton(onClick = onClick, shapes = IconButtonDefaults.shapes()) {
+        Icon(icon, contentDescription = description)
     }
 }

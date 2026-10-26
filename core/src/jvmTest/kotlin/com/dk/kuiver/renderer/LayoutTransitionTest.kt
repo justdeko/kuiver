@@ -1,10 +1,13 @@
 package com.dk.kuiver.renderer
 
+import androidx.compose.animation.core.keyframes
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.v2.runComposeUiTest
+import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.edge
+import com.dk.kuiver.util.times
 import kotlin.math.hypot
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -101,6 +104,103 @@ class LayoutTransitionTest {
     }
 
     @Test
+    fun retargetingATransitionKeepsNodesMovingAtTheirSpeed() = runComposeUiTest {
+        // Each generation spreads the ring a little further, as a node growing frame by frame does
+        val base = ringGraph(NODE_COUNT, withEdges = false, seed = 1)
+        val scene = ViewerScene(base)
+        mainClock.autoAdvance = false
+        setContent { scene.Content() }
+        settle(scene)
+
+        runOnIdle { scene.state.layoutedKuiver = base.spreadBy(1.5f) }
+        repeat(4) {
+            mainClock.advanceTimeByFrame()
+            waitForIdle()
+        }
+        var previous = scene.nodeCenters.toMap()
+        mainClock.advanceTimeByFrame()
+        waitForIdle()
+        val stepsBefore = scene.nodeCenters.mapValues { (id, center) ->
+            (center - previous.getValue(id)).getDistance()
+        }
+        previous = scene.nodeCenters.toMap()
+
+        runOnIdle { scene.state.layoutedKuiver = base.spreadBy(1.55f) }
+        repeat(3) { frame ->
+            mainClock.advanceTimeByFrame()
+            waitForIdle()
+            scene.nodeCenters.forEach { (id, center) ->
+                val step = (center - previous.getValue(id)).getDistance()
+                assertTrue(
+                    step > stepsBefore.getValue(id) * MIN_SPEED_KEPT,
+                    "node $id slowed to $step px on frame $frame after the retarget, " +
+                            "moved ${stepsBefore.getValue(id)} px before"
+                )
+            }
+            previous = scene.nodeCenters.toMap()
+        }
+    }
+
+    @Test
+    fun aTransitionSettlesWithoutAFinalJump() = runComposeUiTest {
+        val base = ringGraph(NODE_COUNT, withEdges = false, seed = 1)
+        val scene = ViewerScene(base)
+        mainClock.autoAdvance = false
+        setContent { scene.Content() }
+        settle(scene)
+
+        runOnIdle { scene.state.layoutedKuiver = base.spreadBy(2f) }
+        var previous = scene.nodeCenters.toMap()
+        val lastSteps = mutableMapOf<String, Float>()
+        repeat(TRANSITION_FRAMES) {
+            mainClock.advanceTimeByFrame()
+            waitForIdle()
+            scene.nodeCenters.forEach { (id, center) ->
+                val step = (center - previous.getValue(id)).getDistance()
+                if (step > 0f) lastSteps[id] = step
+            }
+            previous = scene.nodeCenters.toMap()
+        }
+
+        // Nodes travel about 1000 px here, the last 1% of that as one step is visible
+        lastSteps.forEach { (id, step) ->
+            assertTrue(step <= MAX_FINAL_STEP_PX, "node $id ended with a jump of $step px")
+        }
+    }
+
+    @Test
+    fun keyframesDriveTheProgressAsWritten() = runComposeUiTest {
+        // Hold halfway for most of the animation
+        val spec = keyframes {
+            durationMillis = 1600
+            0.5f at 160
+            0.5f at 1440
+        }
+        val base = ringGraph(NODE_COUNT, withEdges = false, seed = 1)
+        val scene = ViewerScene(
+            base,
+            config = KuiverViewerConfig(fitToContent = false, layoutAnimationSpec = spec)
+        )
+        mainClock.autoAdvance = false
+        setContent { scene.Content() }
+        settle(scene)
+        val start = scene.nodeCenters.toMap()
+
+        runOnIdle { scene.state.layoutedKuiver = base.spreadBy(2f) }
+        repeat(50) { mainClock.advanceTimeByFrame() }
+        waitForIdle()
+        val middle = scene.nodeCenters.toMap()
+        repeat(60) { mainClock.advanceTimeByFrame() }
+        waitForIdle()
+
+        scene.nodeCenters.forEach { (id, end) ->
+            val halfway = (start.getValue(id) + end) / 2f
+            val offBy = (middle.getValue(id) - halfway).getDistance()
+            assertTrue(offBy <= TOLERANCE_PX, "node $id is $offBy px from halfway")
+        }
+    }
+
+    @Test
     fun batchedEdgesDrawWhereTheEdgeComposablesDo() {
         // Endpoints resolved in the draw phase against the same math run in composition
         val graph = ringGraph(NODE_COUNT, withEdges = true, seed = 1).rebuild {
@@ -140,6 +240,10 @@ class LayoutTransitionTest {
         }
     }
 
+    // Every node moved away from the origin by factor
+    private fun Kuiver.spreadBy(factor: Float): Kuiver =
+        withNodes(nodes.values.map { it.copy(position = it.position * factor) })
+
     private fun ComposeUiTest.settle(scene: ViewerScene) {
         repeat(SETTLE_FRAMES) { mainClock.advanceTimeByFrame() }
         waitForIdle()
@@ -156,5 +260,14 @@ class LayoutTransitionTest {
 
         /** Fraction of the travelled distance a retarget must not give up */
         const val MIN_PROGRESS_KEPT = 0.5f
+
+        /** Fraction of its speed a node has to keep through a retarget */
+        const val MIN_SPEED_KEPT = 0.5f
+
+        /** Frames for the default layout spring to come to rest */
+        const val TRANSITION_FRAMES = 300
+
+        /** Largest step allowed on the frame a transition ends, about the rounding of a placement */
+        const val MAX_FINAL_STEP_PX = 1.5f
     }
 }

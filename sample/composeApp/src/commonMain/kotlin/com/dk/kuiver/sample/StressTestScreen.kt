@@ -25,8 +25,6 @@ import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FloatingToolbarDefaults
 import androidx.compose.material3.HorizontalFloatingToolbar
@@ -173,7 +171,6 @@ private fun StressNodeContent(data: StressNodeData) {
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun StressTestControlsCard(
     selectedPreset: StressPreset,
@@ -259,7 +256,6 @@ private fun StressTestTitleRow(
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun StressTestPresetRow(
     selectedPreset: StressPreset,
@@ -300,7 +296,6 @@ private fun StressTestPresetRow(
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun StressTestLayoutRow(
     selectedLayoutAlgorithm: LayoutAlgorithm,
@@ -374,7 +369,6 @@ private fun StressTestLoadingOverlay() {
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun StressTestZoomToolbar(
     state: KuiverViewerState,
@@ -416,7 +410,6 @@ private fun StressTestZoomToolbar(
     )
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun StressTestScreen(onNavigateBack: () -> Unit) {
     var selectedPreset by rememberSaveable { mutableStateOf(StressPreset.MEDIUM) }

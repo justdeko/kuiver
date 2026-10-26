@@ -1,10 +1,12 @@
 package com.dk.kuiver.renderer
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.TwoWayConverter
 import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.VisibilityThreshold
-import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
@@ -28,6 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
@@ -264,25 +267,31 @@ internal fun ViewerRenderer(
         state.config = config
     }
 
-    LaunchedEffect(state.pendingAnimation) {
-        val request = state.pendingAnimation ?: return@LaunchedEffect
-        launch {
-            animate(
-                initialValue = state.scale,
-                targetValue = request.scale,
-                animationSpec = config.scaleAnimationSpec
-            ) { value, _ ->
-                state.scale = value
+    // Zoom and pan animations that keep their velocity across requests
+    val scaleAnimation = remember { Animatable(state.scale, FineScaleConverter) }
+    val offsetAnimation = remember {
+        Animatable(state.offset, DpOffset.VectorConverter, DpOffset.VisibilityThreshold)
+    }
+    LaunchedEffect(state) {
+        snapshotFlow { state.pendingAnimation }.collect { request ->
+            if (request == null) {
+                scaleAnimation.stop()
+                offsetAnimation.stop()
+                return@collect
             }
-        }
-        launch {
-            animate(
-                typeConverter = DpOffset.VectorConverter,
-                initialValue = state.offset,
-                targetValue = request.offset,
-                animationSpec = config.offsetAnimationSpec
-            ) { value, _ ->
-                state.offset = value
+            launch {
+                // Start over from where a gesture left the view
+                if (scaleAnimation.value != state.scale) scaleAnimation.snapTo(state.scale)
+                scaleAnimation.animateTo(request.scale, currentConfig.scaleAnimationSpec) {
+                    // Stop writing once a gesture or a newer request has taken over
+                    if (state.pendingAnimation === request) state.scale = value
+                }
+            }
+            launch {
+                if (offsetAnimation.value != state.offset) offsetAnimation.snapTo(state.offset)
+                offsetAnimation.animateTo(request.offset, currentConfig.offsetAnimationSpec) {
+                    if (state.pendingAnimation === request) state.offset = value
+                }
             }
         }
     }
@@ -639,3 +648,12 @@ private fun PointerInputScope.edgeAt(
     val graphPoint = (position - center - pan) / state.scale + center
     return registry.hitTest(graphPoint, EDGE_HIT_TOLERANCE.toPx() / state.scale)
 }
+
+/**
+ * Scale in thousandths for animating. A spring stops within 0.01 of its target, and a 0.01 step
+ * in scale visibly jumps nodes far from the center.
+ */
+private val FineScaleConverter = TwoWayConverter<Float, AnimationVector1D>(
+    convertToVector = { AnimationVector1D(it * 1000f) },
+    convertFromVector = { it.value / 1000f }
+)

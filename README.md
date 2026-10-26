@@ -322,7 +322,7 @@ buildKuiver {
 - Anchor IDs are scoped per-node (each node has its own namespace).
 - Missing anchors or anchors that aren't found fallback to automatic edge positioning
 
-See `ProcessDiagramDemo.kt` for a complete example with multiple anchors per side.
+See `PlaygroundNode.kt` for a complete example with multiple anchors per side.
 
 ## Layout Algorithms
 
