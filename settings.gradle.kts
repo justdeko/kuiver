@@ -36,6 +36,7 @@ plugins {
 }
 
 include(":core")
+include(":readme-check")
 
 include(":sample")
 include(":sample:composeApp")

@@ -30,6 +30,9 @@ jobs:
       - name: Build library
         run: ./gradlew :core:build --no-daemon
 
+      - name: Compile README snippets
+        run: ./gradlew :readme-check:build --no-daemon
+
       - name: Summary
         if: success()
         run: |

@@ -12,6 +12,7 @@ composeMultiplatform = "1.12.2"
 foundation = "1.12.2"
 kotlin = "2.4.21"
 kotlinx-coroutines = "1.11.0"
+knit = "0.5.1"
 kuiver = "0.5.0"
 material3 = "1.12.0-alpha03"
 mavenPublish = "0.37.0"
@@ -51,6 +52,9 @@ androidMultiplatformLibrary = { id = "com.android.kotlin.multiplatform.library",
 
 # Sample only
 composeHotReload = { id = "org.jetbrains.compose.hot-reload", version.ref = "composeHotReload" }
+
+# README check only
+knit = { id = "org.jetbrains.kotlinx.knit", version.ref = "knit" }
 
 # Core only
 mavenPublish = { id = "com.vanniktech.maven.publish", version.ref = "mavenPublish" }

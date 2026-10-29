@@ -14,8 +14,8 @@
 <br/>
 <br/>
 
-| **Android** | **iOS** | **Web** |
-|:---:|:---:|:---:|
+|                             **Android**                              |                           **iOS**                            |                           **Web**                            |
+|:--------------------------------------------------------------------:|:------------------------------------------------------------:|:------------------------------------------------------------:|
 | <img src="docs/images/demo-android.png" alt="Android" height="400"/> | <img src="docs/images/demo-ios.png" alt="iOS" height="400"/> | <img src="docs/images/demo-web.png" alt="Web" height="400"/> |
 
 </div>
@@ -77,6 +77,54 @@ kotlin {
 
 ## Basic Usage
 
+<!--- CLEAR -->
+<!--- INCLUDE .*
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.isCtrlPressed
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.dk.kuiver.*
+import com.dk.kuiver.model.*
+import com.dk.kuiver.model.layout.*
+import com.dk.kuiver.renderer.*
+import com.dk.kuiver.ui.*
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
+
+lateinit var viewerState: KuiverViewerState
+lateinit var kuiver: Kuiver
+lateinit var someEdgeFromTheGraph: KuiverEdge
+lateinit var nodeContent: @Composable KuiverNodeScope.(KuiverNode) -> Unit
+lateinit var edgeContent: @Composable KuiverEdgeScope.(KuiverEdge, Offset, Offset) -> Unit
+lateinit var edgeStyle: (KuiverEdge) -> EdgeStyle
+
+fun showMenuFor(node: KuiverNode) = Unit
+
+@Composable
+fun snippet() {
+----- SUFFIX .*
+}
+-->
+
 ```kotlin
 @Composable
 fun MyGraphViewer() {
@@ -128,6 +176,8 @@ fun MyGraphViewer() {
 }
 ```
 
+<!--- KNIT example-readme-01.kt -->
+
 ## Customization
 
 ### Node Data
@@ -171,14 +221,16 @@ edgeContent = { edge, from, to ->
 }
 ```
 
+<!--- KNIT example-readme-02.kt -->
+
 Pass the path as `hitPath` to `EdgeCanvas` to make a custom edge tappable and hoverable, see
 [Selecting, Hovering and Dragging](#selecting-hovering-and-dragging).
 
 ### Edge Labels
 
 Use `EdgeContentWithLabel` (or `StyledEdgeContent`) to display text along an edge. Labels
-automatically hide on edges shorter than `minEdgeLengthForLabel` and can optionally rotate
-to follow the edge direction.
+automatically hide on edges shorter than `minEdgeLengthForLabel` and can optionally rotate to follow
+the edge direction.
 
 ```kotlin
 edgeContent = { edge, from, to ->
@@ -209,14 +261,16 @@ edgeContent = { edge, from, to ->
 }
 ```
 
-`StyledEdgeContent` also accepts the same label parameters, so you can combine automatic
-edge styling with labels in one call.
+<!--- KNIT example-readme-03.kt -->
+
+`StyledEdgeContent` also accepts the same label parameters, so you can combine automatic edge
+styling with labels in one call.
 
 ### Theming
 
 Kuiver depends on compose `runtime` + `foundation` + `ui` only, so it can't read `MaterialTheme`
-directly. However you can use`LocalKuiverColors`. Provide it once instead of overriding colors
-in every `edgeContent` lambda:
+directly. However, you can use`LocalKuiverColors`. Provide it once instead of overriding colors in
+every `edgeContent` lambda:
 
 ```kotlin
 CompositionLocalProvider(
@@ -235,20 +289,24 @@ CompositionLocalProvider(
 }
 ```
 
+<!--- KNIT example-readme-04.kt -->
+
 ### Custom Arrow Drawing
 
 Replace the default filled-triangle arrow with any `DrawScope` lambda via the `arrowDrawer`
 parameter, available on all edge composables:
 
 ```kotlin
-val circleArrow: ArrowDrawer = { arrowTip, direction, color ->
-    drawCircle(color = color, radius = 8f, center = arrowTip)
+val circleArrow: ArrowDrawer = { arrowTip, _, color, arrowSize ->
+  drawCircle(color = color, radius = arrowSize / 2, center = arrowTip)
 }
 
 edgeContent = { edge, from, to ->
     EdgeContent(from, to, arrowDrawer = circleArrow)
 }
 ```
+
+<!--- KNIT example-readme-05.kt -->
 
 ### Node Dimensions
 
@@ -270,10 +328,13 @@ buildKuiver {
 }
 ```
 
+<!--- KNIT example-readme-06.kt -->
+
 Auto-measured nodes are measured while they render, with unbounded constraints, so a node is as
 large as its content wants to be. The measurement is repeated whenever the content changes size, and
 the graph is laid out again with the new sizes, so nodes that grow or shrink at runtime keep their
-spacing. Nodes with explicit dimensions are held to them, and their content is given that much room.
+spacing. Nodes with explicit dimensions are layouted faster, but break the layout constraints if the
+content is larger than the specified dimensions.
 
 ### Edge Anchor Points
 
@@ -318,7 +379,10 @@ buildKuiver {
 }
 ```
 
+<!--- KNIT example-readme-07.kt -->
+
 **Things to keep in mind:**
+
 - Anchor IDs are scoped per-node (each node has its own namespace).
 - Missing anchors or anchors that aren't found fallback to automatic edge positioning
 
@@ -348,6 +412,8 @@ val layoutConfig = LayoutConfig.Hierarchical(
 )
 ```
 
+<!--- KNIT example-readme-08.kt -->
+
 **Edge Types in Hierarchical Layout:**
 
 - `FORWARD` - Edges to descendants (typical parent-child edges)
@@ -369,10 +435,12 @@ val layoutConfig = LayoutConfig.ForceDirected(
 )
 ```
 
+<!--- KNIT example-readme-09.kt -->
+
 ### Custom Layouts
 
-You can provide your own layout algorithm using `LayoutConfig.Custom`. This gives you full
-control over node positioning.
+You can provide your own layout algorithm using `LayoutConfig.Custom`. This gives you full control
+over node positioning.
 
 ```kotlin
 // Define a custom circular layout
@@ -401,11 +469,14 @@ val layoutConfig = LayoutConfig.Custom(
 )
 ```
 
+<!--- KNIT example-readme-10.kt -->
+
 **Custom Layout Tips:**
 
 - Your layout function receives the `Kuiver` graph and `LayoutConfig` (use `LayoutConfig.Custom`)
 - Access canvas dimensions via `config.width` and `config.height`, both `Dp`
-- Write each node a `DpOffset` position. `Dp` multiplies as `spacing * count`, never `count * spacing`
+- Write each node a `DpOffset` position. `Dp` multiplies as `spacing * count`, never
+  `count * spacing`
 - Always use `buildKuiverWithClassifiedEdges(updatedNodes, kuiver.edges)` to construct the result
 - Handle zero dimensions gracefully (canvas might not be measured yet on first layout)
 - Use `remember` to stabilize your layout function in Compose to avoid unnecessary recompositions
@@ -461,6 +532,8 @@ KuiverViewer(
 )
 ```
 
+<!--- KNIT example-readme-11.kt -->
+
 ## Interaction & State Management
 
 ### Programmatic Controls
@@ -482,6 +555,8 @@ val currentOffset = viewerState.offset
 val isReady = viewerState.hasFittedInitially  // true when first auto-fit completes
 ```
 
+<!--- KNIT example-readme-12.kt -->
+
 `zoomIn()`, `zoomOut()` and `centerGraph()` read `contentPadding`, `minScale`, `maxScale` and
 `zoomStep` from the `KuiverViewerConfig` of the `KuiverViewer` the state is passed to, so they stay
 in sync with gestures. `updateTransform` is unclamped by design — it sets exactly what you ask for.
@@ -493,7 +568,8 @@ in sync with gestures. `updateTransform` is unclamped by design — it sets exac
 
 ### Selecting, Hovering and Dragging
 
-You can enable selecting and hovering nodes and edges and dragging nodes, then respond to them with `KuiverInteractionCallbacks`:
+You can enable selecting and hovering nodes and edges and dragging nodes, then respond to them with
+`KuiverInteractionCallbacks`:
 
 ```kotlin
 KuiverViewer(
@@ -517,6 +593,8 @@ KuiverViewer(
 )
 ```
 
+<!--- KNIT example-readme-13.kt -->
+
 Additionally, you have `KuiverNodeScope` with `isSelected`, `isHovered` and `isDragging`:
 
 ```kotlin
@@ -531,6 +609,8 @@ nodeContent = { node ->
     ) { Text(node.id) }
 }
 ```
+
+<!--- KNIT example-readme-14.kt -->
 
 `edgeContent` has `KuiverEdgeScope` with `isSelected` and `isHovered`. `isHovered` is always false
 on touch, which has no hover. Nodes and edges share one selection, so selecting an edge clears the
@@ -548,6 +628,8 @@ viewerState.interaction.toggleSelection("B")
 viewerState.interaction.selectEdge("A->B")
 viewerState.interaction.clearSelection()
 ```
+
+<!--- KNIT example-readme-15.kt -->
 
 #### Where Dragged Nodes End Up
 
@@ -570,15 +652,17 @@ viewerState.clearManualPositions()
 viewerState.relayout()
 ```
 
+<!--- KNIT example-readme-16.kt -->
+
 ### State Persistence
 
 Use `rememberSaveableKuiverViewerState` to preserve zoom/pan across process death.
 
 ### Updating the Graph
 
-A `Kuiver` is immutable. `buildKuiver { }` is a simple constructor dsl and every change afterwards 
-hands back a new graph instead of modifying the old one. Two graphs
-with the same nodes and edges are equal, so they work as snapshot state and as `remember` keys.
+A `Kuiver` is immutable. `buildKuiver { }` is a simple constructor dsl and every change afterwards
+hands back a new graph instead of modifying the old one. Two graphs with the same nodes and edges
+are equal, so they work as snapshot state and as `remember` keys.
 
 Derive the new graph and hand it to `viewerState.updateKuiver(newKuiver)`:
 
@@ -603,12 +687,14 @@ val extended = graph.rebuild {
 viewerState.updateKuiver(extended)
 ```
 
+<!--- KNIT example-readme-17.kt -->
+
 `withNode` replaces a node that already carries the same id and leaves its edges alone, which is how
 you move a node or give it explicit dimensions. `withEdge` throws if either endpoint is missing from
 the graph.
 
-Edges are identified by `id`, `"$fromId->$toId"` by default. Give edges their own ids to connect
-the same nodes several times, drawn as fanned out arcs. Custom edges read the bend from
+Edges are identified by `id`, `"$fromId->$toId"` by default. Give edges their own ids to connect the
+same nodes several times, drawn as fanned out arcs. Custom edges read the bend from
 `LocalEdgeBend`. Use `withoutEdge` to drop an edge by its id:
 
 ```kotlin
@@ -621,6 +707,8 @@ graph.withoutEdge("A->B")                   // the default id of an edge from A 
 graph.withoutEdge(someEdgeFromTheGraph)     // matched by id
 ```
 
+<!--- KNIT example-readme-18.kt -->
+
 ## Advanced Features
 
 ### Batched Edges (Large Graphs)
@@ -628,8 +716,8 @@ graph.withoutEdge(someEdgeFromTheGraph)     // matched by id
 Each edge composable is a layout node to compose, measure and draw, and every edge recomposes on
 every frame of a layout animation to pick up its new end points.
 
-Pass `edgeStyle` instead of `edgeContent` to draw the whole edge set from one canvas, with
-end points resolved in the draw phase:
+Pass `edgeStyle` instead of `edgeContent` to draw the whole edge set from one canvas, with end
+points resolved in the draw phase:
 
 ```kotlin
 KuiverViewer(
@@ -640,6 +728,8 @@ KuiverViewer(
     }
 )
 ```
+
+<!--- KNIT example-readme-19.kt -->
 
 `EdgeStyle` has the same parameters as the edge composables:
 
@@ -653,6 +743,8 @@ edgeStyle = { edge ->
     )
 }
 ```
+
+<!--- KNIT example-readme-20.kt -->
 
 Edges are values rather than composables here, so they cannot hold composable content. No edge
 labels in this mode. Edge selection and hover work as usual, read them from
@@ -669,6 +761,8 @@ KuiverViewer(
     edgeStyle = KuiverDefaults.edgeStyle()
 )
 ```
+
+<!--- KNIT example-readme-21.kt -->
 
 ### Cycle Detection
 
@@ -695,6 +789,8 @@ if (kuiver.hasCycles()) {
 }
 ```
 
+<!--- KNIT example-readme-22.kt -->
+
 ### Edge Classification
 
 ```kotlin
@@ -718,6 +814,8 @@ edgeTypes.forEach { (edge, type) ->
 // C -> A: BACK
 ```
 
+<!--- KNIT example-readme-23.kt -->
+
 ### Topological Ordering
 
 ```kotlin
@@ -727,9 +825,13 @@ println("Topological order: $order")
 // Useful for dependency resolution, task scheduling, etc.
 ```
 
+<!--- KNIT example-readme-24.kt -->
+
 ## Sample Application
 
-A complete demo app is included in [`/sample`](./sample). Open the project in **IntelliJ IDEA** or **Android Studio**, sync, and select a run configuration (Desktop/Android/iOS/Web) from the dropdown.
+A complete demo app is included in [`/sample`](./sample). Open the project in **IntelliJ IDEA** or
+**Android Studio**, sync, and select a run configuration (Desktop/Android/iOS/Web) from the
+dropdown.
 
 You can also run from the command line:
 
@@ -745,8 +847,8 @@ The Web target is **experimental** and has known issues.
 
 The library implements several web-specific adjustments to handle browser limitations:
 
-- **Reduced Pan Velocity**: `panVelocity` defaults to `2f` on js/wasmJs (vs `15f` on Android, iOS and
-  desktop) to compensate for higher scroll sensitivity in browsers
+- **Reduced Pan Velocity**: `panVelocity` defaults to `2f` on js/wasmJs (vs `15f` on Android, iOS
+  and desktop) to compensate for higher scroll sensitivity in browsers
 - **Late Fonts**: a font that finishes loading after the first frame re-measures the text in your
   nodes. Kuiver measures nodes as it renders them and lays the graph out again when those
   measurements change, so the nodes end up correctly sized either way. This only arises if you
@@ -757,12 +859,13 @@ The library implements several web-specific adjustments to handle browser limita
 
 ### API Stability
 
-As a beta release, the public API may still change between versions. Breaking changes will be noted in
-the changelog.
+As a beta release, the public API may still change between versions. Breaking changes will be noted
+in the changelog.
 
 ## Contributing
 
 Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on:
+
 - Reporting bugs and requesting features
 - Contributing code and submitting pull requests
 - Development setup and testing
