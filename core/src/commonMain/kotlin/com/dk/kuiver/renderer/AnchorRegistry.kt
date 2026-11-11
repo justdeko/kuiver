@@ -3,6 +3,8 @@ package com.dk.kuiver.renderer
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.snapshots.SnapshotStateMap
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.layout.LayoutCoordinates
 import com.dk.kuiver.model.AnchorOffset
 
 /**
@@ -17,10 +19,8 @@ internal class AnchorPositionRegistry {
      * Maps nodeId -> anchorId -> offset relative to node's top-left corner.
      * Uses mutableStateMapOf to trigger recomposition when anchor positions change.
      */
-    private val _anchorPositions =
-        mutableStateMapOf<String, SnapshotStateMap<String, AnchorOffset>>()
     val anchorPositions: Map<String, Map<String, AnchorOffset>>
-        get() = _anchorPositions
+        field = mutableStateMapOf<String, SnapshotStateMap<String, AnchorOffset>>()
 
     /**
      * Register an anchor position for a specific node.
@@ -30,8 +30,9 @@ internal class AnchorPositionRegistry {
      * @param offset The position of the anchor relative to the node's top-left corner
      */
     fun registerAnchor(nodeId: String, anchorId: String, offset: AnchorOffset) {
-        val nodeAnchors = _anchorPositions.getOrPut(nodeId) { mutableStateMapOf() }
-        nodeAnchors[anchorId] = offset
+        val nodeAnchors = anchorPositions.getOrPut(nodeId) { mutableStateMapOf() }
+        // Skip unchanged offsets
+        if (nodeAnchors[anchorId] != offset) nodeAnchors[anchorId] = offset
     }
 
     /**
@@ -42,7 +43,7 @@ internal class AnchorPositionRegistry {
      * @return The anchor offset, or null if not found
      */
     fun getAnchorOffset(nodeId: String, anchorId: String): AnchorOffset? {
-        return _anchorPositions[nodeId]?.get(anchorId)
+        return anchorPositions[nodeId]?.get(anchorId)
     }
 
     /**
@@ -52,7 +53,7 @@ internal class AnchorPositionRegistry {
      * @param nodeId The ID of the node to clear anchors for
      */
     fun clearNode(nodeId: String) {
-        _anchorPositions.remove(nodeId)
+        anchorPositions.remove(nodeId)
     }
 
     /**
@@ -60,10 +61,20 @@ internal class AnchorPositionRegistry {
      * This should be called when the entire graph is cleared.
      */
     fun clear() {
-        _anchorPositions.clear()
+        anchorPositions.clear()
     }
 }
 
 internal val LocalAnchorRegistry = compositionLocalOf<AnchorPositionRegistry> {
     error("CompositionLocal LocalAnchorRegistry not present")
 }
+
+/**
+ * Layout coordinates of a node's box for anchor origin
+ */
+internal class NodeCoordinates {
+    // Set when the node box is placed
+    var coordinates: LayoutCoordinates? = null
+}
+
+internal val LocalNodeCoordinates = staticCompositionLocalOf<NodeCoordinates?> { null }

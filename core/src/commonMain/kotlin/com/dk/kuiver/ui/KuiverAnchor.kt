@@ -9,6 +9,7 @@ import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalDensity
 import com.dk.kuiver.model.AnchorOffset
 import com.dk.kuiver.renderer.LocalAnchorRegistry
+import com.dk.kuiver.renderer.LocalNodeCoordinates
 
 
 /**
@@ -71,16 +72,21 @@ fun KuiverAnchor(
     content: @Composable (() -> Unit)? = null
 ) {
     val anchorRegistry = LocalAnchorRegistry.current
+    val nodeCoordinates = LocalNodeCoordinates.current
     val density = LocalDensity.current
 
     Box(
         modifier = modifier
             .onGloballyPositioned { coordinates ->
                 // Calculate position relative to node's top-left
-                val anchorCenter = Offset(
-                    coordinates.positionInParent().x + coordinates.size.width / 2f,
-                    coordinates.positionInParent().y + coordinates.size.height / 2f
+                val centerInAnchor = Offset(
+                    coordinates.size.width / 2f,
+                    coordinates.size.height / 2f
                 )
+                val anchorCenter = nodeCoordinates?.coordinates
+                    ?.takeIf { it.isAttached }
+                    ?.localPositionOf(coordinates, centerInAnchor)
+                    ?: (coordinates.positionInParent() + centerInAnchor)
 
                 with(density) {
                     anchorRegistry.registerAnchor(

@@ -32,7 +32,11 @@ kotlin {
         }
     }
 
-    jvm()
+    jvm {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_11)
+        }
+    }
 
     js {
         browser()
@@ -48,9 +52,10 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation(libs.runtime)
-            implementation(libs.foundation)
-            implementation(libs.ui)
+            // Part of the public API
+            api(libs.runtime)
+            api(libs.foundation)
+            api(libs.ui)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

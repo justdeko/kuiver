@@ -1,6 +1,7 @@
 package com.dk.kuiver.renderer
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -69,10 +70,67 @@ class AnchorRegistrationTest {
         )
     }
 
+    @Test
+    fun `a nested anchor registers its offset from the node and not from parent`() =
+        runComposeUiTest {
+            lateinit var registry: AnchorPositionRegistry
+            val graph = buildKuiver {
+                addNode(KuiverNode("A", dimensions = NodeDimensions(NODE_WIDTH.dp, NODE_HEIGHT.dp)))
+            }
+            val state = KuiverViewerState(graph).apply {
+                layoutedKuiver = graph
+                hasFittedInitially = true
+            }
+
+            setContent {
+                registry = remember { AnchorPositionRegistry() }
+                ViewerRenderer(
+                    state = state,
+                    config = KuiverViewerConfig(fitToContent = false),
+                    anchorRegistry = registry,
+                    nodeContent = { node ->
+                        Box(Modifier.size(NODE_WIDTH.dp, NODE_HEIGHT.dp).padding(PADDING.dp)) {
+                            KuiverAnchor(anchorId = "padded", nodeId = node.id) {
+                                Box(Modifier.size(ANCHOR_SIZE.dp))
+                            }
+                            Box(Modifier.align(Alignment.BottomEnd).size(20.dp)) {
+                                KuiverAnchor(
+                                    anchorId = "nested",
+                                    nodeId = node.id,
+                                    modifier = Modifier.align(Alignment.BottomEnd)
+                                ) {
+                                    Box(Modifier.size(ANCHOR_SIZE.dp))
+                                }
+                            }
+                        }
+                    },
+                    edges = EdgeRendering.Batched { EdgeStyle() }
+                )
+            }
+            waitForIdle()
+
+            // Top start of the padded area: (10 + 8 / 2, 10 + 8 / 2)
+            assertEquals(
+                AnchorOffset((PADDING + ANCHOR_SIZE / 2).dp, (PADDING + ANCHOR_SIZE / 2).dp),
+                registry.getAnchorOffset("A", "padded"),
+                "the padding of the node content was left out"
+            )
+            // Bottom end of the padded area: (80 - 10 - 8 / 2, 40 - 10 - 8 / 2)
+            assertEquals(
+                AnchorOffset(
+                    (NODE_WIDTH - PADDING - ANCHOR_SIZE / 2).dp,
+                    (NODE_HEIGHT - PADDING - ANCHOR_SIZE / 2).dp
+                ),
+                registry.getAnchorOffset("A", "nested"),
+                "the anchor registered relative to its own parent"
+            )
+        }
+
     private companion object {
         /** Sizes in dp, which are also px at the test density of 1 */
         const val NODE_WIDTH = 80f
         const val NODE_HEIGHT = 40f
         const val ANCHOR_SIZE = 8f
+        const val PADDING = 10f
     }
 }

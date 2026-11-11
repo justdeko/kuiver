@@ -311,6 +311,32 @@ class NodeInteractionTest {
         assertEquals(true, hovered["A"], "the content was not told that A is hovered")
     }
 
+    @Test
+    fun hoverAndSelectionRecomposeOnlyTheNodesTheyChange() = runComposeUiTest {
+        val state = twoNodeState()
+        val compositions = mutableMapOf<String, Int>()
+        setContent {
+            Scene(
+                state = state,
+                config = config(selectionMode = SelectionMode.SINGLE, hoverEnabled = true),
+                nodeContent = { node ->
+                    compositions[node.id] = (compositions[node.id] ?: 0) + 1
+                    val color = if (isSelected || isHovered) Color.Blue else Color.Gray
+                    Box(Modifier.fillMaxSize().background(color))
+                }
+            )
+        }
+        waitForIdle()
+        compositions.clear()
+
+        onRoot().performMouseInput { moveTo(center + nodeA) }
+        clickAt(nodeA)
+        waitForIdle()
+
+        assertTrue(compositions.containsKey("A"), "the hovered and selected node did not recompose")
+        assertNull(compositions["B"], "a node recomposed for a change to another node")
+    }
+
     private fun config(
         selectionMode: SelectionMode = SelectionMode.NONE,
         nodeDragEnabled: Boolean = false,

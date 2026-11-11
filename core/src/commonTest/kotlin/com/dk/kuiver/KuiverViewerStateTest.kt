@@ -1,11 +1,15 @@
 package com.dk.kuiver
 
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.dk.kuiver.model.Kuiver
+import com.dk.kuiver.model.KuiverEdge
 import com.dk.kuiver.model.KuiverNode
 import com.dk.kuiver.model.NodeDimensions
 import com.dk.kuiver.model.buildKuiver
+import com.dk.kuiver.model.layout.LayoutConfig
+import com.dk.kuiver.model.layout.layout
 import com.dk.kuiver.renderer.KuiverViewerConfig
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -129,5 +133,38 @@ class KuiverViewerStateTest {
         state.applyInitialFit(state.canvasWidth, state.canvasHeight)
         assertFalse(state.hasFittedInitially, "nodes have not been measured yet")
         assertEquals(1f, state.scale, 0.001f)
+    }
+
+    @Test
+    fun `moved node keeps place in the graph when the canvas resizes`() {
+        val graph = buildKuiver {
+            listOf("A", "B", "C").forEach {
+                addNode(KuiverNode(it, dimensions = NodeDimensions(80.dp, 40.dp)))
+            }
+            addEdge(KuiverEdge("A", "B"))
+            addEdge(KuiverEdge("B", "C"))
+        }
+        val state = KuiverViewerState(graph)
+        fun layoutPass(width: Dp) {
+            val laid = layout(graph, LayoutConfig.Hierarchical(width = width, height = 600.dp))
+            state.layoutedKuiver = state.withRelayoutPolicyApplied(laid, width, 600.dp)
+        }
+
+        fun offsetFromB(): DpOffset = state.layoutedKuiver.nodes.getValue("A").position -
+                state.layoutedKuiver.nodes.getValue("B").position
+
+        layoutPass(800.dp)
+        state.moveNodeBy("A", DpOffset(20.dp, 50.dp))
+        val before = offsetFromB()
+
+        layoutPass(1200.dp)
+
+        assertDpEquals(before.x, offsetFromB().x, message = "the moved node drifted horizontally")
+        assertDpEquals(before.y, offsetFromB().y, message = "the moved node drifted vertically")
+        assertEquals(
+            state.layoutedKuiver.nodes.getValue("A").position,
+            state.manualPositions["A"],
+            "manual position is not where the node is"
+        )
     }
 }

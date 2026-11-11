@@ -1,6 +1,8 @@
 package com.dk.kuiver.renderer
 
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import com.dk.kuiver.KuiverInteractionState
 
 /**
@@ -25,6 +27,7 @@ internal class EdgeScope(
     private val edgeId: String,
     private val interaction: KuiverInteractionState
 ) : KuiverEdgeScope {
-    override val isSelected: Boolean get() = interaction.isEdgeSelected(edgeId)
-    override val isHovered: Boolean get() = interaction.hoveredEdgeId == edgeId
+    // Recompose only the edges that change
+    override val isSelected: Boolean by derivedStateOf { interaction.isEdgeSelected(edgeId) }
+    override val isHovered: Boolean by derivedStateOf { interaction.hoveredEdgeId == edgeId }
 }

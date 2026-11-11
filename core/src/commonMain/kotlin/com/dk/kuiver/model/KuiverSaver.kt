@@ -3,6 +3,7 @@ package com.dk.kuiver.model
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import com.dk.kuiver.LayoutFrame
 
 /**
  * Saver for the node positions a user has set by hand, flattened to a list of primitives.
@@ -17,6 +18,27 @@ internal fun manualPositionsSaver(): Saver<Map<String, DpOffset>, Any> = Saver(
         flat.chunked(3).associate { (id, x, y) ->
             id as String to DpOffset((x as Float).dp, (y as Float).dp)
         }
+    }
+)
+
+/**
+ * Saver for the layout frame, flattened to a list of floats.
+ */
+internal fun layoutFrameSaver(): Saver<LayoutFrame?, Any> = Saver(
+    save = { frame ->
+        frame?.let {
+            listOf(
+                it.canvasWidth.value,
+                it.canvasHeight.value,
+                it.center.x.value,
+                it.center.y.value
+            )
+        }
+    },
+    restore = { savedValue ->
+        @Suppress("UNCHECKED_CAST")
+        val (width, height, x, y) = savedValue as List<Float>
+        LayoutFrame(width.dp, height.dp, DpOffset(x.dp, y.dp))
     }
 )
 

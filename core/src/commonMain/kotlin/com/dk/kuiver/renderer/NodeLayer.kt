@@ -4,10 +4,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import com.dk.kuiver.KuiverViewerState
@@ -71,8 +73,15 @@ internal fun NodeLayer(
                 }
                 // Remembered: the content keeps the same receiver across measure passes
                 val scope = remember(nodeId) { NodeScope(nodeId, interaction) }
-                Box(sizeModifier.nodeInteraction(node, state, config, callbacks)) {
-                    scope.nodeContent(node)
+                val nodeCoordinates = remember { NodeCoordinates() }
+                Box(
+                    sizeModifier
+                        .onPlaced { nodeCoordinates.coordinates = it }
+                        .nodeInteraction(node, state, config, callbacks)
+                ) {
+                    CompositionLocalProvider(LocalNodeCoordinates provides nodeCoordinates) {
+                        scope.nodeContent(node)
+                    }
                 }
             }
             val placeable = content.firstOrNull()?.measure(Constraints()) ?: return@forEach
