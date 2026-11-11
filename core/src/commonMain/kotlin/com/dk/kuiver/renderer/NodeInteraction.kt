@@ -81,15 +81,22 @@ internal fun Modifier.nodeInteraction(
 
     var modifier = this
 
-    if (config.hoverEnabled) {
+    if (config.hoverEnabled || config.edgeHoverEnabled) {
         modifier = modifier.pointerInput(nodeId) {
             awaitPointerEventScope {
                 while (true) {
                     when (awaitPointerEvent().type) {
-                        PointerEventType.Enter -> interaction.hoveredNodeId = nodeId
-                        PointerEventType.Exit ->
+                        PointerEventType.Enter -> {
+                            interaction.pointerNodeId = nodeId
+                            if (currentConfig.hoverEnabled) interaction.hoveredNodeId = nodeId
+                        }
+
+                        PointerEventType.Exit -> {
+                            if (interaction.pointerNodeId == nodeId) interaction.pointerNodeId =
+                                null
                             if (interaction.hoveredNodeId == nodeId) interaction.hoveredNodeId =
                                 null
+                        }
                     }
                 }
             }

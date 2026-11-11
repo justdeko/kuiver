@@ -153,6 +153,20 @@ sealed class LayoutConfig {
 }
 
 /**
+ * Lays out a graph without using a viewer.
+ *
+ * [LayoutConfig.ForceDirected] returns the graph unchanged without a canvas size.
+ *
+ * @param kuiver the graph to lay out
+ * @param layoutConfig layout algorithm and settings, hierarchical by default
+ * @return the graph with node positions set and edges classified
+ */
+fun layout(
+    kuiver: Kuiver,
+    layoutConfig: LayoutConfig = LayoutConfig.Hierarchical()
+): Kuiver = layout(kuiver, layoutConfig, checkCancellation = {})
+
+/**
  * Applies the configured layout algorithm to the given graph.
  *
  * @param kuiver The graph to layout
@@ -162,8 +176,8 @@ sealed class LayoutConfig {
  */
 internal fun layout(
     kuiver: Kuiver,
-    layoutConfig: LayoutConfig = LayoutConfig.Hierarchical(),
-    checkCancellation: () -> Unit = {}
+    layoutConfig: LayoutConfig,
+    checkCancellation: () -> Unit
 ): Kuiver {
     return when (layoutConfig) {
         is LayoutConfig.Hierarchical -> hierarchical(kuiver, layoutConfig)

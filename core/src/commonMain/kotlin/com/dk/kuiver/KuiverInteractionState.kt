@@ -68,6 +68,9 @@ class KuiverInteractionState internal constructor() {
     var draggedNodeId: String? by mutableStateOf(null)
         internal set
 
+    // Node under the pointer, also tracked when node hover is off
+    internal var pointerNodeId: String? = null
+
     // How far the dragged node has travelled since the drag started, in graph dp.
     // Applied during placement so the node never recomposes mid-drag.
     internal var dragOffset: DpOffset by mutableStateOf(DpOffset.Zero)
@@ -223,6 +226,7 @@ class KuiverInteractionState internal constructor() {
     internal fun forget(nodeId: String) {
         if (nodeId in selectedNodeIds) selectedNodeIds = selectedNodeIds - nodeId
         if (hoveredNodeId == nodeId) hoveredNodeId = null
+        if (pointerNodeId == nodeId) pointerNodeId = null
         if (draggedNodeId == nodeId) endDrag()
     }
 

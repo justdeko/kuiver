@@ -20,28 +20,7 @@ class KuiverSaverTest {
             addEdge(KuiverEdge("node2", "node1"))
         }
 
-        val saved = mapOf(
-            "nodes" to original.nodes.map { (id, node) ->
-                mapOf(
-                    "id" to id,
-                    "posX" to node.position.x.value,
-                    "posY" to node.position.y.value,
-                    "dimWidth" to node.dimensions?.width?.value,
-                    "dimHeight" to node.dimensions?.height?.value
-                )
-            },
-            "edges" to original.edges.map { edge ->
-                mapOf(
-                    "fromId" to edge.fromId,
-                    "toId" to edge.toId,
-                    "type" to edge.type?.name,
-                    "fromAnchor" to edge.fromAnchor,
-                    "toAnchor" to edge.toAnchor
-                )
-            }
-        )
-
-        val restored = kuiverSaver().restore(saved)
+        val restored = kuiverSaver().roundTrip(original)
         assertNotNull(restored)
 
         // Node with dimensions: position (100,200), dimensions 80x60
@@ -70,6 +49,29 @@ class KuiverSaverTest {
         assertNull(edge2.type)
         assertNull(edge2.fromAnchor)
         assertNull(edge2.toAnchor)
+    }
+
+    @Test
+    fun `graph is saved as flat list of primitives`() {
+        val graph = buildKuiver {
+            addNode(KuiverNode("A", NodeDimensions(80.dp, 60.dp), DpOffset(1.dp, 2.dp)))
+            addNode(KuiverNode("B"))
+            edge("A", "B")
+            edge("A", "B", id = "second")
+        }
+
+        val saved = with(kuiverSaver()) { SaverScope { true }.save(graph) }
+
+        assertEquals(
+            listOf<Any?>(
+                2,
+                "A", 1f, 2f, 80f, 60f,
+                "B", 0f, 0f, null, null,
+                "A", "B", null, null, null, null,
+                "A", "B", null, null, null, "second"
+            ),
+            saved
+        )
     }
 
     @Test

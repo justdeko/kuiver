@@ -134,4 +134,20 @@ class KuiverDslTest {
         assertTrue(edgeTypes.contains(EdgeType.FORWARD))
         assertTrue(edgeTypes.contains(EdgeType.BACK))
     }
+
+    @Test
+    fun `buildKuiverWithClassifiedEdges keeps the order the edges were added in`() {
+        // Classification visits the self-loop first
+        val original = buildKuiver {
+            nodes("A", "B", "C")
+            edge("A", "B")
+            edge("B", "C")
+            edge("A", "C")
+            edge("C", "C")
+        }
+
+        val classified = buildKuiverWithClassifiedEdges(original.nodes.values, original.edges)
+
+        assertEquals(original.edges.map { it.id }, classified.edges.map { it.id })
+    }
 }

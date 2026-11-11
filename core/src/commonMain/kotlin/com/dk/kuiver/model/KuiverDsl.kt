@@ -37,8 +37,9 @@ fun buildKuiverWithClassifiedEdges(
 
     return buildKuiver {
         nodes.forEach { addNode(it) }
-        edgeClassifications.forEach { (edge, type) ->
-            addEdge(edge.copy(type = type))
+        // Keep the order the edges were added in
+        tempKuiver.edges.forEach { edge ->
+            addEdge(edge.copy(type = edgeClassifications[edge] ?: EdgeType.CROSS))
         }
     }
 }

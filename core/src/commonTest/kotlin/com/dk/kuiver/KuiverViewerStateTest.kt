@@ -167,4 +167,18 @@ class KuiverViewerStateTest {
             "manual position is not where the node is"
         )
     }
+
+    @Test
+    fun `initial fit keeps a restored transform`() {
+        val state = stateWith(KuiverViewerConfig(fitToContent = true)).apply {
+            updateTransform(scale = 2f, offset = DpOffset(30.dp, 40.dp))
+            hasRestoredTransform = true
+        }
+
+        state.applyInitialFit(state.canvasWidth, state.canvasHeight)
+
+        assertTrue(state.hasFittedInitially, "the restored graph was never reported as ready")
+        assertEquals(2f, state.scale)
+        assertEquals(DpOffset(30.dp, 40.dp), state.offset)
+    }
 }

@@ -3,7 +3,10 @@ package com.dk.kuiver.renderer
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -19,6 +22,8 @@ import com.dk.kuiver.ui.EdgeStyle
 import com.dk.kuiver.ui.KuiverAnchor
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 /**
  * Anchors are declared inside node content, which the viewer subcomposes. They need the registry
@@ -125,6 +130,40 @@ class AnchorRegistrationTest {
                 "the anchor registered relative to its own parent"
             )
         }
+
+    @Test
+    fun `anchor that leaves node content is unregistered`() = runComposeUiTest {
+        lateinit var registry: AnchorPositionRegistry
+        var showAnchor by mutableStateOf(true)
+        val graph = buildKuiver {
+            addNode(KuiverNode("A", dimensions = NodeDimensions(NODE_WIDTH.dp, NODE_HEIGHT.dp)))
+        }
+        val state = KuiverViewerState(graph).apply {
+            layoutedKuiver = graph
+            hasFittedInitially = true
+        }
+
+        setContent {
+            registry = remember { AnchorPositionRegistry() }
+            ViewerRenderer(
+                state = state,
+                config = KuiverViewerConfig(fitToContent = false),
+                anchorRegistry = registry,
+                nodeContent = { node ->
+                    Box(Modifier.size(NODE_WIDTH.dp, NODE_HEIGHT.dp)) {
+                        if (showAnchor) KuiverAnchor(anchorId = "right", nodeId = node.id)
+                    }
+                },
+                edges = EdgeRendering.Batched { EdgeStyle() }
+            )
+        }
+        waitForIdle()
+        assertNotNull(registry.getAnchorOffset("A", "right"))
+
+        showAnchor = false
+        waitForIdle()
+        assertNull(registry.getAnchorOffset("A", "right"), "a removed anchor stayed registered")
+    }
 
     private companion object {
         /** Sizes in dp, which are also px at the test density of 1 */

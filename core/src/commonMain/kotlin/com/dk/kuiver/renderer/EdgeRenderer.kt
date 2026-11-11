@@ -7,6 +7,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.dk.kuiver.KuiverInteractionState
 import com.dk.kuiver.model.AnchorOffset
 import com.dk.kuiver.model.DEFAULT_NODE_SIZE
@@ -20,7 +21,10 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-private const val EDGE_PADDING = 4f
+/**
+ * Gap between node boundary and edges pointing to it
+ */
+private val EDGE_PADDING = 4.dp
 
 @Composable
 internal fun RenderEdge(
@@ -167,6 +171,7 @@ internal fun calculateEdgeEndpointsWithAnchors(
     density: Density
 ): Pair<Offset, Offset> {
     val curveAngle = edge.curveTangentAngle(bend)
+    val padding = with(density) { EDGE_PADDING.toPx() }
     val fromAnchorOffset = edge.fromAnchor?.let { anchorRegistry.getAnchorOffset(fromNode.id, it) }
     val toAnchorOffset = edge.toAnchor?.let { anchorRegistry.getAnchorOffset(toNode.id, it) }
 
@@ -200,6 +205,7 @@ internal fun calculateEdgeEndpointsWithAnchors(
                 targetWidth = toNodeWidth,
                 targetHeight = toNodeHeight,
                 outbound = false,
+                padding = padding,
                 curveAngle = curveAngle
             )
             Pair(edgeStart, calculatedEnd)
@@ -212,6 +218,7 @@ internal fun calculateEdgeEndpointsWithAnchors(
                 targetWidth = fromNodeWidth,
                 targetHeight = fromNodeHeight,
                 outbound = true,
+                padding = padding,
                 curveAngle = curveAngle
             )
             Pair(calculatedStart, edgeEnd)
@@ -225,6 +232,7 @@ internal fun calculateEdgeEndpointsWithAnchors(
             toNodeWidth = toNodeWidth,
             toNodeHeight = toNodeHeight,
             isSelfLoop = isSelfLoop,
+            padding = padding,
             curveAngle = curveAngle,
             loopBend = bend?.amount ?: 0f
         )
@@ -248,7 +256,7 @@ private fun rotate(direction: Offset, radians: Float): Offset {
     )
 }
 
-fun calculateAbsoluteAnchorPosition(
+internal fun calculateAbsoluteAnchorPosition(
     nodeCenter: Offset,
     nodeWidth: Float,
     nodeHeight: Float,
@@ -275,6 +283,7 @@ fun calculateAbsoluteAnchorPosition(
  * @param targetWidth Width of the target node
  * @param targetHeight Height of the target node
  * @param outbound If true, calculates outbound endpoint (from anchor); if false, inbound (to anchor)
+ * @param padding Gap kept between the node boundary and the endpoint, in pixels
  * @param curveAngle Angle of edge path curve. Zero for straight edges
  */
 internal fun calculateGeometricEndpoint(
@@ -283,6 +292,7 @@ internal fun calculateGeometricEndpoint(
     targetWidth: Float,
     targetHeight: Float,
     outbound: Boolean,
+    padding: Float,
     curveAngle: Float = 0f
 ): Offset {
     val direction = if (outbound) {
@@ -307,13 +317,13 @@ internal fun calculateGeometricEndpoint(
 
     return if (outbound) {
         Offset(
-            targetCenter.x + normalizedDirection.x * (nodeRadius + EDGE_PADDING),
-            targetCenter.y + normalizedDirection.y * (nodeRadius + EDGE_PADDING)
+            targetCenter.x + normalizedDirection.x * (nodeRadius + padding),
+            targetCenter.y + normalizedDirection.y * (nodeRadius + padding)
         )
     } else {
         Offset(
-            targetCenter.x - normalizedDirection.x * (nodeRadius + EDGE_PADDING),
-            targetCenter.y - normalizedDirection.y * (nodeRadius + EDGE_PADDING)
+            targetCenter.x - normalizedDirection.x * (nodeRadius + padding),
+            targetCenter.y - normalizedDirection.y * (nodeRadius + padding)
         )
     }
 }
@@ -331,6 +341,7 @@ private fun calculateEdgeEndpoints(
     toNodeWidth: Float,
     toNodeHeight: Float,
     isSelfLoop: Boolean = false,
+    padding: Float,
     curveAngle: Float = 0f,
     loopBend: Float = 0f
 ): Pair<Offset, Offset> {
@@ -367,13 +378,13 @@ private fun calculateEdgeEndpoints(
 
     // Calculate edge start and end points at node boundaries (with padding)
     val edgeStart = Offset(
-        fromCenter.x + startDirection.x * (fromNodeRadius + EDGE_PADDING),
-        fromCenter.y + startDirection.y * (fromNodeRadius + EDGE_PADDING)
+        fromCenter.x + startDirection.x * (fromNodeRadius + padding),
+        fromCenter.y + startDirection.y * (fromNodeRadius + padding)
     )
 
     val edgeEnd = Offset(
-        toCenter.x - endDirection.x * (toNodeRadius + EDGE_PADDING),
-        toCenter.y - endDirection.y * (toNodeRadius + EDGE_PADDING)
+        toCenter.x - endDirection.x * (toNodeRadius + padding),
+        toCenter.y - endDirection.y * (toNodeRadius + padding)
     )
 
     return Pair(edgeStart, edgeEnd)

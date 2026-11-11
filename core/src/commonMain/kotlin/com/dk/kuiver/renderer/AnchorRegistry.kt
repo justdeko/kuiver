@@ -36,6 +36,16 @@ internal class AnchorPositionRegistry {
     }
 
     /**
+     * Remove an anchor that is no longer part of its node content.
+     *
+     * @param nodeId The ID of the node this anchor belongs to
+     * @param anchorId The ID of the anchor within the node's namespace
+     */
+    fun unregisterAnchor(nodeId: String, anchorId: String) {
+        anchorPositions[nodeId]?.remove(anchorId)
+    }
+
+    /**
      * Get the offset of a specific anchor within a node.
      *
      * @param nodeId The ID of the node

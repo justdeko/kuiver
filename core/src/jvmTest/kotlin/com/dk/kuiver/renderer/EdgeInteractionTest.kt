@@ -214,6 +214,25 @@ class EdgeInteractionTest {
     }
 
     @Test
+    fun anEdgeIsNotHoveredThroughANodeWithNodeHoverOff() = runComposeUiTest {
+        // C sits on top of the middle of A->B
+        val state = state(
+            graph().withNode(KuiverNode("C", dimensions = NODE_SIZE, position = DpOffset.Zero))
+        )
+        setContent { Scene(state, config().copy(edgeHoverEnabled = true)) }
+        waitForIdle()
+
+        onRoot().performMouseInput { moveTo(center + Offset(-75f, 0f)) }
+        waitForIdle()
+        assertEquals("A->B", state.interaction.hoveredEdgeId)
+
+        onRoot().performMouseInput { moveTo(center) }
+        waitForIdle()
+        assertNull(state.interaction.hoveredEdgeId, "an edge was hovered through a node")
+        assertNull(state.interaction.hoveredNodeId, "node hover is off")
+    }
+
+    @Test
     fun turningHoverOffClearsTheHoveredNodeAndEdge() = runComposeUiTest {
         val state = state(graph())
         var hoverEnabled by mutableStateOf(true)

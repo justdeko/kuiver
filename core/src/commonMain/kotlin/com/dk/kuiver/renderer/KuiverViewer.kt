@@ -305,6 +305,7 @@ internal fun ViewerRenderer(
             .forEach { anchorRegistry.clearNode(it) }
         (interaction.selectedNodeIds + listOfNotNull(
             interaction.hoveredNodeId,
+            interaction.pointerNodeId,
             interaction.draggedNodeId
         )).forEach { nodeId ->
             if (nodeId !in currentNodeIds) interaction.forget(nodeId)
@@ -324,6 +325,9 @@ internal fun ViewerRenderer(
     }
     LaunchedEffect(config.edgeHoverEnabled) {
         if (!config.edgeHoverEnabled) interaction.hoveredEdgeId = null
+    }
+    LaunchedEffect(config.hoverEnabled, config.edgeHoverEnabled) {
+        if (!config.hoverEnabled && !config.edgeHoverEnabled) interaction.pointerNodeId = null
     }
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
@@ -477,6 +481,7 @@ internal fun ViewerRenderer(
                             if (event.type != PointerEventType.Scroll) continue
 
                             val change = event.changes.first()
+                            if (change.isConsumed) continue
                             val scrollDelta = change.scrollDelta
                             change.consume()
 
@@ -518,7 +523,7 @@ internal fun ViewerRenderer(
                                         PointerEventType.Exit -> null
                                         PointerEventType.Enter, PointerEventType.Move ->
                                             // Nodes are drawn over edges
-                                            if (interaction.hoveredNodeId != null) {
+                                            if (interaction.pointerNodeId != null) {
                                                 null
                                             } else {
                                                 edgeAt(

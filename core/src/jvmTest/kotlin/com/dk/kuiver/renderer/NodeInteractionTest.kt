@@ -7,6 +7,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.test.ComposeUiTest
@@ -309,6 +311,46 @@ class NodeInteractionTest {
         assertEquals(true, selected["A"], "the content was not told that A is selected")
         assertEquals(false, selected["B"], "the content was told that B is selected")
         assertEquals(true, hovered["A"], "the content was not told that A is hovered")
+    }
+
+    @Test
+    fun aScrollHandledByNodeContentDoesNotPanTheGraph() = runComposeUiTest {
+        val state = twoNodeState()
+        setContent {
+            Scene(
+                state = state,
+                config = config(),
+                nodeContent = {
+                    Box(
+                        Modifier.fillMaxSize().pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    if (event.type == PointerEventType.Scroll) {
+                                        event.changes.forEach { it.consume() }
+                                    }
+                                }
+                            }
+                        }
+                    )
+                }
+            )
+        }
+        waitForIdle()
+
+        onRoot().performMouseInput {
+            moveTo(center + nodeA)
+            scroll(5f)
+        }
+        waitForIdle()
+        assertEquals(DpOffset.Zero, state.offset, "a scroll the node consumed panned the graph")
+
+        onRoot().performMouseInput {
+            moveTo(center + Offset(0f, 200f))
+            scroll(5f)
+        }
+        waitForIdle()
+        assertTrue(state.offset != DpOffset.Zero, "a scroll over the canvas did not pan")
     }
 
     @Test

@@ -14,6 +14,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.NodeDimensions
@@ -121,6 +122,9 @@ class KuiverViewerState internal constructor(
 
     var hasFittedInitially: Boolean by mutableStateOf(false)
         internal set
+
+    // Skip the initial fit for a restored scale and offset
+    internal var hasRestoredTransform = false
 
     /**
      * Swaps in a new graph, which lays it out again. [Kuiver] is immutable: derive the new graph
@@ -339,7 +343,7 @@ internal fun KuiverViewerState.applyInitialFit(canvasWidth: Dp, canvasHeight: Dp
     val nodes = layoutedKuiver.nodes.values
     if (nodes.isEmpty() || nodes.none { it.dimensions != null }) return
 
-    if (config.fitToContent) centerGraph(animated = false)
+    if (config.fitToContent && !hasRestoredTransform) centerGraph(animated = false)
     hasFittedInitially = true
 }
 
@@ -362,7 +366,8 @@ fun rememberKuiverViewerState(
 /**
  * Creates and remembers a saveable [KuiverViewerState] that persists across configuration changes.
  *
- * Saves graph structure, zoom level, and pan position.
+ * Saves graph structure, zoom level, pan position and moved nodes. Saved state is limited to about
+ * 1 MB per screen on Android, use [rememberKuiverViewerState] for larger graphs.
  *
  * @param initialKuiver The initial graph to display
  * @param layoutConfig Configuration for the layout algorithm
@@ -387,7 +392,8 @@ fun rememberSaveableKuiverViewerState(
 
     val state = remember {
         KuiverViewerState(savedKuiver, savedScale, DpOffset(savedOffsetX.dp, savedOffsetY.dp)).also {
-            it.hasFittedInitially = savedHasFitted
+            // Keep the restored view over the initial fit
+            it.hasRestoredTransform = savedHasFitted
             it.restoreManualPositions(savedManualPositions, savedLayoutFrame)
         }
     }
@@ -420,13 +426,20 @@ private fun setupLayout(state: KuiverViewerState, layoutConfig: LayoutConfig) {
     val canvasWidth = state.canvasWidth
     val canvasHeight = state.canvasHeight
     val layoutKey = state.layoutKey
-    LaunchedEffect(kuiver, measuredDimensions, layoutConfig, canvasWidth, canvasHeight, layoutKey) {
+    val hasCanvas = canvasWidth > 0.dp && canvasHeight > 0.dp
+    // Canvas size only shifts the hierarchical layout
+    val canvasKey: Any = if (layoutConfig is LayoutConfig.Hierarchical) {
+        hasCanvas
+    } else {
+        DpSize(canvasWidth, canvasHeight)
+    }
+    LaunchedEffect(kuiver, measuredDimensions, layoutConfig, canvasKey, layoutKey) {
         val sizedKuiver = if (measuredDimensions.isEmpty()) {
             kuiver
         } else {
             kuiver.withMeasuredDimensions(measuredDimensions)
         }
-        val laid = if (canvasWidth > 0.dp && canvasHeight > 0.dp) {
+        val laid = if (hasCanvas) {
             val configWithDimensions = when (layoutConfig) {
                 is LayoutConfig.Hierarchical -> layoutConfig.copy(
                     width = canvasWidth,
