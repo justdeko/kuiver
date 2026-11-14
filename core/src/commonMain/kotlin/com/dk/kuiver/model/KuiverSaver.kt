@@ -3,6 +3,7 @@ package com.dk.kuiver.model
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import com.dk.kuiver.KuiverViewerState
 import com.dk.kuiver.LayoutFrame
 
 /**
@@ -43,6 +44,44 @@ internal fun layoutFrameSaver(): Saver<LayoutFrame?, Any> = Saver(
 )
 
 /**
+ * Saver for [KuiverViewerState]. Saves the graph, zoom, pan and moved nodes.
+ */
+internal fun kuiverViewerStateSaver(): Saver<KuiverViewerState, Any> = Saver(
+    save = { state ->
+        listOf(
+            with(kuiverSaver()) { save(state.kuiver) },
+            state.scale,
+            // Stored as dp to survive a density change across the restore
+            state.offset.x.value,
+            state.offset.y.value,
+            state.hasFittedInitially,
+            with(manualPositionsSaver()) { save(state.manualPositions) },
+            with(layoutFrameSaver()) { save(state.layoutFrame) }
+        )
+    },
+    restore = { savedValue ->
+        val saved = savedValue as List<*>
+        val kuiver = saved[0]?.let { kuiverSaver().restore(it) }
+        if (kuiver == null) {
+            null
+        } else {
+            KuiverViewerState(
+                initialKuiver = kuiver,
+                initialScale = saved[1] as Float,
+                initialOffset = DpOffset((saved[2] as Float).dp, (saved[3] as Float).dp)
+            ).also { state ->
+                // Keep the restored view over the initial fit
+                state.hasRestoredTransform = saved[4] as Boolean
+                state.restoreManualPositions(
+                    positions = saved[5]?.let { manualPositionsSaver().restore(it) }.orEmpty(),
+                    frame = saved[6]?.let { layoutFrameSaver().restore(it) }
+                )
+            }
+        }
+    }
+)
+
+/**
  * Values saved per node: id, position x and y, width and height.
  */
 private const val NODE_FIELDS = 5
@@ -58,7 +97,7 @@ private const val EDGE_FIELDS = 6
  * Saved state is limited to about 1 MB per screen on Android.
  */
 @Suppress("UNCHECKED_CAST")
-fun kuiverSaver(): Saver<Kuiver, Any> = Saver(
+public fun kuiverSaver(): Saver<Kuiver, Any> = Saver(
     save = { kuiver ->
         buildList {
             add(kuiver.nodes.size)

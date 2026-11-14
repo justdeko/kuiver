@@ -81,10 +81,15 @@ internal val LocalAnchorRegistry = compositionLocalOf<AnchorPositionRegistry> {
 
 /**
  * Layout coordinates of a node's box for anchor origin
+ *
+ * @property nodeId id of the node
+ * @property coordinates layout coordinates of the box, null until it is placed
  */
-internal class NodeCoordinates {
-    // Set when the node box is placed
+internal class NodeCoordinates(val nodeId: String) {
     var coordinates: LayoutCoordinates? = null
 }
 
+/**
+ * The [NodeCoordinates] of the enclosing node content. null outside a node.
+ */
 internal val LocalNodeCoordinates = staticCompositionLocalOf<NodeCoordinates?> { null }

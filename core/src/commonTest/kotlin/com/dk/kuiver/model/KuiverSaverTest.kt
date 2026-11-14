@@ -4,10 +4,13 @@ import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.SaverScope
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import com.dk.kuiver.KuiverViewerState
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class KuiverSaverTest {
 
@@ -96,6 +99,34 @@ class KuiverSaverTest {
             edge("A", "B", id = "second")
         }
         assertEquals(graph, kuiverSaver().roundTrip(graph))
+    }
+
+    @Test
+    fun `viewer state restores graph and view and moved nodes`() {
+        val graph = buildKuiver {
+            nodes("A", "B")
+            edge("A", "B")
+        }
+        val state =
+            KuiverViewerState(graph, initialScale = 2f, initialOffset = DpOffset(30.dp, (-12).dp))
+        state.moveNode("B", DpOffset(250.dp, 40.dp))
+        state.hasFittedInitially = true
+
+        val restored = assertNotNull(kuiverViewerStateSaver().roundTrip(state))
+
+        assertEquals(graph, restored.kuiver)
+        assertEquals(state.scale, restored.scale)
+        assertEquals(state.offset, restored.offset)
+        assertEquals(mapOf("B" to DpOffset(250.dp, 40.dp)), restored.manualPositions)
+        assertTrue(restored.hasRestoredTransform, "the restored view would be replaced by a fit")
+    }
+
+    @Test
+    fun `viewer state that never fitted is fitted after a restore`() {
+        val restored = assertNotNull(
+            kuiverViewerStateSaver().roundTrip(KuiverViewerState(buildKuiver { nodes("A") }))
+        )
+        assertFalse(restored.hasRestoredTransform)
     }
 
     /** Puts [value] through the saver the way `rememberSaveable` does. */

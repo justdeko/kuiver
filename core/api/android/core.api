@@ -1,0 +1,747 @@
+public final class com/dk/kuiver/KuiverInteractionState {
+	public static final field $stable I
+	public final fun clearSelection ()V
+	public final fun getDraggedNodeId ()Ljava/lang/String;
+	public final fun getHoveredEdgeId ()Ljava/lang/String;
+	public final fun getHoveredNodeId ()Ljava/lang/String;
+	public final fun getSelectedEdgeIds ()Ljava/util/Set;
+	public final fun getSelectedNodeIds ()Ljava/util/Set;
+	public final fun isDragging ()Z
+	public final fun isEdgeSelected (Ljava/lang/String;)Z
+	public final fun isSelected (Ljava/lang/String;)Z
+	public final fun select (Ljava/lang/String;)V
+	public final fun selectAll (Ljava/util/Set;)V
+	public final fun selectAllEdges (Ljava/util/Set;)V
+	public final fun selectEdge (Ljava/lang/String;)V
+	public final fun toggleEdgeSelection (Ljava/lang/String;)V
+	public final fun toggleSelection (Ljava/lang/String;)V
+}
+
+public final class com/dk/kuiver/KuiverViewerState {
+	public static final field $stable I
+	public synthetic fun <init> (Lcom/dk/kuiver/model/Kuiver;FJILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun centerGraph (Z)V
+	public static synthetic fun centerGraph$default (Lcom/dk/kuiver/KuiverViewerState;ZILjava/lang/Object;)V
+	public final fun clearManualPositions ()V
+	public final fun getCanvasHeight-D9Ej5fM ()F
+	public final fun getCanvasWidth-D9Ej5fM ()F
+	public final fun getContentOffset-RKDOV3M ()J
+	public final fun getHasFittedInitially ()Z
+	public final fun getInteraction ()Lcom/dk/kuiver/KuiverInteractionState;
+	public final fun getKuiver ()Lcom/dk/kuiver/model/Kuiver;
+	public final fun getLayoutedKuiver ()Lcom/dk/kuiver/model/Kuiver;
+	public final fun getManualPositions ()Ljava/util/Map;
+	public final fun getOffset-RKDOV3M ()J
+	public final fun getScale ()F
+	public final fun moveNode-BkVx2pU (Ljava/lang/String;J)V
+	public final fun moveNodeBy-BkVx2pU (Ljava/lang/String;J)V
+	public final fun relayout ()V
+	public final fun updateContentOffset-jo-Fl9I (J)V
+	public final fun updateKuiver (Lcom/dk/kuiver/model/Kuiver;)V
+	public final fun updateTransform-MOpCEqE (FJZ)V
+	public static synthetic fun updateTransform-MOpCEqE$default (Lcom/dk/kuiver/KuiverViewerState;FJZILjava/lang/Object;)V
+	public final fun zoomIn ()V
+	public final fun zoomOut ()V
+}
+
+public final class com/dk/kuiver/KuiverViewerStateKt {
+	public static final fun rememberKuiverViewerState (Lcom/dk/kuiver/model/Kuiver;Lcom/dk/kuiver/model/layout/LayoutConfig;Landroidx/compose/runtime/Composer;II)Lcom/dk/kuiver/KuiverViewerState;
+	public static final fun rememberSaveableKuiverViewerState (Lcom/dk/kuiver/model/Kuiver;Lcom/dk/kuiver/model/layout/LayoutConfig;Landroidx/compose/runtime/Composer;II)Lcom/dk/kuiver/KuiverViewerState;
+}
+
+public final class com/dk/kuiver/RelayoutPolicy : java/lang/Enum {
+	public static final field KEEP_MANUAL Lcom/dk/kuiver/RelayoutPolicy;
+	public static final field RELAYOUT_ALL Lcom/dk/kuiver/RelayoutPolicy;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/dk/kuiver/RelayoutPolicy;
+	public static fun values ()[Lcom/dk/kuiver/RelayoutPolicy;
+}
+
+public final class com/dk/kuiver/SelectionMode : java/lang/Enum {
+	public static final field MULTIPLE Lcom/dk/kuiver/SelectionMode;
+	public static final field NONE Lcom/dk/kuiver/SelectionMode;
+	public static final field SINGLE Lcom/dk/kuiver/SelectionMode;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/dk/kuiver/SelectionMode;
+	public static fun values ()[Lcom/dk/kuiver/SelectionMode;
+}
+
+public final class com/dk/kuiver/model/EdgeType : java/lang/Enum {
+	public static final field BACK Lcom/dk/kuiver/model/EdgeType;
+	public static final field CROSS Lcom/dk/kuiver/model/EdgeType;
+	public static final field FORWARD Lcom/dk/kuiver/model/EdgeType;
+	public static final field SELF_LOOP Lcom/dk/kuiver/model/EdgeType;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/dk/kuiver/model/EdgeType;
+	public static fun values ()[Lcom/dk/kuiver/model/EdgeType;
+}
+
+public final class com/dk/kuiver/model/Kuiver {
+	public static final field $stable I
+	public final fun classifyAllEdges ()Ljava/util/Map;
+	public final fun classifyEdge (Lcom/dk/kuiver/model/KuiverEdge;)Lcom/dk/kuiver/model/EdgeType;
+	public final fun edgesBetween (Ljava/lang/String;Ljava/lang/String;)Ljava/util/List;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun findStronglyConnectedComponents ()Ljava/util/List;
+	public final fun getEdges ()Ljava/util/Set;
+	public final fun getNodes ()Ljava/util/Map;
+	public final fun getTopologicalOrder ()Ljava/util/List;
+	public final fun hasCycles ()Z
+	public fun hashCode ()I
+	public final fun rebuild (Lkotlin/jvm/functions/Function1;)Lcom/dk/kuiver/model/Kuiver;
+	public fun toString ()Ljava/lang/String;
+	public final fun withEdge (Lcom/dk/kuiver/model/KuiverEdge;)Lcom/dk/kuiver/model/Kuiver;
+	public final fun withEdges (Ljava/util/Collection;)Lcom/dk/kuiver/model/Kuiver;
+	public final fun withNode (Lcom/dk/kuiver/model/KuiverNode;)Lcom/dk/kuiver/model/Kuiver;
+	public final fun withNodes (Ljava/util/Collection;)Lcom/dk/kuiver/model/Kuiver;
+	public final fun withoutEdge (Lcom/dk/kuiver/model/KuiverEdge;)Lcom/dk/kuiver/model/Kuiver;
+	public final fun withoutEdge (Ljava/lang/String;)Lcom/dk/kuiver/model/Kuiver;
+	public final fun withoutEdge (Ljava/lang/String;Ljava/lang/String;)Lcom/dk/kuiver/model/Kuiver;
+	public final fun withoutNode (Ljava/lang/String;)Lcom/dk/kuiver/model/Kuiver;
+	public final fun wouldCreateCycle (Ljava/lang/String;Ljava/lang/String;)Z
+}
+
+public final class com/dk/kuiver/model/KuiverBuilder {
+	public static final field $stable I
+	public fun <init> ()V
+	public final fun addAll (Lcom/dk/kuiver/model/Kuiver;)V
+	public final fun addEdge (Lcom/dk/kuiver/model/KuiverEdge;)Z
+	public final fun addNode (Lcom/dk/kuiver/model/KuiverNode;)Z
+	public final fun build ()Lcom/dk/kuiver/model/Kuiver;
+	public final fun wouldCreateCycle (Ljava/lang/String;Ljava/lang/String;)Z
+}
+
+public final class com/dk/kuiver/model/KuiverDslKt {
+	public static final fun buildKuiver (Lkotlin/jvm/functions/Function1;)Lcom/dk/kuiver/model/Kuiver;
+	public static final fun buildKuiverWithClassifiedEdges (Ljava/util/Collection;Ljava/util/Collection;)Lcom/dk/kuiver/model/Kuiver;
+	public static final fun edge (Lcom/dk/kuiver/model/KuiverBuilder;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public static synthetic fun edge$default (Lcom/dk/kuiver/model/KuiverBuilder;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)V
+	public static final fun edges (Lcom/dk/kuiver/model/KuiverBuilder;[Lkotlin/Pair;)V
+	public static final fun fromEdgeList (Lcom/dk/kuiver/model/KuiverBuilder;Ljava/util/List;Z)V
+	public static synthetic fun fromEdgeList$default (Lcom/dk/kuiver/model/KuiverBuilder;Ljava/util/List;ZILjava/lang/Object;)V
+	public static final fun nodes (Lcom/dk/kuiver/model/KuiverBuilder;Ljava/util/Collection;)V
+	public static final fun nodes (Lcom/dk/kuiver/model/KuiverBuilder;[Ljava/lang/String;)V
+}
+
+public final class com/dk/kuiver/model/KuiverEdge {
+	public static final field $stable I
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lcom/dk/kuiver/model/EdgeType;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lcom/dk/kuiver/model/EdgeType;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Lcom/dk/kuiver/model/EdgeType;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun component6 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Lcom/dk/kuiver/model/EdgeType;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lcom/dk/kuiver/model/KuiverEdge;
+	public static synthetic fun copy$default (Lcom/dk/kuiver/model/KuiverEdge;Ljava/lang/String;Ljava/lang/String;Lcom/dk/kuiver/model/EdgeType;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lcom/dk/kuiver/model/KuiverEdge;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFromAnchor ()Ljava/lang/String;
+	public final fun getFromId ()Ljava/lang/String;
+	public final fun getId ()Ljava/lang/String;
+	public final fun getToAnchor ()Ljava/lang/String;
+	public final fun getToId ()Ljava/lang/String;
+	public final fun getType ()Lcom/dk/kuiver/model/EdgeType;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/dk/kuiver/model/KuiverNode {
+	public static final field $stable I
+	public synthetic fun <init> (Ljava/lang/String;Lcom/dk/kuiver/model/NodeDimensions;JILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;Lcom/dk/kuiver/model/NodeDimensions;JLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Lcom/dk/kuiver/model/NodeDimensions;
+	public final fun component3-RKDOV3M ()J
+	public final fun copy-GrvxvIE (Ljava/lang/String;Lcom/dk/kuiver/model/NodeDimensions;J)Lcom/dk/kuiver/model/KuiverNode;
+	public static synthetic fun copy-GrvxvIE$default (Lcom/dk/kuiver/model/KuiverNode;Ljava/lang/String;Lcom/dk/kuiver/model/NodeDimensions;JILjava/lang/Object;)Lcom/dk/kuiver/model/KuiverNode;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDimensions ()Lcom/dk/kuiver/model/NodeDimensions;
+	public final fun getId ()Ljava/lang/String;
+	public final fun getPosition-RKDOV3M ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/dk/kuiver/model/KuiverSaverKt {
+	public static final fun kuiverSaver ()Landroidx/compose/runtime/saveable/Saver;
+}
+
+public final class com/dk/kuiver/model/NodeDimensions {
+	public static final field $stable I
+	public synthetic fun <init> (FFLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-D9Ej5fM ()F
+	public final fun component2-D9Ej5fM ()F
+	public final fun copy-YgX7TsA (FF)Lcom/dk/kuiver/model/NodeDimensions;
+	public static synthetic fun copy-YgX7TsA$default (Lcom/dk/kuiver/model/NodeDimensions;FFILjava/lang/Object;)Lcom/dk/kuiver/model/NodeDimensions;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getHeight-D9Ej5fM ()F
+	public final fun getWidth-D9Ej5fM ()F
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/dk/kuiver/model/layout/ForceDirectedLayoutKt {
+	public static final fun forceDirected (Lcom/dk/kuiver/model/Kuiver;Lcom/dk/kuiver/model/layout/LayoutConfig$ForceDirected;)Lcom/dk/kuiver/model/Kuiver;
+	public static synthetic fun forceDirected$default (Lcom/dk/kuiver/model/Kuiver;Lcom/dk/kuiver/model/layout/LayoutConfig$ForceDirected;ILjava/lang/Object;)Lcom/dk/kuiver/model/Kuiver;
+}
+
+public final class com/dk/kuiver/model/layout/KuiverLayoutKt {
+	public static final fun layout (Lcom/dk/kuiver/model/Kuiver;Lcom/dk/kuiver/model/layout/LayoutConfig;)Lcom/dk/kuiver/model/Kuiver;
+	public static synthetic fun layout$default (Lcom/dk/kuiver/model/Kuiver;Lcom/dk/kuiver/model/layout/LayoutConfig;ILjava/lang/Object;)Lcom/dk/kuiver/model/Kuiver;
+}
+
+public abstract class com/dk/kuiver/model/layout/LayoutConfig {
+	public static final field $stable I
+	public abstract fun getHeight-D9Ej5fM ()F
+	public abstract fun getWidth-D9Ej5fM ()F
+}
+
+public final class com/dk/kuiver/model/layout/LayoutConfig$Custom : com/dk/kuiver/model/layout/LayoutConfig {
+	public static final field $stable I
+	public synthetic fun <init> (Lkotlin/jvm/functions/Function2;FFILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Lkotlin/jvm/functions/Function2;FFLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lkotlin/jvm/functions/Function2;
+	public final fun component2-D9Ej5fM ()F
+	public final fun component3-D9Ej5fM ()F
+	public final fun copy-VpY3zN4 (Lkotlin/jvm/functions/Function2;FF)Lcom/dk/kuiver/model/layout/LayoutConfig$Custom;
+	public static synthetic fun copy-VpY3zN4$default (Lcom/dk/kuiver/model/layout/LayoutConfig$Custom;Lkotlin/jvm/functions/Function2;FFILjava/lang/Object;)Lcom/dk/kuiver/model/layout/LayoutConfig$Custom;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getHeight-D9Ej5fM ()F
+	public final fun getProvider ()Lkotlin/jvm/functions/Function2;
+	public fun getWidth-D9Ej5fM ()F
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/dk/kuiver/model/layout/LayoutConfig$ForceDirected : com/dk/kuiver/model/layout/LayoutConfig {
+	public static final field $stable I
+	public fun <init> ()V
+	public synthetic fun <init> (IFFFFFILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (IFFFFFLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()I
+	public final fun component2 ()F
+	public final fun component3 ()F
+	public final fun component4 ()F
+	public final fun component5-D9Ej5fM ()F
+	public final fun component6-D9Ej5fM ()F
+	public final fun copy-Kr38-dQ (IFFFFF)Lcom/dk/kuiver/model/layout/LayoutConfig$ForceDirected;
+	public static synthetic fun copy-Kr38-dQ$default (Lcom/dk/kuiver/model/layout/LayoutConfig$ForceDirected;IFFFFFILjava/lang/Object;)Lcom/dk/kuiver/model/layout/LayoutConfig$ForceDirected;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAttractionStrength ()F
+	public final fun getDamping ()F
+	public fun getHeight-D9Ej5fM ()F
+	public final fun getIterations ()I
+	public final fun getRepulsionStrength ()F
+	public fun getWidth-D9Ej5fM ()F
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/dk/kuiver/model/layout/LayoutConfig$Hierarchical : com/dk/kuiver/model/layout/LayoutConfig {
+	public static final field $stable I
+	public fun <init> ()V
+	public synthetic fun <init> (Lcom/dk/kuiver/model/layout/LayoutDirection;FFFFILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Lcom/dk/kuiver/model/layout/LayoutDirection;FFFFLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lcom/dk/kuiver/model/layout/LayoutDirection;
+	public final fun component2-D9Ej5fM ()F
+	public final fun component3-D9Ej5fM ()F
+	public final fun component4-D9Ej5fM ()F
+	public final fun component5-D9Ej5fM ()F
+	public final fun copy-qDBjuR0 (Lcom/dk/kuiver/model/layout/LayoutDirection;FFFF)Lcom/dk/kuiver/model/layout/LayoutConfig$Hierarchical;
+	public static synthetic fun copy-qDBjuR0$default (Lcom/dk/kuiver/model/layout/LayoutConfig$Hierarchical;Lcom/dk/kuiver/model/layout/LayoutDirection;FFFFILjava/lang/Object;)Lcom/dk/kuiver/model/layout/LayoutConfig$Hierarchical;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDirection ()Lcom/dk/kuiver/model/layout/LayoutDirection;
+	public fun getHeight-D9Ej5fM ()F
+	public final fun getLevelSpacing-D9Ej5fM ()F
+	public final fun getNodeSpacing-D9Ej5fM ()F
+	public fun getWidth-D9Ej5fM ()F
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/dk/kuiver/model/layout/LayoutDirection : java/lang/Enum {
+	public static final field HORIZONTAL Lcom/dk/kuiver/model/layout/LayoutDirection;
+	public static final field VERTICAL Lcom/dk/kuiver/model/layout/LayoutDirection;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/dk/kuiver/model/layout/LayoutDirection;
+	public static fun values ()[Lcom/dk/kuiver/model/layout/LayoutDirection;
+}
+
+public abstract interface class com/dk/kuiver/renderer/KuiverEdgeScope {
+	public abstract fun isHovered ()Z
+	public abstract fun isSelected ()Z
+}
+
+public final class com/dk/kuiver/renderer/KuiverInteractionCallbacks {
+	public static final field $stable I
+	public static final field Companion Lcom/dk/kuiver/renderer/KuiverInteractionCallbacks$Companion;
+	public fun <init> ()V
+	public fun <init> (Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lkotlin/jvm/functions/Function1;
+	public final fun component2 ()Lkotlin/jvm/functions/Function1;
+	public final fun component3 ()Lkotlin/jvm/functions/Function1;
+	public final fun component4 ()Lkotlin/jvm/functions/Function2;
+	public final fun component5 ()Lkotlin/jvm/functions/Function2;
+	public final fun component6 ()Lkotlin/jvm/functions/Function1;
+	public final fun component7 ()Lkotlin/jvm/functions/Function0;
+	public final fun copy (Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;)Lcom/dk/kuiver/renderer/KuiverInteractionCallbacks;
+	public static synthetic fun copy$default (Lcom/dk/kuiver/renderer/KuiverInteractionCallbacks;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Lcom/dk/kuiver/renderer/KuiverInteractionCallbacks;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getOnCanvasClick ()Lkotlin/jvm/functions/Function0;
+	public final fun getOnEdgeClick ()Lkotlin/jvm/functions/Function1;
+	public final fun getOnNodeClick ()Lkotlin/jvm/functions/Function1;
+	public final fun getOnNodeDrag ()Lkotlin/jvm/functions/Function2;
+	public final fun getOnNodeDragEnd ()Lkotlin/jvm/functions/Function2;
+	public final fun getOnNodeDragStart ()Lkotlin/jvm/functions/Function1;
+	public final fun getOnNodeLongPress ()Lkotlin/jvm/functions/Function1;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/dk/kuiver/renderer/KuiverInteractionCallbacks$Companion {
+	public final fun getNone ()Lcom/dk/kuiver/renderer/KuiverInteractionCallbacks;
+}
+
+public abstract interface class com/dk/kuiver/renderer/KuiverNodeScope {
+	public abstract fun isDragging ()Z
+	public abstract fun isHovered ()Z
+	public abstract fun isSelected ()Z
+}
+
+public final class com/dk/kuiver/renderer/KuiverViewerConfig {
+	public static final field $stable I
+	public fun <init> ()V
+	public fun <init> (ZZFFFFFFLcom/dk/kuiver/SelectionMode;ZZLcom/dk/kuiver/SelectionMode;ZLcom/dk/kuiver/RelayoutPolicy;Lkotlin/jvm/functions/Function1;Landroidx/compose/animation/core/AnimationSpec;Landroidx/compose/animation/core/AnimationSpec;Landroidx/compose/animation/core/AnimationSpec;ZLandroidx/compose/animation/core/AnimationSpec;)V
+	public synthetic fun <init> (ZZFFFFFFLcom/dk/kuiver/SelectionMode;ZZLcom/dk/kuiver/SelectionMode;ZLcom/dk/kuiver/RelayoutPolicy;Lkotlin/jvm/functions/Function1;Landroidx/compose/animation/core/AnimationSpec;Landroidx/compose/animation/core/AnimationSpec;Landroidx/compose/animation/core/AnimationSpec;ZLandroidx/compose/animation/core/AnimationSpec;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Z
+	public final fun component10 ()Z
+	public final fun component11 ()Z
+	public final fun component12 ()Lcom/dk/kuiver/SelectionMode;
+	public final fun component13 ()Z
+	public final fun component14 ()Lcom/dk/kuiver/RelayoutPolicy;
+	public final fun component15 ()Lkotlin/jvm/functions/Function1;
+	public final fun component16 ()Landroidx/compose/animation/core/AnimationSpec;
+	public final fun component17 ()Landroidx/compose/animation/core/AnimationSpec;
+	public final fun component18 ()Landroidx/compose/animation/core/AnimationSpec;
+	public final fun component19 ()Z
+	public final fun component2 ()Z
+	public final fun component20 ()Landroidx/compose/animation/core/AnimationSpec;
+	public final fun component3 ()F
+	public final fun component4 ()F
+	public final fun component5 ()F
+	public final fun component6 ()F
+	public final fun component7 ()F
+	public final fun component8 ()F
+	public final fun component9 ()Lcom/dk/kuiver/SelectionMode;
+	public final fun copy (ZZFFFFFFLcom/dk/kuiver/SelectionMode;ZZLcom/dk/kuiver/SelectionMode;ZLcom/dk/kuiver/RelayoutPolicy;Lkotlin/jvm/functions/Function1;Landroidx/compose/animation/core/AnimationSpec;Landroidx/compose/animation/core/AnimationSpec;Landroidx/compose/animation/core/AnimationSpec;ZLandroidx/compose/animation/core/AnimationSpec;)Lcom/dk/kuiver/renderer/KuiverViewerConfig;
+	public static synthetic fun copy$default (Lcom/dk/kuiver/renderer/KuiverViewerConfig;ZZFFFFFFLcom/dk/kuiver/SelectionMode;ZZLcom/dk/kuiver/SelectionMode;ZLcom/dk/kuiver/RelayoutPolicy;Lkotlin/jvm/functions/Function1;Landroidx/compose/animation/core/AnimationSpec;Landroidx/compose/animation/core/AnimationSpec;Landroidx/compose/animation/core/AnimationSpec;ZLandroidx/compose/animation/core/AnimationSpec;ILjava/lang/Object;)Lcom/dk/kuiver/renderer/KuiverViewerConfig;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAnimateInitialPlacement ()Z
+	public final fun getContentPadding ()F
+	public final fun getEdgeHoverEnabled ()Z
+	public final fun getEdgeSelectionMode ()Lcom/dk/kuiver/SelectionMode;
+	public final fun getEnterAnimationSpec ()Landroidx/compose/animation/core/AnimationSpec;
+	public final fun getFitToContent ()Z
+	public final fun getHoverEnabled ()Z
+	public final fun getLayoutAnimationSpec ()Landroidx/compose/animation/core/AnimationSpec;
+	public final fun getMaxScale ()F
+	public final fun getMinScale ()F
+	public final fun getNodeDragEnabled ()Z
+	public final fun getOffsetAnimationSpec ()Landroidx/compose/animation/core/AnimationSpec;
+	public final fun getPanVelocity ()F
+	public final fun getRelayoutPolicy ()Lcom/dk/kuiver/RelayoutPolicy;
+	public final fun getScaleAnimationSpec ()Landroidx/compose/animation/core/AnimationSpec;
+	public final fun getSelectionMode ()Lcom/dk/kuiver/SelectionMode;
+	public final fun getShowDebugBounds ()Z
+	public final fun getZoomConditionDesktop ()Lkotlin/jvm/functions/Function1;
+	public final fun getZoomStep ()F
+	public final fun getZoomVelocity ()F
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/dk/kuiver/renderer/KuiverViewerKt {
+	public static final fun KuiverViewer (Lcom/dk/kuiver/KuiverViewerState;Landroidx/compose/ui/Modifier;Lcom/dk/kuiver/renderer/KuiverViewerConfig;Lcom/dk/kuiver/renderer/KuiverInteractionCallbacks;Lkotlin/jvm/functions/Function4;Lkotlin/jvm/functions/Function1;Landroidx/compose/runtime/Composer;II)V
+	public static final fun KuiverViewer (Lcom/dk/kuiver/KuiverViewerState;Landroidx/compose/ui/Modifier;Lcom/dk/kuiver/renderer/KuiverViewerConfig;Lcom/dk/kuiver/renderer/KuiverInteractionCallbacks;Lkotlin/jvm/functions/Function4;Lkotlin/jvm/functions/Function6;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class com/dk/kuiver/ui/AnchorSide : java/lang/Enum {
+	public static final field BOTTOM Lcom/dk/kuiver/ui/AnchorSide;
+	public static final field Companion Lcom/dk/kuiver/ui/AnchorSide$Companion;
+	public static final field LEFT Lcom/dk/kuiver/ui/AnchorSide;
+	public static final field RIGHT Lcom/dk/kuiver/ui/AnchorSide;
+	public static final field TOP Lcom/dk/kuiver/ui/AnchorSide;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/dk/kuiver/ui/AnchorSide;
+	public static fun values ()[Lcom/dk/kuiver/ui/AnchorSide;
+}
+
+public final class com/dk/kuiver/ui/AnchorSide$Companion {
+	public final fun fromAnchorId (Ljava/lang/String;)Lcom/dk/kuiver/ui/AnchorSide;
+}
+
+public final class com/dk/kuiver/ui/ArrowDrawingKt {
+	public static final fun getDefaultArrowDrawer ()Lkotlin/jvm/functions/Function5;
+}
+
+public final class com/dk/kuiver/ui/EdgeBoundsKt {
+	public static final fun boundingRect-xRxHbuk (Lcom/dk/kuiver/ui/EdgePath;Landroidx/compose/ui/unit/Density;FFZF)Landroidx/compose/ui/geometry/Rect;
+	public static synthetic fun boundingRect-xRxHbuk$default (Lcom/dk/kuiver/ui/EdgePath;Landroidx/compose/ui/unit/Density;FFZFILjava/lang/Object;)Landroidx/compose/ui/geometry/Rect;
+}
+
+public final class com/dk/kuiver/ui/EdgeCanvasKt {
+	public static final fun EdgeCanvas (Landroidx/compose/ui/geometry/Rect;Lcom/dk/kuiver/ui/EdgePath;Lkotlin/jvm/functions/Function1;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class com/dk/kuiver/ui/EdgeComponentsKt {
+	public static final fun EdgeContent-X3tbCWI (JJJFZZFFZFZFLkotlin/jvm/functions/Function5;Ljava/lang/Float;Landroidx/compose/runtime/Composer;III)V
+	public static final fun EdgeContentWithLabel-8KJVlIw (JJLjava/lang/String;Ljava/lang/Float;Lcom/dk/kuiver/ui/LabelPlacement;Lcom/dk/kuiver/ui/EdgeLabelStyle;Lkotlin/jvm/functions/Function3;JFZZFFZFZFLkotlin/jvm/functions/Function5;FLjava/lang/Float;Landroidx/compose/runtime/Composer;III)V
+	public static final fun StyledEdgeContent-gX7w90Y (Lcom/dk/kuiver/model/KuiverEdge;JJJJFFFLkotlin/jvm/functions/Function5;Ljava/lang/String;Ljava/lang/Float;Lcom/dk/kuiver/ui/LabelPlacement;Lcom/dk/kuiver/ui/EdgeLabelStyle;Lkotlin/jvm/functions/Function3;Landroidx/compose/runtime/Composer;III)V
+	public static final fun getLocalEdgeBend ()Landroidx/compose/runtime/ProvidableCompositionLocal;
+}
+
+public final class com/dk/kuiver/ui/EdgeLabelPosition {
+	public static final field $stable I
+	public synthetic fun <init> (JFILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (JFLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-F1C5BW0 ()J
+	public final fun component2 ()F
+	public final fun copy-3MmeM6k (JF)Lcom/dk/kuiver/ui/EdgeLabelPosition;
+	public static synthetic fun copy-3MmeM6k$default (Lcom/dk/kuiver/ui/EdgeLabelPosition;JFILjava/lang/Object;)Lcom/dk/kuiver/ui/EdgeLabelPosition;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAngle ()F
+	public final fun getPosition-F1C5BW0 ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/dk/kuiver/ui/EdgeLabelStyle {
+	public static final field $stable I
+	public fun <init> ()V
+	public synthetic fun <init> (JJJFLandroidx/compose/ui/graphics/Color;FFIIZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (JJJFLandroidx/compose/ui/graphics/Color;FFIIZLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-0d7_KjU ()J
+	public final fun component10 ()Z
+	public final fun component2-0d7_KjU ()J
+	public final fun component3-XSAIIZE ()J
+	public final fun component4-D9Ej5fM ()F
+	public final fun component5-QN2ZGVo ()Landroidx/compose/ui/graphics/Color;
+	public final fun component6-D9Ej5fM ()F
+	public final fun component7-D9Ej5fM ()F
+	public final fun component8 ()I
+	public final fun component9-gIe3tQ8 ()I
+	public final fun copy-626Pgl8 (JJJFLandroidx/compose/ui/graphics/Color;FFIIZ)Lcom/dk/kuiver/ui/EdgeLabelStyle;
+	public static synthetic fun copy-626Pgl8$default (Lcom/dk/kuiver/ui/EdgeLabelStyle;JJJFLandroidx/compose/ui/graphics/Color;FFIIZILjava/lang/Object;)Lcom/dk/kuiver/ui/EdgeLabelStyle;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBackgroundColor-0d7_KjU ()J
+	public final fun getBorderColor-QN2ZGVo ()Landroidx/compose/ui/graphics/Color;
+	public final fun getBorderWidth-D9Ej5fM ()F
+	public final fun getCornerRadius-D9Ej5fM ()F
+	public final fun getFontSize-XSAIIZE ()J
+	public final fun getMaxLines ()I
+	public final fun getOverflow-gIe3tQ8 ()I
+	public final fun getPadding-D9Ej5fM ()F
+	public final fun getRotateWithEdge ()Z
+	public final fun getTextColor-0d7_KjU ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/dk/kuiver/ui/EdgeLabelStyleKt {
+	public static final fun DefaultEdgeLabel (Ljava/lang/String;Landroidx/compose/ui/Modifier;Lcom/dk/kuiver/ui/EdgeLabelStyle;Landroidx/compose/runtime/Composer;II)V
+}
+
+public abstract class com/dk/kuiver/ui/EdgePath {
+	public static final field $stable I
+	public abstract fun calculateLabelPosition (FF)Lcom/dk/kuiver/ui/EdgeLabelPosition;
+	public static synthetic fun calculateLabelPosition$default (Lcom/dk/kuiver/ui/EdgePath;FFILjava/lang/Object;)Lcom/dk/kuiver/ui/EdgeLabelPosition;
+	public abstract fun getEdgeLength ()F
+	public abstract fun getFrom-F1C5BW0 ()J
+	public abstract fun getPathEndpoint-F1C5BW0 ()J
+	public abstract fun getTo-F1C5BW0 ()J
+}
+
+public final class com/dk/kuiver/ui/EdgePath$Curved : com/dk/kuiver/ui/EdgePath {
+	public static final field $stable I
+	public synthetic fun <init> (JJJJFLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun calculateLabelPosition (FF)Lcom/dk/kuiver/ui/EdgeLabelPosition;
+	public final fun component1-F1C5BW0 ()J
+	public final fun component2-F1C5BW0 ()J
+	public final fun component3-F1C5BW0 ()J
+	public final fun component4-F1C5BW0 ()J
+	public final fun component5 ()F
+	public final fun copy-X4D1Z80 (JJJJF)Lcom/dk/kuiver/ui/EdgePath$Curved;
+	public static synthetic fun copy-X4D1Z80$default (Lcom/dk/kuiver/ui/EdgePath$Curved;JJJJFILjava/lang/Object;)Lcom/dk/kuiver/ui/EdgePath$Curved;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getControlPoint-F1C5BW0 ()J
+	public fun getEdgeLength ()F
+	public fun getFrom-F1C5BW0 ()J
+	public fun getPathEndpoint-F1C5BW0 ()J
+	public fun getTo-F1C5BW0 ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/dk/kuiver/ui/EdgePath$Orthogonal : com/dk/kuiver/ui/EdgePath {
+	public static final field $stable I
+	public synthetic fun <init> (JJJJJFFLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun calculateLabelPosition (FF)Lcom/dk/kuiver/ui/EdgeLabelPosition;
+	public final fun component1-F1C5BW0 ()J
+	public final fun component2-F1C5BW0 ()J
+	public final fun component3-F1C5BW0 ()J
+	public final fun component4-F1C5BW0 ()J
+	public final fun component5-F1C5BW0 ()J
+	public final fun component6 ()F
+	public final fun component7 ()F
+	public final fun copy-7vmHNfk (JJJJJFF)Lcom/dk/kuiver/ui/EdgePath$Orthogonal;
+	public static synthetic fun copy-7vmHNfk$default (Lcom/dk/kuiver/ui/EdgePath$Orthogonal;JJJJJFFILjava/lang/Object;)Lcom/dk/kuiver/ui/EdgePath$Orthogonal;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getControlPoint1-F1C5BW0 ()J
+	public final fun getControlPoint2-F1C5BW0 ()J
+	public final fun getCurveFactor ()F
+	public fun getEdgeLength ()F
+	public fun getFrom-F1C5BW0 ()J
+	public fun getPathEndpoint-F1C5BW0 ()J
+	public fun getTo-F1C5BW0 ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/dk/kuiver/ui/EdgePath$RightAngle : com/dk/kuiver/ui/EdgePath {
+	public static final field $stable I
+	public synthetic fun <init> (JJLjava/util/List;JFLandroidx/compose/ui/geometry/Offset;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun calculateLabelPosition (FF)Lcom/dk/kuiver/ui/EdgeLabelPosition;
+	public final fun component1-F1C5BW0 ()J
+	public final fun component2-F1C5BW0 ()J
+	public final fun component3 ()Ljava/util/List;
+	public final fun component4-F1C5BW0 ()J
+	public final fun component5 ()F
+	public final fun component6-_m7T9-E ()Landroidx/compose/ui/geometry/Offset;
+	public final fun copy-PAN7i98 (JJLjava/util/List;JFLandroidx/compose/ui/geometry/Offset;)Lcom/dk/kuiver/ui/EdgePath$RightAngle;
+	public static synthetic fun copy-PAN7i98$default (Lcom/dk/kuiver/ui/EdgePath$RightAngle;JJLjava/util/List;JFLandroidx/compose/ui/geometry/Offset;ILjava/lang/Object;)Lcom/dk/kuiver/ui/EdgePath$RightAngle;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getArrowDirection-_m7T9-E ()Landroidx/compose/ui/geometry/Offset;
+	public fun getEdgeLength ()F
+	public fun getFrom-F1C5BW0 ()J
+	public fun getPathEndpoint-F1C5BW0 ()J
+	public fun getTo-F1C5BW0 ()J
+	public final fun getWaypoints ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/dk/kuiver/ui/EdgePath$SelfLoop : com/dk/kuiver/ui/EdgePath {
+	public static final field $stable I
+	public synthetic fun <init> (JJJJFLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun calculateLabelPosition (FF)Lcom/dk/kuiver/ui/EdgeLabelPosition;
+	public final fun component1-F1C5BW0 ()J
+	public final fun component2-F1C5BW0 ()J
+	public final fun component3-F1C5BW0 ()J
+	public final fun component4-F1C5BW0 ()J
+	public final fun component5 ()F
+	public final fun copy-X4D1Z80 (JJJJF)Lcom/dk/kuiver/ui/EdgePath$SelfLoop;
+	public static synthetic fun copy-X4D1Z80$default (Lcom/dk/kuiver/ui/EdgePath$SelfLoop;JJJJFILjava/lang/Object;)Lcom/dk/kuiver/ui/EdgePath$SelfLoop;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getControlPoint-F1C5BW0 ()J
+	public fun getEdgeLength ()F
+	public fun getFrom-F1C5BW0 ()J
+	public fun getPathEndpoint-F1C5BW0 ()J
+	public fun getTo-F1C5BW0 ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/dk/kuiver/ui/EdgePath$Straight : com/dk/kuiver/ui/EdgePath {
+	public static final field $stable I
+	public synthetic fun <init> (JJJFLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun calculateLabelPosition (FF)Lcom/dk/kuiver/ui/EdgeLabelPosition;
+	public final fun component1-F1C5BW0 ()J
+	public final fun component2-F1C5BW0 ()J
+	public final fun component3-F1C5BW0 ()J
+	public final fun component4 ()F
+	public final fun copy-428G9Dg (JJJF)Lcom/dk/kuiver/ui/EdgePath$Straight;
+	public static synthetic fun copy-428G9Dg$default (Lcom/dk/kuiver/ui/EdgePath$Straight;JJJFILjava/lang/Object;)Lcom/dk/kuiver/ui/EdgePath$Straight;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getEdgeLength ()F
+	public fun getFrom-F1C5BW0 ()J
+	public fun getPathEndpoint-F1C5BW0 ()J
+	public fun getTo-F1C5BW0 ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/dk/kuiver/ui/EdgePathFactory {
+	public static final field $stable I
+	public static final field INSTANCE Lcom/dk/kuiver/ui/EdgePathFactory;
+	public final fun createCurvedPath-o8zmmCE (JJLandroidx/compose/ui/unit/Density;ZFF)Lcom/dk/kuiver/ui/EdgePath$Curved;
+	public static synthetic fun createCurvedPath-o8zmmCE$default (Lcom/dk/kuiver/ui/EdgePathFactory;JJLandroidx/compose/ui/unit/Density;ZFFILjava/lang/Object;)Lcom/dk/kuiver/ui/EdgePath$Curved;
+	public final fun createOrthogonalPath-DbSvBKo (JJLandroidx/compose/ui/unit/Density;FZF)Lcom/dk/kuiver/ui/EdgePath$Orthogonal;
+	public static synthetic fun createOrthogonalPath-DbSvBKo$default (Lcom/dk/kuiver/ui/EdgePathFactory;JJLandroidx/compose/ui/unit/Density;FZFILjava/lang/Object;)Lcom/dk/kuiver/ui/EdgePath$Orthogonal;
+	public final fun createRightAnglePath-DbSvBKo (JJLcom/dk/kuiver/ui/RightAngleRouting;Landroidx/compose/ui/unit/Density;ZF)Lcom/dk/kuiver/ui/EdgePath$RightAngle;
+	public static synthetic fun createRightAnglePath-DbSvBKo$default (Lcom/dk/kuiver/ui/EdgePathFactory;JJLcom/dk/kuiver/ui/RightAngleRouting;Landroidx/compose/ui/unit/Density;ZFILjava/lang/Object;)Lcom/dk/kuiver/ui/EdgePath$RightAngle;
+	public final fun createSelfLoopPath-_f_rKtU (JJLandroidx/compose/ui/unit/Density;FZFF)Lcom/dk/kuiver/ui/EdgePath$SelfLoop;
+	public static synthetic fun createSelfLoopPath-_f_rKtU$default (Lcom/dk/kuiver/ui/EdgePathFactory;JJLandroidx/compose/ui/unit/Density;FZFFILjava/lang/Object;)Lcom/dk/kuiver/ui/EdgePath$SelfLoop;
+	public final fun createStraightPath-Fuq8lUU (JJLandroidx/compose/ui/unit/Density;ZF)Lcom/dk/kuiver/ui/EdgePath$Straight;
+	public static synthetic fun createStraightPath-Fuq8lUU$default (Lcom/dk/kuiver/ui/EdgePathFactory;JJLandroidx/compose/ui/unit/Density;ZFILjava/lang/Object;)Lcom/dk/kuiver/ui/EdgePath$Straight;
+}
+
+public final class com/dk/kuiver/ui/EdgeShape : java/lang/Enum {
+	public static final field AUTO Lcom/dk/kuiver/ui/EdgeShape;
+	public static final field CURVED Lcom/dk/kuiver/ui/EdgeShape;
+	public static final field ORTHOGONAL Lcom/dk/kuiver/ui/EdgeShape;
+	public static final field RIGHT_ANGLE Lcom/dk/kuiver/ui/EdgeShape;
+	public static final field STRAIGHT Lcom/dk/kuiver/ui/EdgeShape;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/dk/kuiver/ui/EdgeShape;
+	public static fun values ()[Lcom/dk/kuiver/ui/EdgeShape;
+}
+
+public final class com/dk/kuiver/ui/EdgeStyle {
+	public static final field $stable I
+	public static final field Companion Lcom/dk/kuiver/ui/EdgeStyle$Companion;
+	public fun <init> ()V
+	public synthetic fun <init> (JFZZFFLcom/dk/kuiver/ui/EdgeShape;FFFLkotlin/jvm/functions/Function5;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (JFZZFFLcom/dk/kuiver/ui/EdgeShape;FFFLkotlin/jvm/functions/Function5;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-0d7_KjU ()J
+	public final fun component10-D9Ej5fM ()F
+	public final fun component11 ()Lkotlin/jvm/functions/Function5;
+	public final fun component2-D9Ej5fM ()F
+	public final fun component3 ()Z
+	public final fun component4 ()Z
+	public final fun component5-D9Ej5fM ()F
+	public final fun component6-D9Ej5fM ()F
+	public final fun component7 ()Lcom/dk/kuiver/ui/EdgeShape;
+	public final fun component8-D9Ej5fM ()F
+	public final fun component9 ()F
+	public final fun copy-jPIdOKA (JFZZFFLcom/dk/kuiver/ui/EdgeShape;FFFLkotlin/jvm/functions/Function5;)Lcom/dk/kuiver/ui/EdgeStyle;
+	public static synthetic fun copy-jPIdOKA$default (Lcom/dk/kuiver/ui/EdgeStyle;JFZZFFLcom/dk/kuiver/ui/EdgeShape;FFFLkotlin/jvm/functions/Function5;ILjava/lang/Object;)Lcom/dk/kuiver/ui/EdgeStyle;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getArrowDrawer ()Lkotlin/jvm/functions/Function5;
+	public final fun getArrowSize-D9Ej5fM ()F
+	public final fun getColor-0d7_KjU ()J
+	public final fun getCurveFactor ()F
+	public final fun getDashLength-D9Ej5fM ()F
+	public final fun getDashed ()Z
+	public final fun getGapLength-D9Ej5fM ()F
+	public final fun getLoopRadius-D9Ej5fM ()F
+	public final fun getShape ()Lcom/dk/kuiver/ui/EdgeShape;
+	public final fun getShowArrow ()Z
+	public final fun getStrokeWidth-D9Ej5fM ()F
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/dk/kuiver/ui/EdgeStyle$Companion {
+	public final fun styled--WgHM3s (Lcom/dk/kuiver/model/KuiverEdge;JJF)Lcom/dk/kuiver/ui/EdgeStyle;
+	public static synthetic fun styled--WgHM3s$default (Lcom/dk/kuiver/ui/EdgeStyle$Companion;Lcom/dk/kuiver/model/KuiverEdge;JJFILjava/lang/Object;)Lcom/dk/kuiver/ui/EdgeStyle;
+}
+
+public final class com/dk/kuiver/ui/KuiverAnchorKt {
+	public static final fun KuiverAnchor (Landroidx/compose/ui/Modifier;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
+	public static final fun KuiverAnchor (Ljava/lang/String;Landroidx/compose/ui/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class com/dk/kuiver/ui/KuiverColors {
+	public static final field $stable I
+	public fun <init> ()V
+	public synthetic fun <init> (JJJJLandroidx/compose/ui/graphics/Color;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (JJJJLandroidx/compose/ui/graphics/Color;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-0d7_KjU ()J
+	public final fun component2-0d7_KjU ()J
+	public final fun component3-0d7_KjU ()J
+	public final fun component4-0d7_KjU ()J
+	public final fun component5-QN2ZGVo ()Landroidx/compose/ui/graphics/Color;
+	public final fun copy-qa9m3tE (JJJJLandroidx/compose/ui/graphics/Color;)Lcom/dk/kuiver/ui/KuiverColors;
+	public static synthetic fun copy-qa9m3tE$default (Lcom/dk/kuiver/ui/KuiverColors;JJJJLandroidx/compose/ui/graphics/Color;ILjava/lang/Object;)Lcom/dk/kuiver/ui/KuiverColors;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBackEdge-0d7_KjU ()J
+	public final fun getEdge-0d7_KjU ()J
+	public final fun getLabelBackground-0d7_KjU ()J
+	public final fun getLabelBorder-QN2ZGVo ()Landroidx/compose/ui/graphics/Color;
+	public final fun getLabelText-0d7_KjU ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/dk/kuiver/ui/KuiverColorsKt {
+	public static final fun getLocalKuiverColors ()Landroidx/compose/runtime/ProvidableCompositionLocal;
+}
+
+public final class com/dk/kuiver/ui/KuiverDefaults {
+	public static final field $stable I
+	public static final field INSTANCE Lcom/dk/kuiver/ui/KuiverDefaults;
+	public final fun edgeLabelStyle (Landroidx/compose/runtime/Composer;I)Lcom/dk/kuiver/ui/EdgeLabelStyle;
+	public final fun edgeStyle-kHDZbjc (FLandroidx/compose/runtime/Composer;II)Lkotlin/jvm/functions/Function1;
+}
+
+public final class com/dk/kuiver/ui/LabelPlacement : java/lang/Enum {
+	public static final field CENTER Lcom/dk/kuiver/ui/LabelPlacement;
+	public static final field END Lcom/dk/kuiver/ui/LabelPlacement;
+	public static final field START Lcom/dk/kuiver/ui/LabelPlacement;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getOffset ()F
+	public static fun valueOf (Ljava/lang/String;)Lcom/dk/kuiver/ui/LabelPlacement;
+	public static fun values ()[Lcom/dk/kuiver/ui/LabelPlacement;
+}
+
+public final class com/dk/kuiver/ui/NodeComponentsKt {
+	public static final fun DefaultNodeContent-eopBjH0 (Ljava/lang/String;JJLkotlin/jvm/functions/Function0;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class com/dk/kuiver/ui/OrthogonalEdgeComponentsKt {
+	public static final fun OrthogonalEdgeContent-WmE9_FU (JJJFZZFFFFLkotlin/jvm/functions/Function5;Landroidx/compose/runtime/Composer;III)V
+	public static final fun OrthogonalEdgeContentWithLabel-8oKbKUQ (JJLjava/lang/String;Ljava/lang/Float;Lcom/dk/kuiver/ui/LabelPlacement;Lcom/dk/kuiver/ui/EdgeLabelStyle;Lkotlin/jvm/functions/Function3;JFZZFFFFLkotlin/jvm/functions/Function5;FLandroidx/compose/runtime/Composer;III)V
+	public static final fun RightAngleEdgeContent-WmE9_FU (JJJFZZFFLcom/dk/kuiver/ui/RightAngleRouting;FLkotlin/jvm/functions/Function5;Landroidx/compose/runtime/Composer;III)V
+	public static final fun RightAngleEdgeContentWithLabel-8oKbKUQ (JJLjava/lang/String;Ljava/lang/Float;Lcom/dk/kuiver/ui/LabelPlacement;Lcom/dk/kuiver/ui/EdgeLabelStyle;Lkotlin/jvm/functions/Function3;JFZZFFLcom/dk/kuiver/ui/RightAngleRouting;FLkotlin/jvm/functions/Function5;FLandroidx/compose/runtime/Composer;III)V
+	public static final fun StyledRightAngleEdgeContent-t12re9I (Lcom/dk/kuiver/model/KuiverEdge;JJJFZZFFFLkotlin/jvm/functions/Function5;Ljava/lang/String;Ljava/lang/Float;Lcom/dk/kuiver/ui/LabelPlacement;Lcom/dk/kuiver/ui/EdgeLabelStyle;Lkotlin/jvm/functions/Function3;Landroidx/compose/runtime/Composer;III)V
+}
+
+public final class com/dk/kuiver/ui/RightAngleRouting : java/lang/Enum {
+	public static final field Companion Lcom/dk/kuiver/ui/RightAngleRouting$Companion;
+	public static final field HORIZONTAL_FIRST Lcom/dk/kuiver/ui/RightAngleRouting;
+	public static final field HORIZONTAL_VERTICAL_HORIZONTAL Lcom/dk/kuiver/ui/RightAngleRouting;
+	public static final field VERTICAL_FIRST Lcom/dk/kuiver/ui/RightAngleRouting;
+	public static final field VERTICAL_HORIZONTAL_VERTICAL Lcom/dk/kuiver/ui/RightAngleRouting;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/dk/kuiver/ui/RightAngleRouting;
+	public static fun values ()[Lcom/dk/kuiver/ui/RightAngleRouting;
+}
+
+public final class com/dk/kuiver/ui/RightAngleRouting$Companion {
+	public final fun fromAnchorSides (Lcom/dk/kuiver/ui/AnchorSide;Lcom/dk/kuiver/ui/AnchorSide;)Lcom/dk/kuiver/ui/RightAngleRouting;
+}
+
+public final class com/dk/kuiver/util/Bounds {
+	public static final field $stable I
+	public static final field Companion Lcom/dk/kuiver/util/Bounds$Companion;
+	public synthetic fun <init> (FFFFLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-D9Ej5fM ()F
+	public final fun component2-D9Ej5fM ()F
+	public final fun component3-D9Ej5fM ()F
+	public final fun component4-D9Ej5fM ()F
+	public final fun copy-a9UjIt4 (FFFF)Lcom/dk/kuiver/util/Bounds;
+	public static synthetic fun copy-a9UjIt4$default (Lcom/dk/kuiver/util/Bounds;FFFFILjava/lang/Object;)Lcom/dk/kuiver/util/Bounds;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCenterX-D9Ej5fM ()F
+	public final fun getCenterY-D9Ej5fM ()F
+	public final fun getHeight-D9Ej5fM ()F
+	public final fun getMaxX-D9Ej5fM ()F
+	public final fun getMaxY-D9Ej5fM ()F
+	public final fun getMinX-D9Ej5fM ()F
+	public final fun getMinY-D9Ej5fM ()F
+	public final fun getWidth-D9Ej5fM ()F
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/dk/kuiver/util/Bounds$Companion {
+	public final fun getEMPTY ()Lcom/dk/kuiver/util/Bounds;
+}
+
+public final class com/dk/kuiver/util/BoundsUtilsKt {
+	public static final fun calculateNodeBounds (Ljava/util/Collection;)Lcom/dk/kuiver/util/Bounds;
+	public static final fun calculatePositionBounds (Ljava/util/Collection;)Lcom/dk/kuiver/util/Bounds;
+}
+

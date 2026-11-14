@@ -10,12 +10,12 @@ import com.dk.kuiver.model.Kuiver
  * Type alias for custom layout provider functions.
  * Takes a Kuiver graph and LayoutConfig, returns a new Kuiver with updated node positions.
  */
-typealias LayoutProvider = (Kuiver, LayoutConfig) -> Kuiver
+public typealias LayoutProvider = (Kuiver, LayoutConfig) -> Kuiver
 
 /**
  * Layout direction for hierarchical layouts.
  */
-enum class LayoutDirection {
+public enum class LayoutDirection {
     /** Left to right flow */
     HORIZONTAL,
     /** Top to bottom flow */
@@ -33,18 +33,18 @@ enum class LayoutDirection {
  * @see Custom for user-defined layout algorithms
  */
 @Immutable
-sealed class LayoutConfig {
+public sealed class LayoutConfig {
     /**
      * Canvas width. Set automatically by the viewer from canvas size.
      * Can be 0 if canvas hasn't been measured yet.
      */
-    abstract val width: Dp
+    public abstract val width: Dp
 
     /**
      * Canvas height. Set automatically by the viewer from canvas size.
      * Can be 0 if canvas hasn't been measured yet.
      */
-    abstract val height: Dp
+    public abstract val height: Dp
 
     /**
      * Fallback node size, used when a node doesn't specify explicit dimensions.
@@ -73,7 +73,7 @@ sealed class LayoutConfig {
      * ```
      */
     @Immutable
-    data class Hierarchical(
+    public data class Hierarchical(
         val direction: LayoutDirection = LayoutDirection.HORIZONTAL,
         val levelSpacing: Dp = 150.dp,
         val nodeSpacing: Dp = 100.dp,
@@ -105,7 +105,7 @@ sealed class LayoutConfig {
      * ```
      */
     @Immutable
-    data class ForceDirected(
+    public data class ForceDirected(
         val iterations: Int = 200,
         val repulsionStrength: Float = 500f,
         val attractionStrength: Float = 0.02f,
@@ -145,7 +145,7 @@ sealed class LayoutConfig {
      * ```
      */
     @Immutable
-    data class Custom(
+    public data class Custom(
         val provider: LayoutProvider,
         override val width: Dp = 0.dp,
         override val height: Dp = 0.dp
@@ -161,7 +161,7 @@ sealed class LayoutConfig {
  * @param layoutConfig layout algorithm and settings, hierarchical by default
  * @return the graph with node positions set and edges classified
  */
-fun layout(
+public fun layout(
     kuiver: Kuiver,
     layoutConfig: LayoutConfig = LayoutConfig.Hierarchical()
 ): Kuiver = layout(kuiver, layoutConfig, checkCancellation = {})

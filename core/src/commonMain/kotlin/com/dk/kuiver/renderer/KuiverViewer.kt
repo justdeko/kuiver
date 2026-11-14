@@ -17,7 +17,6 @@ import androidx.compose.foundation.gestures.calculateCentroidSize
 import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -89,7 +88,7 @@ import kotlin.math.exp
  * @property enterAnimationSpec fade-in of the graph once it is ready, or none when `null`
  */
 @Immutable
-data class KuiverViewerConfig(
+public data class KuiverViewerConfig(
     val showDebugBounds: Boolean = false,
     val fitToContent: Boolean = true,
     val contentPadding: Float = 0.8f,
@@ -156,7 +155,7 @@ internal sealed interface EdgeRendering {
  * state as its [KuiverEdgeScope] receiver
  */
 @Composable
-fun KuiverViewer(
+public fun KuiverViewer(
     state: KuiverViewerState,
     modifier: Modifier = Modifier,
     config: KuiverViewerConfig = KuiverViewerConfig(),
@@ -201,7 +200,7 @@ fun KuiverViewer(
  * @param edgeStyle how each edge is drawn
  */
 @Composable
-fun KuiverViewer(
+public fun KuiverViewer(
     state: KuiverViewerState,
     modifier: Modifier = Modifier,
     config: KuiverViewerConfig = KuiverViewerConfig(),
@@ -248,6 +247,7 @@ internal fun ViewerRenderer(
     config: KuiverViewerConfig = KuiverViewerConfig(),
     callbacks: KuiverInteractionCallbacks = KuiverInteractionCallbacks.None,
     anchorRegistry: AnchorPositionRegistry,
+    cullOffscreen: Boolean = true,
     nodeContent: @Composable KuiverNodeScope.(KuiverNode) -> Unit,
     edges: EdgeRendering
 ) {
@@ -259,6 +259,8 @@ internal fun ViewerRenderer(
     val layoutTransition = remember { LayoutTransition() }
     val reportMeasured = remember(state) { state::updateMeasuredDimensions }
     val edgeHitRegistry = remember { EdgeHitRegistry() }
+    val cullWindow =
+        remember(state, cullOffscreen) { if (cullOffscreen) CullWindow(state) else null }
     val edgesInteractive = config.edgeSelectionMode != SelectionMode.NONE ||
             config.edgeHoverEnabled || callbacks.onEdgeClick != null
 
@@ -330,9 +332,9 @@ internal fun ViewerRenderer(
         if (!config.hoverEnabled && !config.edgeHoverEnabled) interaction.pointerNodeId = null
     }
 
-    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-        val centerX = maxWidth / 2
-        val centerY = maxHeight / 2
+    Box(modifier = modifier.fillMaxSize()) {
+        val centerX = state.canvasWidth / 2
+        val centerY = state.canvasHeight / 2
 
         val kuiver = state.layoutedKuiver
         val bounds = remember(kuiver.nodes) { kuiver.nodes.values.calculatePositionBounds() }
@@ -569,6 +571,7 @@ internal fun ViewerRenderer(
                             interaction = interaction,
                             anchorRegistry = anchorRegistry,
                             skipAnimation = skipAnimation,
+                            cullWindow = cullWindow,
                             bends = bends,
                             hitRegistry = edgeHitRegistry.takeIf { edgesInteractive },
                             edgeStyle = edges.style
@@ -625,6 +628,7 @@ internal fun ViewerRenderer(
                         config = config,
                         callbacks = callbacks,
                         skipAnimation = skipAnimation,
+                        cullWindow = cullWindow,
                         onMeasured = reportMeasured,
                         nodeContent = nodeContent
                     )

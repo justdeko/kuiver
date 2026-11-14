@@ -1,5 +1,6 @@
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -13,6 +14,12 @@ group = "io.github.justdeko"
 version = project.findProperty("publish.version") as String? ?: "1.0.0-SNAPSHOT"
 
 kotlin {
+    explicitApi()
+
+    // Reference dumps in core/api, see checkKotlinAbi and updateKotlinAbi
+    @OptIn(ExperimentalAbiValidation::class)
+    abiValidation()
+
     android {
         namespace = "com.dk.kuiver.library"
         compileSdk = libs.versions.android.compileSdk.get().toInt()

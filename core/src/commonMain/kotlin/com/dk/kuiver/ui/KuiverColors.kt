@@ -20,7 +20,7 @@ import com.dk.kuiver.model.KuiverEdge
  * @property labelBorder Color of the edge label border, null for no border (default: black with 30% opacity)
  */
 @Immutable
-data class KuiverColors(
+public data class KuiverColors(
     val edge: Color = Color.Black,
     val backEdge: Color = Color(0xFFFF6B6B),
     val labelText: Color = Color.Black,
@@ -51,13 +51,13 @@ data class KuiverColors(
  * }
  * ```
  */
-val LocalKuiverColors: ProvidableCompositionLocal<KuiverColors> =
+public val LocalKuiverColors: ProvidableCompositionLocal<KuiverColors> =
     staticCompositionLocalOf { KuiverColors() }
 
 /**
  * Default values used by kuiver's edge composables, themeable via [LocalKuiverColors]
  */
-object KuiverDefaults {
+public object KuiverDefaults {
 
     /**
      * Builds the default edge label style
@@ -65,7 +65,7 @@ object KuiverDefaults {
      * @return an [EdgeLabelStyle] built from the current [LocalKuiverColors]
      */
     @Composable
-    fun edgeLabelStyle(): EdgeLabelStyle = LocalKuiverColors.current.let { colors ->
+    public fun edgeLabelStyle(): EdgeLabelStyle = LocalKuiverColors.current.let { colors ->
         EdgeLabelStyle(
             textColor = colors.labelText,
             backgroundColor = colors.labelBackground,
@@ -84,7 +84,7 @@ object KuiverDefaults {
      * @param strokeWidth width of the edge line
      */
     @Composable
-    fun edgeStyle(strokeWidth: Dp = 3.dp): (KuiverEdge) -> EdgeStyle {
+    public fun edgeStyle(strokeWidth: Dp = 3.dp): (KuiverEdge) -> EdgeStyle {
         val colors = LocalKuiverColors.current
         return remember(colors, strokeWidth) {
             { edge ->

@@ -19,7 +19,7 @@ import com.dk.kuiver.model.KuiverEdge
  * back edges or self-loops. For graphs with back edges, handle the fallback yourself.
  */
 @Composable
-fun OrthogonalEdgeContent(
+public fun OrthogonalEdgeContent(
     from: Offset,
     to: Offset,
     color: Color = LocalKuiverColors.current.edge,
@@ -53,36 +53,31 @@ fun OrthogonalEdgeContent(
 }
 
 /**
- * Orthogonal edge with S-curve path and label support.
+ * S-curve edge with horizontal tangents and an optional label.
  *
- * Renders an edge with horizontal tangents at both ends, creating a smooth
- * S-curve path. Supports customizable labels positioned along the curve path.
- * Labels automatically hide on edges shorter than minEdgeLengthForLabel and
- * rotate to stay readable.
+ * The label follows the curve and is hidden on edges shorter than [minEdgeLengthForLabel]. Back
+ * edges and self-loops are not supported.
  *
- * Note: This component is designed for forward/tree edges only. It does not support
- * back edges or self-loops. For graphs with back edges, handle the fallback yourself.
- *
- * @param from Start point of the edge
- * @param to End point of the edge
- * @param label Optional label text to display on the edge
- * @param labelOffset Position along the edge (0.0 = from, 1.0 = to). Must be in range [0, 1]
- * @param labelPlacement Preset position (START, CENTER, END). Takes precedence over labelOffset
- * @param labelStyle Styling configuration for the label
- * @param labelContent Optional custom composable for label rendering (overrides default)
- * @param color Edge line color
- * @param strokeWidth Width of the edge line. Must be positive
- * @param showArrow Whether to show an arrow at the end
- * @param dashed Whether the edge should be dashed
- * @param dashLength Length of dashes (if dashed)
- * @param gapLength Length of gaps between dashes (if dashed)
- * @param curveFactor How far control points extend horizontally (0.0-1.0, default 0.5)
- * @param arrowSize Size of the arrow head
- * @param arrowDrawer Custom arrow drawing function
- * @param minEdgeLengthForLabel Minimum edge length to show label. Must be non-negative
+ * @param from start point of the edge
+ * @param to end point of the edge
+ * @param label text shown on the edge, none when null
+ * @param labelOffset position along the edge from 0 (start) to 1 (end), 0.5 by default
+ * @param labelPlacement preset position, takes precedence over [labelOffset]
+ * @param labelStyle style of the label
+ * @param labelContent replaces the default label
+ * @param color edge line color
+ * @param strokeWidth width of the edge line, must be positive
+ * @param showArrow whether to draw an arrow at the end
+ * @param dashed whether the edge is dashed
+ * @param dashLength length of dashes
+ * @param gapLength length of gaps between dashes
+ * @param curveFactor how far the control points extend horizontally, 0 to 1
+ * @param arrowSize size of the arrow head
+ * @param arrowDrawer draws the arrow head
+ * @param minEdgeLengthForLabel shortest edge that still shows its label
  */
 @Composable
-fun OrthogonalEdgeContentWithLabel(
+public fun OrthogonalEdgeContentWithLabel(
     from: Offset,
     to: Offset,
     label: String? = null,
@@ -140,13 +135,13 @@ fun OrthogonalEdgeContentWithLabel(
  * Represents which side of a node an anchor is positioned on.
  * Used to determine optimal routing for right-angle edges.
  */
-enum class AnchorSide {
+public enum class AnchorSide {
     LEFT,
     RIGHT,
     TOP,
     BOTTOM;
 
-    companion object {
+    public companion object {
         /**
          * Infer anchor side from common anchor naming conventions.
          *
@@ -160,7 +155,7 @@ enum class AnchorSide {
          * @param anchorId The anchor identifier string
          * @return The inferred AnchorSide, or null if cannot be determined
          */
-        fun fromAnchorId(anchorId: String?): AnchorSide? {
+        public fun fromAnchorId(anchorId: String?): AnchorSide? {
             if (anchorId == null) return null
             val id = anchorId.lowercase().trim()
             return when (id) {
@@ -177,7 +172,7 @@ enum class AnchorSide {
 /**
  * Routing strategy for right-angle edges.
  */
-enum class RightAngleRouting {
+public enum class RightAngleRouting {
     /** Go horizontal first, then vertical */
     HORIZONTAL_FIRST,
 
@@ -190,7 +185,7 @@ enum class RightAngleRouting {
     /** Use a middle waypoint for 3-segment routing (vertical-horizontal-vertical) */
     VERTICAL_HORIZONTAL_VERTICAL;
 
-    companion object {
+    public companion object {
         /**
          * Determine optimal routing based on source and target anchor sides.
          *
@@ -203,7 +198,7 @@ enum class RightAngleRouting {
          * @param toSide The anchor side on the target node
          * @return The optimal routing strategy
          */
-        fun fromAnchorSides(fromSide: AnchorSide?, toSide: AnchorSide?): RightAngleRouting {
+        public fun fromAnchorSides(fromSide: AnchorSide?, toSide: AnchorSide?): RightAngleRouting {
             return when {
                 // Both horizontal anchors: use H-V-H for parallel nodes
                 fromSide == AnchorSide.RIGHT && toSide == AnchorSide.LEFT -> HORIZONTAL_VERTICAL_HORIZONTAL
@@ -266,7 +261,7 @@ enum class RightAngleRouting {
  * @param arrowDrawer Custom arrow drawing function
  */
 @Composable
-fun RightAngleEdgeContent(
+public fun RightAngleEdgeContent(
     from: Offset,
     to: Offset,
     color: Color = LocalKuiverColors.current.edge,
@@ -298,34 +293,30 @@ fun RightAngleEdgeContent(
 }
 
 /**
- * Right-angle orthogonal edge with label support (draw.io style).
+ * Edge of horizontal and vertical segments with an optional label.
  *
- * Renders an edge using only horizontal and vertical line segments with
- * optional label positioned along the path.
+ * Use [StyledRightAngleEdgeContent] to pick the routing from the edge anchors.
  *
- * Note: This component requires explicit routing. For automatic routing based on
- * anchor positions, use [StyledRightAngleEdgeContent] with a [KuiverEdge].
- *
- * @param from Start point of the edge
- * @param to End point of the edge
- * @param label Optional label text to display on the edge
- * @param labelOffset Position along the edge (0.0 = from, 1.0 = to). Must be in range [0, 1]
- * @param labelPlacement Preset position (START, CENTER, END). Takes precedence over labelOffset
- * @param labelStyle Styling configuration for the label
- * @param labelContent Optional custom composable for label rendering (overrides default)
- * @param color Edge line color
- * @param strokeWidth Width of the edge line. Must be positive
- * @param showArrow Whether to show an arrow at the end
- * @param dashed Whether the edge should be dashed
- * @param dashLength Length of dashes (if dashed)
- * @param gapLength Length of gaps between dashes (if dashed)
- * @param routing The routing strategy for the edge segments
- * @param arrowSize Size of the arrow head
- * @param arrowDrawer Custom arrow drawing function
- * @param minEdgeLengthForLabel Minimum edge length to show label. Must be non-negative
+ * @param from start point of the edge
+ * @param to end point of the edge
+ * @param label text shown on the edge, none when null
+ * @param labelOffset position along the edge from 0 (start) to 1 (end), 0.5 by default
+ * @param labelPlacement preset position, takes precedence over [labelOffset]
+ * @param labelStyle style of the label
+ * @param labelContent replaces the default label
+ * @param color edge line color
+ * @param strokeWidth width of the edge line, must be positive
+ * @param showArrow whether to draw an arrow at the end
+ * @param dashed whether the edge is dashed
+ * @param dashLength length of dashes
+ * @param gapLength length of gaps between dashes
+ * @param routing order of the horizontal and vertical segments
+ * @param arrowSize size of the arrow head
+ * @param arrowDrawer draws the arrow head
+ * @param minEdgeLengthForLabel shortest edge that still shows its label
  */
 @Composable
-fun RightAngleEdgeContentWithLabel(
+public fun RightAngleEdgeContentWithLabel(
     from: Offset,
     to: Offset,
     label: String? = null,
@@ -378,39 +369,30 @@ fun RightAngleEdgeContentWithLabel(
 }
 
 /**
- * Right-angle edge that automatically determines routing from anchor information.
+ * Right-angle edge routed from the anchor ids of [edge], see [AnchorSide.fromAnchorId] for the
+ * names it understands.
  *
- * The routing is automatically determined based on the anchor IDs specified in the
- * edge (e.g., "left", "right", "top", "bottom").
+ * Back edges and self-loops are not supported.
  *
- * Note: This component is designed for forward/tree edges only. It does not support
- * back edges or self-loops. For graphs with back edges, handle the fallback yourself.
- *
- * Supported anchor names (case-insensitive):
- * - Left side: "left", "l", "west", "w", "start"
- * - Right side: "right", "r", "east", "e", "end"
- * - Top side: "top", "t", "north", "n", "up"
- * - Bottom side: "bottom", "b", "south", "s", "down"
- *
- * @param edge The edge containing anchor information (fromAnchor and toAnchor)
- * @param from Start point of the edge (already resolved from anchor position)
- * @param to End point of the edge (already resolved from anchor position)
- * @param color Edge line color
- * @param strokeWidth Width of the edge line
- * @param showArrow Whether to show an arrow at the end
- * @param dashed Whether the edge should be dashed
- * @param dashLength Length of dashes (if dashed)
- * @param gapLength Length of gaps between dashes (if dashed)
- * @param arrowSize Size of the arrow head
- * @param arrowDrawer Custom arrow drawing function
- * @param label Optional label text to display on the edge
- * @param labelOffset Position along the edge (0.0 = from, 1.0 = to)
- * @param labelPlacement Preset position (START, CENTER, END)
- * @param labelStyle Styling configuration for the label
- * @param labelContent Optional custom composable for label rendering
+ * @param edge edge to draw, read for its anchors
+ * @param from start point of the edge
+ * @param to end point of the edge
+ * @param color edge line color
+ * @param strokeWidth width of the edge line, must be positive
+ * @param showArrow whether to draw an arrow at the end
+ * @param dashed whether the edge is dashed
+ * @param dashLength length of dashes
+ * @param gapLength length of gaps between dashes
+ * @param arrowSize size of the arrow head
+ * @param arrowDrawer draws the arrow head
+ * @param label text shown on the edge, none when null
+ * @param labelOffset position along the edge from 0 (start) to 1 (end), 0.5 by default
+ * @param labelPlacement preset position, takes precedence over [labelOffset]
+ * @param labelStyle style of the label
+ * @param labelContent replaces the default label
  */
 @Composable
-fun StyledRightAngleEdgeContent(
+public fun StyledRightAngleEdgeContent(
     edge: KuiverEdge,
     from: Offset,
     to: Offset,

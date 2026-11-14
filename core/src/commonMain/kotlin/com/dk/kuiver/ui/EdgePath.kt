@@ -22,11 +22,11 @@ import androidx.compose.ui.geometry.Offset
  * @property edgeLength Total geometric length of the edge
  */
 @Immutable
-sealed class EdgePath {
-    abstract val from: Offset
-    abstract val to: Offset
-    abstract val pathEndpoint: Offset
-    abstract val edgeLength: Float
+public sealed class EdgePath {
+    public abstract val from: Offset
+    public abstract val to: Offset
+    public abstract val pathEndpoint: Offset
+    public abstract val edgeLength: Float
 
     /**
      * Calculate label position at a given offset along the path.
@@ -40,7 +40,7 @@ sealed class EdgePath {
      *   Returns null if the edge is shorter.
      * @return Label position with rotation angle, or null if edge is too short
      */
-    abstract fun calculateLabelPosition(
+    public abstract fun calculateLabelPosition(
         offset: Float,
         minEdgeLength: Float = 50f
     ): EdgeLabelPosition?
@@ -54,7 +54,7 @@ sealed class EdgePath {
      * @property edgeLength Distance between from and to
      */
     @Immutable
-    data class Straight(
+    public data class Straight(
         override val from: Offset,
         override val to: Offset,
         override val pathEndpoint: Offset,
@@ -82,7 +82,7 @@ sealed class EdgePath {
      * @property edgeLength Approximate arc length of the curve
      */
     @Immutable
-    data class Curved(
+    public data class Curved(
         override val from: Offset,
         override val to: Offset,
         val controlPoint: Offset,
@@ -111,7 +111,7 @@ sealed class EdgePath {
      * @property edgeLength Approximate arc length of the loop
      */
     @Immutable
-    data class SelfLoop(
+    public data class SelfLoop(
         override val from: Offset,
         override val to: Offset,
         val controlPoint: Offset,
@@ -143,7 +143,7 @@ sealed class EdgePath {
      * @property curveFactor How far the control points extend horizontally
      */
     @Immutable
-    data class Orthogonal(
+    public data class Orthogonal(
         override val from: Offset,
         override val to: Offset,
         val controlPoint1: Offset,
@@ -177,7 +177,7 @@ sealed class EdgePath {
      * @property arrowDirection Direction vector for the arrow (based on final segment)
      */
     @Immutable
-    data class RightAngle(
+    public data class RightAngle(
         override val from: Offset,
         override val to: Offset,
         val waypoints: List<Offset>,

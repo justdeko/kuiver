@@ -3,6 +3,7 @@ package com.dk.kuiver.ui
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
@@ -16,7 +17,7 @@ import com.dk.kuiver.model.KuiverEdge
  * Self-loops ignore this and always draw as a loop. Edges that share their nodes, direction and
  * anchors with other edges fan out as arcs with [AUTO], [STRAIGHT] or [CURVED].
  */
-enum class EdgeShape {
+public enum class EdgeShape {
     /** Curved for [EdgeType.BACK], straight otherwise. */
     AUTO,
     STRAIGHT,
@@ -45,7 +46,7 @@ enum class EdgeShape {
  * @property arrowDrawer draws the arrow head
  */
 @Immutable
-data class EdgeStyle(
+public data class EdgeStyle(
     val color: Color = Color.Black,
     val strokeWidth: Dp = 3.dp,
     val showArrow: Boolean = true,
@@ -58,7 +59,7 @@ data class EdgeStyle(
     val arrowSize: Dp = 16.dp,
     val arrowDrawer: ArrowDrawer = DefaultArrowDrawer
 ) {
-    companion object {
+    public companion object {
         /**
          * Returns a default [EdgeStyle] for the given [edge], with different colors for back edges and self-loops.
          *
@@ -67,7 +68,7 @@ data class EdgeStyle(
          * @param backEdgeColor color for back edges and self-loops
          * @param strokeWidth width of the edge line
          */
-        fun styled(
+        public fun styled(
             edge: KuiverEdge,
             baseColor: Color = Color.Black,
             backEdgeColor: Color = Color(0xFFFF6B6B),
@@ -148,7 +149,7 @@ private fun EdgeStyle.curvedPath(
     bend: Float
 ): EdgePath = EdgePathFactory.createCurvedPath(from, to, density, showArrow, strokeWidth, bend)
 
-internal fun DrawScope.drawStyledEdge(path: EdgePath, style: EdgeStyle) {
+internal fun DrawScope.drawStyledEdge(path: EdgePath, style: EdgeStyle, scratch: Path) {
     drawEdgePath(
         path = path,
         color = style.color,
@@ -158,6 +159,7 @@ internal fun DrawScope.drawStyledEdge(path: EdgePath, style: EdgeStyle) {
         dashLength = style.dashLength,
         gapLength = style.gapLength,
         arrowSize = style.arrowSize,
-        arrowDrawer = style.arrowDrawer
+        arrowDrawer = style.arrowDrawer,
+        scratch = scratch
     )
 }

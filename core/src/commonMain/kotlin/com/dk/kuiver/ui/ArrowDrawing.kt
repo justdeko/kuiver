@@ -16,7 +16,7 @@ import kotlin.math.sin
  * @param color The color to use for the arrow
  * @param arrowSize Size of the arrow head in pixels
  */
-typealias ArrowDrawer = DrawScope.(
+public typealias ArrowDrawer = DrawScope.(
     arrowTip: Offset,
     direction: Offset,
     color: Color,
@@ -26,7 +26,7 @@ typealias ArrowDrawer = DrawScope.(
 /**
  * Default arrow drawer that draws a filled triangle.
  */
-val DefaultArrowDrawer: ArrowDrawer = { arrowTip, direction, color, arrowSize ->
+public val DefaultArrowDrawer: ArrowDrawer = { arrowTip, direction, color, arrowSize ->
     val angle = atan2(direction.y.toDouble(), direction.x.toDouble()).toFloat()
     val arrowAngleSpread = EdgeDrawingDefaults.ARROW_ANGLE_SPREAD
 

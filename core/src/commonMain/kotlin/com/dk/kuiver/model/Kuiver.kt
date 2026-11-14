@@ -14,16 +14,16 @@ import androidx.compose.runtime.Immutable
  * at most once per direction. Edges with their own ids can connect the same nodes several times.
  */
 @Immutable
-class Kuiver internal constructor(
-    val nodes: Map<String, KuiverNode>,
-    val edges: Set<KuiverEdge>,
+public class Kuiver internal constructor(
+    public val nodes: Map<String, KuiverNode>,
+    public val edges: Set<KuiverEdge>,
     private val adjacency: Map<String, Set<String>>,
     private val edgeMap: Map<String, KuiverEdge>
 ) {
     /**
      * Creates an empty graph.
      */
-    constructor() : this(emptyMap(), emptySet(), emptyMap(), emptyMap())
+    public constructor() : this(emptyMap(), emptySet(), emptyMap(), emptyMap())
 
     private val cachedHashCode: Int by lazy(LazyThreadSafetyMode.PUBLICATION) {
         31 * nodes.hashCode() + edges.hashCode()
@@ -45,7 +45,7 @@ class Kuiver internal constructor(
      * Returns a copy of this graph with [node] added, replacing any existing node with the same id.
      * Edges are left untouched, which makes this the way to update a node's position or dimensions.
      */
-    fun withNode(node: KuiverNode): Kuiver {
+    public fun withNode(node: KuiverNode): Kuiver {
         if (nodes[node.id] == node) return this
         val updatedAdjacency = if (adjacency.containsKey(node.id)) {
             adjacency
@@ -59,7 +59,7 @@ class Kuiver internal constructor(
      * Returns a copy of this graph with all of [newNodes] added, replacing existing nodes with the
      * same ids. See [withNode].
      */
-    fun withNodes(newNodes: Collection<KuiverNode>): Kuiver {
+    public fun withNodes(newNodes: Collection<KuiverNode>): Kuiver {
         if (newNodes.isEmpty()) return this
         val updatedNodes = nodes.toMutableMap()
         val updatedAdjacency = adjacency.toMutableMap()
@@ -80,7 +80,7 @@ class Kuiver internal constructor(
      * @throws IllegalArgumentException if either endpoint is not part of the graph, or if the id
      * already belongs to an edge between other nodes
      */
-    fun withEdge(edge: KuiverEdge): Kuiver {
+    public fun withEdge(edge: KuiverEdge): Kuiver {
         requireEndpoints(edge)
         val existing = edgeMap[edge.id]
         if (existing != null) {
@@ -103,7 +103,7 @@ class Kuiver internal constructor(
      * @throws IllegalArgumentException if any endpoint is not part of the graph, or if an id
      * already belongs to an edge between other nodes
      */
-    fun withEdges(newEdges: Collection<KuiverEdge>): Kuiver {
+    public fun withEdges(newEdges: Collection<KuiverEdge>): Kuiver {
         if (newEdges.isEmpty()) return this
         newEdges.forEach { requireEndpoints(it) }
         val updatedEdges = edges.toMutableSet()
@@ -126,7 +126,7 @@ class Kuiver internal constructor(
     /**
      * Returns a copy of this graph without the node [id] and without the edges touching it.
      */
-    fun withoutNode(id: String): Kuiver {
+    public fun withoutNode(id: String): Kuiver {
         if (!nodes.containsKey(id)) return this
         val keptNodes = nodes.values.filter { it.id != id }
         val keptEdges = edges.filter { it.fromId != id && it.toId != id }
@@ -148,21 +148,21 @@ class Kuiver internal constructor(
         "Edges are identified by id",
         ReplaceWith("withoutEdge(\"\$fromId->\$toId\")")
     )
-    fun withoutEdge(fromId: String, toId: String): Kuiver = withoutEdge("$fromId->$toId")
+    public fun withoutEdge(fromId: String, toId: String): Kuiver = withoutEdge("$fromId->$toId")
 
     /**
      * Returns a copy of this graph without [edge]. Nodes are left untouched.
      *
      * @param edge the edge to drop, matched by [KuiverEdge.id]
      */
-    fun withoutEdge(edge: KuiverEdge): Kuiver = withoutEdge(edge.id)
+    public fun withoutEdge(edge: KuiverEdge): Kuiver = withoutEdge(edge.id)
 
     /**
      * Returns a copy of this graph without the edge [id]. Nodes are left untouched.
      *
      * @param id [KuiverEdge.id] of the edge to drop. Unknown ids are ignored
      */
-    fun withoutEdge(id: String): Kuiver {
+    public fun withoutEdge(id: String): Kuiver {
         if (!edgeMap.containsKey(id)) return this
         val keptNodes = nodes.values
         val keptEdges = edges.filter { it.id != id }
@@ -179,7 +179,7 @@ class Kuiver internal constructor(
      * @param fromId id of the edges' start node
      * @param toId id of the edges' end node
      */
-    fun edgesBetween(fromId: String, toId: String): List<KuiverEdge> =
+    public fun edgesBetween(fromId: String, toId: String): List<KuiverEdge> =
         edgesByPair[fromId to toId].orEmpty()
 
     /**
@@ -194,7 +194,7 @@ class Kuiver internal constructor(
      * }
      * ```
      */
-    fun rebuild(block: KuiverBuilder.() -> Unit): Kuiver =
+    public fun rebuild(block: KuiverBuilder.() -> Unit): Kuiver =
         KuiverBuilder().also { it.addAll(this) }.apply(block).build()
 
     /**
@@ -204,7 +204,7 @@ class Kuiver internal constructor(
      * @param to id of the edge's end node
      * @return `true` if the edge would close a cycle
      */
-    fun wouldCreateCycle(from: String, to: String): Boolean {
+    public fun wouldCreateCycle(from: String, to: String): Boolean {
         return hasPath(to, from)
     }
 
@@ -225,7 +225,7 @@ class Kuiver internal constructor(
      *
      * @return the [EdgeType] of [edge]
      */
-    fun classifyEdge(edge: KuiverEdge): EdgeType {
+    public fun classifyEdge(edge: KuiverEdge): EdgeType {
         return classifyAllEdges()[edge] ?: EdgeType.CROSS
     }
 
@@ -235,7 +235,7 @@ class Kuiver internal constructor(
      *
      * @return the [EdgeType] of each edge
      */
-    fun classifyAllEdges(): Map<KuiverEdge, EdgeType> {
+    public fun classifyAllEdges(): Map<KuiverEdge, EdgeType> {
         val result = mutableMapOf<KuiverEdge, EdgeType>()
 
         edges.forEach { edge ->
@@ -328,7 +328,7 @@ class Kuiver internal constructor(
      *
      * @return sets of node ids, one per component
      */
-    fun findStronglyConnectedComponents(): List<Set<String>> {
+    public fun findStronglyConnectedComponents(): List<Set<String>> {
         val index = mutableMapOf<String, Int>()
         val lowLink = mutableMapOf<String, Int>()
         val onStack = mutableSetOf<String>()
@@ -396,7 +396,7 @@ class Kuiver internal constructor(
     /**
      * Checks whether the graph contains a cycle, self-loops included.
      */
-    fun hasCycles(): Boolean {
+    public fun hasCycles(): Boolean {
         // Check for self-loops first (quick check)
         if (edges.any { it.fromId == it.toId }) {
             return true
@@ -409,7 +409,7 @@ class Kuiver internal constructor(
      * Returns the node ids in topological order. Nodes on a cycle are left out. The result
      * contains every node only for acyclic graphs.
      */
-    fun getTopologicalOrder(): List<String> {
+    public fun getTopologicalOrder(): List<String> {
         val inDegree = mutableMapOf<String, Int>()
         val queue = ArrayDeque<String>()
         val result = mutableListOf<String>()
@@ -445,7 +445,7 @@ class Kuiver internal constructor(
      * Returns a copy of this graph with node dimensions replaced by [measuredDimensions] where
      * present. Nodes without an entry keep the dimensions they have.
      */
-    fun withMeasuredDimensions(measuredDimensions: Map<String, NodeDimensions>): Kuiver {
+    internal fun withMeasuredDimensions(measuredDimensions: Map<String, NodeDimensions>): Kuiver {
         if (measuredDimensions.isEmpty()) return this
         var changed = false
         val updatedNodes = nodes.mapValues { (nodeId, node) ->
@@ -476,7 +476,7 @@ class Kuiver internal constructor(
  * Mutable builder for [Kuiver] graphs, the receiver of the [buildKuiver] and [Kuiver.rebuild]
  * blocks. Collect nodes and edges here, then call [build] to freeze them into an immutable graph.
  */
-class KuiverBuilder {
+public class KuiverBuilder {
     private val nodes = mutableMapOf<String, KuiverNode>()
     private val edges = mutableSetOf<KuiverEdge>()
     private val adjacency = mutableMapOf<String, MutableSet<String>>()
@@ -487,7 +487,7 @@ class KuiverBuilder {
      *
      * @return `true` if the node was added
      */
-    fun addNode(node: KuiverNode): Boolean {
+    public fun addNode(node: KuiverNode): Boolean {
         if (nodes.containsKey(node.id)) return false
         nodes[node.id] = node
         adjacency[node.id] = mutableSetOf()
@@ -502,7 +502,7 @@ class KuiverBuilder {
      * @return `true` if the edge was added
      * @throws IllegalArgumentException if the id already belongs to an edge between other nodes
      */
-    fun addEdge(edge: KuiverEdge): Boolean {
+    public fun addEdge(edge: KuiverEdge): Boolean {
         if (!nodes.containsKey(edge.fromId) || !nodes.containsKey(edge.toId)) {
             return false
         }
@@ -526,12 +526,12 @@ class KuiverBuilder {
      * @param to id of the edge's end node
      * @return `true` if the edge would close a cycle
      */
-    fun wouldCreateCycle(from: String, to: String): Boolean = adjacency.hasPath(to, from)
+    public fun wouldCreateCycle(from: String, to: String): Boolean = adjacency.hasPath(to, from)
 
     /**
      * Adds every node and edge of [kuiver], keeping the nodes already present in the builder.
      */
-    fun addAll(kuiver: Kuiver) {
+    public fun addAll(kuiver: Kuiver) {
         kuiver.nodes.values.forEach { addNode(it) }
         kuiver.edges.forEach { addEdge(it) }
     }
@@ -540,7 +540,7 @@ class KuiverBuilder {
      * Freezes the collected nodes and edges into an immutable [Kuiver]. The builder stays usable
      * afterwards and later changes do not affect the graphs it already produced.
      */
-    fun build(): Kuiver = Kuiver(
+    public fun build(): Kuiver = Kuiver(
         nodes.toMap(),
         edges.toSet(),
         adjacency.mapValues { (_, neighbors) -> neighbors.toSet() },

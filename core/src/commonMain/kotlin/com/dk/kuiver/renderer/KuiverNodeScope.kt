@@ -22,10 +22,10 @@ import com.dk.kuiver.KuiverInteractionState
  * @property isDragging whether this node is the one currently being dragged.
  */
 @Stable
-interface KuiverNodeScope {
-    val isSelected: Boolean
-    val isHovered: Boolean
-    val isDragging: Boolean
+public interface KuiverNodeScope {
+    public val isSelected: Boolean
+    public val isHovered: Boolean
+    public val isDragging: Boolean
 }
 
 internal class NodeScope(

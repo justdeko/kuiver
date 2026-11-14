@@ -14,63 +14,66 @@ import com.dk.kuiver.renderer.LocalNodeCoordinates
 
 
 /**
- * Marks a point within a node's content as an anchor point for edges.
+ * Marks a point in node content that edges can attach to.
  *
- * Place this composable within your node content to define where edges can connect.
- * The anchor's position is calculated relative to the node's top-left corner.
+ * Edges refer to it through [com.dk.kuiver.model.KuiverEdge.fromAnchor] and
+ * [com.dk.kuiver.model.KuiverEdge.toAnchor]. Only works inside the `nodeContent` of a viewer.
  *
- * @param modifier Generic compose modifier e.g., for alignment within the node
- * @param anchorId Unique identifier for this anchor within the node (e.g., "left", "right")
- * @param nodeId The ID of the node this anchor belongs to
- * @param content Optional content of the anchor
- *
- * Example:
  * ```kotlin
- * KuiverViewer(
- *     state = viewerState,
- *     nodeContent = { node ->
- *         Box(modifier = Modifier.size(100.dp)) {
- *             // Anchor on the left side
- *             KuiverAnchor(
- *                 anchorId = "left",
- *                 nodeId = node.id,
- *                 modifier = Modifier.align(Alignment.CenterStart)
- *             ) {
- *                 Box(Modifier.size(8.dp).background(Color.White, CircleShape))
- *             }
- *
- *             // Anchor on the right side
- *             KuiverAnchor(
- *                 anchorId = "right",
- *                 nodeId = node.id,
- *                 modifier = Modifier.align(Alignment.CenterEnd)
- *             )
- *
- *             // Node content
- *             Text("My Node")
- *         }
+ * nodeContent = { node ->
+ *     Box(Modifier.size(100.dp)) {
+ *         KuiverAnchor("right", Modifier.align(Alignment.CenterEnd))
+ *         Text(node.id)
  *     }
- * )
- *
- * // Create edges with anchor references
- * val graph = buildKuiver {
- *     addNode(KuiverNode("A"))
- *     addNode(KuiverNode("B"))
- *     addEdge(KuiverEdge(
- *         fromId = "A",
- *         toId = "B",
- *         fromAnchor = "right",
- *         toAnchor = "left"
- *     ))
  * }
  * ```
+ *
+ * @param anchorId id of the anchor, unique within its node
+ * @param modifier compose modifier for the anchor
+ * @param content optional content drawn at the anchor
  */
 @Composable
-fun KuiverAnchor(
+public fun KuiverAnchor(
+    anchorId: String,
+    modifier: Modifier = Modifier,
+    content: @Composable (() -> Unit)? = null
+) {
+    val nodeId = LocalNodeCoordinates.current?.nodeId
+        ?: error("KuiverAnchor has to be placed inside the nodeContent of a KuiverViewer")
+    AnchorBox(modifier, anchorId, nodeId, content)
+}
+
+/**
+ * Marks a point in node content that edges can attach to.
+ *
+ * @param modifier compose modifier for the anchor
+ * @param anchorId id of the anchor, unique within its node
+ * @param nodeId id of the node the anchor belongs to
+ * @param content optional content drawn at the anchor
+ */
+@Deprecated(
+    message = "The anchor takes node from the node content it is placed in",
+    replaceWith = ReplaceWith("KuiverAnchor(anchorId, modifier, content)")
+)
+@Composable
+public fun KuiverAnchor(
     modifier: Modifier = Modifier,
     anchorId: String,
     nodeId: String,
     content: @Composable (() -> Unit)? = null
+) {
+    AnchorBox(modifier, anchorId, nodeId, content)
+}
+
+/**
+ * Registers the center of this box as an anchor of the node.
+ */
+@Composable
+private fun AnchorBox(
+    modifier: Modifier,
+    anchorId: String,
+    nodeId: String,
+    content: @Composable (() -> Unit)?
 ) {
     val anchorRegistry = LocalAnchorRegistry.current
     val nodeCoordinates = LocalNodeCoordinates.current

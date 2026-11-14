@@ -18,9 +18,9 @@ import com.dk.kuiver.KuiverInteractionState
  * @property isHovered whether the pointer is over this edge. Always false on touch, which has no hover.
  */
 @Stable
-interface KuiverEdgeScope {
-    val isSelected: Boolean
-    val isHovered: Boolean
+public interface KuiverEdgeScope {
+    public val isSelected: Boolean
+    public val isHovered: Boolean
 }
 
 internal class EdgeScope(

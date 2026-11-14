@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.sp
  * @property rotateWithEdge Whether to rotate the label to align with edge tangent (default: false)
  */
 @Immutable
-data class EdgeLabelStyle(
+public data class EdgeLabelStyle(
     val textColor: Color = Color.Black,
     val backgroundColor: Color = Color.White.copy(alpha = 0.9f),
     val fontSize: TextUnit = 12.sp,
@@ -57,7 +57,7 @@ data class EdgeLabelStyle(
  * @param style Styling configuration for the label
  */
 @Composable
-fun DefaultEdgeLabel(
+public fun DefaultEdgeLabel(
     label: String,
     modifier: Modifier = Modifier,
     style: EdgeLabelStyle = KuiverDefaults.edgeLabelStyle()

@@ -55,7 +55,6 @@ class AnchorRegistrationTest {
                     Box(Modifier.size(NODE_WIDTH.dp, NODE_HEIGHT.dp)) {
                         KuiverAnchor(
                             anchorId = "right",
-                            nodeId = node.id,
                             modifier = Modifier.align(Alignment.CenterEnd)
                         ) {
                             Box(Modifier.size(ANCHOR_SIZE.dp))
@@ -95,13 +94,12 @@ class AnchorRegistrationTest {
                     anchorRegistry = registry,
                     nodeContent = { node ->
                         Box(Modifier.size(NODE_WIDTH.dp, NODE_HEIGHT.dp).padding(PADDING.dp)) {
-                            KuiverAnchor(anchorId = "padded", nodeId = node.id) {
+                            KuiverAnchor(anchorId = "padded") {
                                 Box(Modifier.size(ANCHOR_SIZE.dp))
                             }
                             Box(Modifier.align(Alignment.BottomEnd).size(20.dp)) {
                                 KuiverAnchor(
                                     anchorId = "nested",
-                                    nodeId = node.id,
                                     modifier = Modifier.align(Alignment.BottomEnd)
                                 ) {
                                     Box(Modifier.size(ANCHOR_SIZE.dp))
@@ -149,9 +147,9 @@ class AnchorRegistrationTest {
                 state = state,
                 config = KuiverViewerConfig(fitToContent = false),
                 anchorRegistry = registry,
-                nodeContent = { node ->
+                nodeContent = {
                     Box(Modifier.size(NODE_WIDTH.dp, NODE_HEIGHT.dp)) {
-                        if (showAnchor) KuiverAnchor(anchorId = "right", nodeId = node.id)
+                        if (showAnchor) KuiverAnchor(anchorId = "right")
                     }
                 },
                 edges = EdgeRendering.Batched { EdgeStyle() }

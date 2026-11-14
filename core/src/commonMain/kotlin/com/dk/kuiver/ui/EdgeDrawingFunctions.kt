@@ -53,9 +53,11 @@ internal fun DrawScope.drawCurvedEdgePath(
     dashLength: Dp,
     gapLength: Dp,
     arrowSize: Dp,
-    arrowDrawer: ArrowDrawer
+    arrowDrawer: ArrowDrawer,
+    scratch: Path
 ) {
-    val curvePath = Path().apply {
+    val curvePath = scratch.apply {
+        rewind()
         moveTo(path.from.x, path.from.y)
         quadraticTo(
             path.controlPoint.x,
@@ -94,9 +96,11 @@ internal fun DrawScope.drawSelfLoopEdgePath(
     dashLength: Dp,
     gapLength: Dp,
     arrowSize: Dp,
-    arrowDrawer: ArrowDrawer
+    arrowDrawer: ArrowDrawer,
+    scratch: Path
 ) {
-    val loopPath = Path().apply {
+    val loopPath = scratch.apply {
+        rewind()
         moveTo(path.from.x, path.from.y)
         quadraticTo(
             path.controlPoint.x,
@@ -135,9 +139,11 @@ internal fun DrawScope.drawOrthogonalEdgePath(
     dashLength: Dp,
     gapLength: Dp,
     arrowSize: Dp,
-    arrowDrawer: ArrowDrawer
+    arrowDrawer: ArrowDrawer,
+    scratch: Path
 ) {
-    val orthPath = Path().apply {
+    val orthPath = scratch.apply {
+        rewind()
         moveTo(path.from.x, path.from.y)
         cubicTo(
             path.controlPoint1.x, path.controlPoint1.y,
@@ -176,9 +182,11 @@ internal fun DrawScope.drawRightAngleEdgePath(
     dashLength: Dp,
     gapLength: Dp,
     arrowSize: Dp,
-    arrowDrawer: ArrowDrawer
+    arrowDrawer: ArrowDrawer,
+    scratch: Path
 ) {
-    val rightAnglePath = Path().apply {
+    val rightAnglePath = scratch.apply {
+        rewind()
         moveTo(path.from.x, path.from.y)
         for (waypoint in path.waypoints) {
             lineTo(waypoint.x, waypoint.y)
@@ -210,7 +218,8 @@ internal fun DrawScope.drawEdgePath(
     dashLength: Dp,
     gapLength: Dp,
     arrowSize: Dp,
-    arrowDrawer: ArrowDrawer
+    arrowDrawer: ArrowDrawer,
+    scratch: Path
 ) {
     when (path) {
         is EdgePath.Straight ->
@@ -236,7 +245,8 @@ internal fun DrawScope.drawEdgePath(
                 dashLength = dashLength,
                 gapLength = gapLength,
                 arrowSize = arrowSize,
-                arrowDrawer = arrowDrawer
+                arrowDrawer = arrowDrawer,
+                scratch = scratch
             )
 
         is EdgePath.SelfLoop ->
@@ -249,7 +259,8 @@ internal fun DrawScope.drawEdgePath(
                 dashLength = dashLength,
                 gapLength = gapLength,
                 arrowSize = arrowSize,
-                arrowDrawer = arrowDrawer
+                arrowDrawer = arrowDrawer,
+                scratch = scratch
             )
 
         is EdgePath.Orthogonal ->
@@ -262,7 +273,8 @@ internal fun DrawScope.drawEdgePath(
                 dashLength = dashLength,
                 gapLength = gapLength,
                 arrowSize = arrowSize,
-                arrowDrawer = arrowDrawer
+                arrowDrawer = arrowDrawer,
+                scratch = scratch
             )
 
         is EdgePath.RightAngle ->
@@ -275,7 +287,8 @@ internal fun DrawScope.drawEdgePath(
                 dashLength = dashLength,
                 gapLength = gapLength,
                 arrowSize = arrowSize,
-                arrowDrawer = arrowDrawer
+                arrowDrawer = arrowDrawer,
+                scratch = scratch
             )
     }
 }

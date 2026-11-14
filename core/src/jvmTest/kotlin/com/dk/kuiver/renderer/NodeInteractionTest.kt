@@ -3,6 +3,7 @@ package com.dk.kuiver.renderer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -11,10 +12,17 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertHasNoClickAction
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performMouseInput
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
@@ -52,6 +60,35 @@ class NodeInteractionTest {
         clickAt(nodeB)
         waitForIdle()
         assertEquals(setOf("B"), state.interaction.selectedNodeIds, "single select did not replace")
+    }
+
+    @Test
+    fun selectableNodesExposeClickAndSelectedSemantics() = runComposeUiTest {
+        val state = twoNodeState()
+        setContent {
+            Scene(
+                state,
+                config(selectionMode = SelectionMode.SINGLE)
+            ) { node -> BasicText(node.id) }
+        }
+        waitForIdle()
+
+        onNodeWithText("A").assertHasClickAction().assertIsNotSelected()
+        onNodeWithText("A").performSemanticsAction(SemanticsActions.OnClick)
+        waitForIdle()
+
+        assertEquals(setOf("A"), state.interaction.selectedNodeIds)
+        onNodeWithText("A").assertIsSelected()
+        onNodeWithText("B").assertIsNotSelected()
+    }
+
+    @Test
+    fun nodesWithoutInteractionExposeNoClickAction() = runComposeUiTest {
+        val state = twoNodeState()
+        setContent { Scene(state, config()) { node -> BasicText(node.id) } }
+        waitForIdle()
+
+        onNodeWithText("A").assertHasNoClickAction()
     }
 
     @Test

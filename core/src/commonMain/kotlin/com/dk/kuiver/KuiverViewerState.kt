@@ -11,18 +11,15 @@ import androidx.compose.runtime.referentialEqualityPolicy
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import com.dk.kuiver.model.Kuiver
 import com.dk.kuiver.model.NodeDimensions
-import com.dk.kuiver.model.kuiverSaver
+import com.dk.kuiver.model.kuiverViewerStateSaver
 import com.dk.kuiver.model.layout.LayoutConfig
 import com.dk.kuiver.model.layout.layout
-import com.dk.kuiver.model.layoutFrameSaver
-import com.dk.kuiver.model.manualPositionsSaver
 import com.dk.kuiver.renderer.KuiverViewerConfig
 import com.dk.kuiver.util.calculateNodeBounds
 import com.dk.kuiver.util.calculatePositionBounds
@@ -30,7 +27,6 @@ import com.dk.kuiver.util.div
 import com.dk.kuiver.util.times
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.min
 
@@ -64,32 +60,32 @@ internal data class LayoutFrame(val canvasWidth: Dp, val canvasHeight: Dp, val c
  * Under [RelayoutPolicy.KEEP_MANUAL] they are reapplied after every layout pass.
  */
 @Stable
-class KuiverViewerState internal constructor(
+public class KuiverViewerState internal constructor(
     initialKuiver: Kuiver,
     initialScale: Float = 1f,
     initialOffset: DpOffset = DpOffset.Zero
 ) {
-    val interaction: KuiverInteractionState = KuiverInteractionState()
+    public val interaction: KuiverInteractionState = KuiverInteractionState()
 
-    var kuiver: Kuiver by mutableStateOf(initialKuiver)
+    public var kuiver: Kuiver by mutableStateOf(initialKuiver)
         internal set
 
-    var layoutedKuiver: Kuiver by mutableStateOf(initialKuiver)
+    public var layoutedKuiver: Kuiver by mutableStateOf(initialKuiver)
         internal set
 
-    var scale: Float by mutableFloatStateOf(initialScale)
+    public var scale: Float by mutableFloatStateOf(initialScale)
         internal set
 
-    var offset: DpOffset by mutableStateOf(initialOffset)
+    public var offset: DpOffset by mutableStateOf(initialOffset)
         internal set
 
-    var canvasWidth: Dp by mutableStateOf(0.dp)
+    public var canvasWidth: Dp by mutableStateOf(0.dp)
         internal set
 
-    var canvasHeight: Dp by mutableStateOf(0.dp)
+    public var canvasHeight: Dp by mutableStateOf(0.dp)
         internal set
 
-    var contentOffset: DpOffset by mutableStateOf(DpOffset.Zero)
+    public var contentOffset: DpOffset by mutableStateOf(DpOffset.Zero)
         internal set
 
     /**
@@ -99,7 +95,7 @@ class KuiverViewerState internal constructor(
     internal var measuredDimensions: Map<String, NodeDimensions> by mutableStateOf(emptyMap())
         private set
 
-    var manualPositions: Map<String, DpOffset> by mutableStateOf(emptyMap())
+    public var manualPositions: Map<String, DpOffset> by mutableStateOf(emptyMap())
         private set
 
     internal var config: KuiverViewerConfig = KuiverViewerConfig()
@@ -120,7 +116,7 @@ class KuiverViewerState internal constructor(
     internal var pendingAnimation: AnimationRequest? by mutableStateOf(null)
         private set
 
-    var hasFittedInitially: Boolean by mutableStateOf(false)
+    public var hasFittedInitially: Boolean by mutableStateOf(false)
         internal set
 
     // Skip the initial fit for a restored scale and offset
@@ -133,7 +129,7 @@ class KuiverViewerState internal constructor(
      *
      * @param newKuiver the graph to display
      */
-    fun updateKuiver(newKuiver: Kuiver) {
+    public fun updateKuiver(newKuiver: Kuiver) {
         kuiver = newKuiver
     }
 
@@ -152,7 +148,7 @@ class KuiverViewerState internal constructor(
      *
      * @param newOffset space taken up by the overlay
      */
-    fun updateContentOffset(newOffset: DpOffset) {
+    public fun updateContentOffset(newOffset: DpOffset) {
         contentOffset = newOffset
     }
 
@@ -166,7 +162,7 @@ class KuiverViewerState internal constructor(
      * @param nodeId id of the node to move
      * @param position where to move it, in graph dp
      */
-    fun moveNode(nodeId: String, position: DpOffset) {
+    public fun moveNode(nodeId: String, position: DpOffset) {
         val node = layoutedKuiver.nodes[nodeId] ?: return
         if (node.position == position) return
 
@@ -192,7 +188,7 @@ class KuiverViewerState internal constructor(
      * @param nodeId the node id
      * @param delta how far to move the node, in graph dp
      */
-    fun moveNodeBy(nodeId: String, delta: DpOffset) {
+    public fun moveNodeBy(nodeId: String, delta: DpOffset) {
         if (delta == DpOffset.Zero) return
         val node = layoutedKuiver.nodes[nodeId] ?: return
         moveNode(nodeId, node.position + delta)
@@ -203,7 +199,7 @@ class KuiverViewerState internal constructor(
      * the node sizes or the canvas change. Use this when nothing observable changed and you still
      * want the algorithm to have another go.
      */
-    fun relayout() {
+    public fun relayout() {
         layoutGeneration++
     }
 
@@ -211,7 +207,7 @@ class KuiverViewerState internal constructor(
      * Hands every node back to the layout algorithm, dropping the positions collected by dragging
      * and by [moveNode], and lays the graph out again.
      */
-    fun clearManualPositions() {
+    public fun clearManualPositions() {
         if (manualPositions.isEmpty()) return
         manualPositions = emptyMap()
         relayout()
@@ -278,7 +274,7 @@ class KuiverViewerState internal constructor(
      *
      * @param animated whether to animate to the new transform
      */
-    fun centerGraph(animated: Boolean = true) {
+    public fun centerGraph(animated: Boolean = true) {
         val centeringOffset = contentOffset / 2f
         if (layoutedKuiver.nodes.isEmpty() || canvasWidth == 0.dp || canvasHeight == 0.dp) {
             updateTransform(clampScale(1f), centeringOffset, animated)
@@ -294,7 +290,7 @@ class KuiverViewerState internal constructor(
     /**
      * Zooms in one [KuiverViewerConfig.zoomStep], animated
      */
-    fun zoomIn() {
+    public fun zoomIn() {
         val newScale = clampScale(scale * config.zoomStep)
         requestAnimation(newScale, offset * (newScale / scale))
     }
@@ -302,7 +298,7 @@ class KuiverViewerState internal constructor(
     /**
      * Zooms out one [KuiverViewerConfig.zoomStep], animated
      */
-    fun zoomOut() {
+    public fun zoomOut() {
         val newScale = clampScale(scale / config.zoomStep)
         requestAnimation(newScale, offset * (newScale / scale))
     }
@@ -314,7 +310,7 @@ class KuiverViewerState internal constructor(
      * @param offset pan offset to set, in graph dp
      * @param animated whether to animate to the new transform
      */
-    fun updateTransform(scale: Float, offset: DpOffset, animated: Boolean = false) {
+    public fun updateTransform(scale: Float, offset: DpOffset, animated: Boolean = false) {
         if (animated) {
             requestAnimation(scale, offset)
         } else {
@@ -354,7 +350,7 @@ internal fun KuiverViewerState.applyInitialFit(canvasWidth: Dp, canvasHeight: Dp
  * @param layoutConfig Configuration for the layout algorithm
  */
 @Composable
-fun rememberKuiverViewerState(
+public fun rememberKuiverViewerState(
     initialKuiver: Kuiver,
     layoutConfig: LayoutConfig = LayoutConfig.Hierarchical()
 ): KuiverViewerState {
@@ -373,44 +369,12 @@ fun rememberKuiverViewerState(
  * @param layoutConfig Configuration for the layout algorithm
  */
 @Composable
-fun rememberSaveableKuiverViewerState(
+public fun rememberSaveableKuiverViewerState(
     initialKuiver: Kuiver,
     layoutConfig: LayoutConfig = LayoutConfig.Hierarchical()
 ): KuiverViewerState {
-    var savedKuiver by rememberSaveable(stateSaver = kuiverSaver()) { mutableStateOf(initialKuiver) }
-    var savedScale by rememberSaveable { mutableFloatStateOf(1f) }
-    var savedOffsetX by rememberSaveable { mutableFloatStateOf(0f) }
-    var savedOffsetY by rememberSaveable { mutableFloatStateOf(0f) }
-    var savedHasFitted by rememberSaveable { mutableStateOf(false) }
-    var savedManualPositions by rememberSaveable(stateSaver = manualPositionsSaver()) {
-        mutableStateOf(emptyMap())
-    }
-
-    var savedLayoutFrame by rememberSaveable(stateSaver = layoutFrameSaver()) {
-        mutableStateOf(null)
-    }
-
-    val state = remember {
-        KuiverViewerState(savedKuiver, savedScale, DpOffset(savedOffsetX.dp, savedOffsetY.dp)).also {
-            // Keep the restored view over the initial fit
-            it.hasRestoredTransform = savedHasFitted
-            it.restoreManualPositions(savedManualPositions, savedLayoutFrame)
-        }
-    }
-
-    // Sync state back to saveable vars via snapshotFlow to avoid composition-phase subscriptions
-    LaunchedEffect(state) {
-        launch { snapshotFlow { state.kuiver }.collect { savedKuiver = it } }
-        launch { snapshotFlow { state.scale }.collect { savedScale = it } }
-        launch { snapshotFlow { state.hasFittedInitially }.collect { savedHasFitted = it } }
-        launch { snapshotFlow { state.manualPositions }.collect { savedManualPositions = it } }
-        launch { snapshotFlow { state.layoutFrame }.collect { savedLayoutFrame = it } }
-        launch {
-            // Stored as dp to survive a density change across the restore
-            snapshotFlow { state.offset }.collect {
-                savedOffsetX = it.x.value; savedOffsetY = it.y.value
-            }
-        }
+    val state = rememberSaveable(saver = kuiverViewerStateSaver()) {
+        KuiverViewerState(initialKuiver)
     }
 
     setupLayout(state, layoutConfig)

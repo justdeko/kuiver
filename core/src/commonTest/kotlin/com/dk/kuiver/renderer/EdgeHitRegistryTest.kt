@@ -8,7 +8,9 @@ import com.dk.kuiver.ui.EdgePathFactory
 import com.dk.kuiver.ui.RightAngleRouting
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class EdgeHitRegistryTest {
 
@@ -32,6 +34,18 @@ class EdgeHitRegistryTest {
         // Control point 50 below the chord puts the middle of the arc 25 below it
         assertEquals(0f, path.distanceTo(Offset(50f, 25f)), 0.5f)
         assertEquals(25f, path.distanceTo(Offset(50f, 0f)), 0.5f)
+    }
+
+    @Test
+    fun `path only reaches points near its arc`() {
+        val path = EdgePathFactory.createCurvedPath(
+            Offset(0f, 0f), Offset(100f, 0f), density, showArrow = false, bend = 0.5f
+        )
+
+        assertTrue(path.reaches(Offset(50f, 25f), tolerance = 8f))
+        assertTrue(path.reaches(Offset(-5f, 0f), tolerance = 8f))
+        assertFalse(path.reaches(Offset(50f, -20f), tolerance = 8f))
+        assertFalse(path.reaches(Offset(120f, 0f), tolerance = 8f))
     }
 
     @Test

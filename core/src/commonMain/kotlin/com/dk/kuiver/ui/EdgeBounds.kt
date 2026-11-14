@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.dp
  * @param showArrow whether the edge has an arrow
  * @param extraPadding extra room around the edge
  */
-fun EdgePath.boundingRect(
+public fun EdgePath.boundingRect(
     density: Density,
     strokeWidth: Dp = 3.dp,
     arrowSize: Dp = 16.dp,
