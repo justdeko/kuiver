@@ -39,6 +39,7 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.isCtrlPressed
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.DpOffset
@@ -54,6 +55,7 @@ import com.dk.kuiver.util.times
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.exp
+import kotlin.math.roundToInt
 
 /**
  * How a [KuiverViewer] looks and what it lets the user do.
@@ -554,6 +556,17 @@ internal fun ViewerRenderer(
                             scaleY = state.scale
                             translationX = state.offset.x.toPx()
                             translationY = state.offset.y.toPx()
+                        }
+                        // Shift content to the measured center while centerX and centerY lag a
+                        // frame behind a resize
+                        .layout { measurable, constraints ->
+                            val placeable = measurable.measure(constraints)
+                            layout(placeable.width, placeable.height) {
+                                placeable.place(
+                                    x = (placeable.width / 2f - centerX.toPx()).roundToInt(),
+                                    y = (placeable.height / 2f - centerY.toPx()).roundToInt()
+                                )
+                            }
                         }
                 ) {
                     val bends = remember(kuiver.edges) {

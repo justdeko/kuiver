@@ -391,6 +391,10 @@ private fun setupLayout(state: KuiverViewerState, layoutConfig: LayoutConfig) {
     val canvasHeight = state.canvasHeight
     val layoutKey = state.layoutKey
     val hasCanvas = canvasWidth > 0.dp && canvasHeight > 0.dp
+    // Hierarchical layout stays on the canvas of its first pass, manual positions need no rebase
+    val frame = state.layoutFrame.takeIf { layoutConfig is LayoutConfig.Hierarchical }
+    val layoutWidth = frame?.canvasWidth ?: canvasWidth
+    val layoutHeight = frame?.canvasHeight ?: canvasHeight
     // Canvas size only shifts the hierarchical layout
     val canvasKey: Any = if (layoutConfig is LayoutConfig.Hierarchical) {
         hasCanvas
@@ -406,18 +410,18 @@ private fun setupLayout(state: KuiverViewerState, layoutConfig: LayoutConfig) {
         val laid = if (hasCanvas) {
             val configWithDimensions = when (layoutConfig) {
                 is LayoutConfig.Hierarchical -> layoutConfig.copy(
-                    width = canvasWidth,
-                    height = canvasHeight
+                    width = layoutWidth,
+                    height = layoutHeight
                 )
 
                 is LayoutConfig.ForceDirected -> layoutConfig.copy(
-                    width = canvasWidth,
-                    height = canvasHeight
+                    width = layoutWidth,
+                    height = layoutHeight
                 )
 
                 is LayoutConfig.Custom -> layoutConfig.copy(
-                    width = canvasWidth,
-                    height = canvasHeight
+                    width = layoutWidth,
+                    height = layoutHeight
                 )
             }
             withContext(Dispatchers.Default) {
@@ -428,7 +432,7 @@ private fun setupLayout(state: KuiverViewerState, layoutConfig: LayoutConfig) {
         } else {
             sizedKuiver
         }
-        state.layoutedKuiver = state.withRelayoutPolicyApplied(laid, canvasWidth, canvasHeight)
+        state.layoutedKuiver = state.withRelayoutPolicyApplied(laid, layoutWidth, layoutHeight)
         state.applyInitialFit(canvasWidth, canvasHeight)
     }
 }
