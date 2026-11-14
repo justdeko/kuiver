@@ -33,6 +33,15 @@ class LayoutTransitionBenchmark {
         edgeMode = EdgeMode.BATCHED
     )
 
+    @Test
+    fun culledBatchedEdges() = benchmark(
+        scenario = "nodes and batched edges, offscreen culled",
+        nodeCount = 300,
+        withEdges = true,
+        edgeMode = EdgeMode.BATCHED,
+        cullOffscreen = true
+    )
+
     /**
      * Renders a graph, moves every node to a second layout and times the frames it animates for.
      *
@@ -40,17 +49,19 @@ class LayoutTransitionBenchmark {
      * @param nodeCount how many nodes to render
      * @param withEdges whether to render edges between them
      * @param edgeMode how the scene renders those edges
+     * @param cullOffscreen whether nodes and edges outside the viewport are skipped
      */
     @OptIn(ExperimentalTestApi::class)
     private fun benchmark(
         scenario: String,
         nodeCount: Int,
         withEdges: Boolean,
-        edgeMode: EdgeMode = EdgeMode.CUSTOM_CANVAS
+        edgeMode: EdgeMode = EdgeMode.CUSTOM_CANVAS,
+        cullOffscreen: Boolean = false
     ) = runComposeUiTest {
         val generationA = ringGraph(nodeCount, withEdges, seed = 1)
         val generationB = ringGraph(nodeCount, withEdges, seed = 2)
-        val scene = ViewerScene(generationA, edgeMode)
+        val scene = ViewerScene(generationA, edgeMode, cullOffscreen = cullOffscreen)
 
         mainClock.autoAdvance = false
         setContent { scene.Content() }
@@ -95,7 +106,11 @@ class LayoutTransitionBenchmark {
         )
 
         val moved = scene.nodeCenters.count { (id, center) -> positionsBefore[id] != center }
-        assertTrue(moved > nodeCount / 2, "expected the transition to move nodes, moved=$moved")
+        // Culled nodes are not placed
+        assertTrue(
+            cullOffscreen || moved > nodeCount / 2,
+            "expected the transition to move nodes, moved=$moved"
+        )
     }
 
     /**

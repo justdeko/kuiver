@@ -335,7 +335,6 @@ private fun PlaygroundContent(portrait: Boolean, compact: Boolean, onNavigateBac
                 nodeContent = { node ->
                     val data = nodeData[node.id] ?: return@KuiverViewer
                     PlaygroundNode(
-                        nodeId = node.id,
                         data = data,
                         ports = viewer.kuiver.portsOf(node.id, vertical),
                         isSelected = isSelected,

@@ -74,7 +74,7 @@ internal fun forceDirectedBoundsScale(
  * - Fruchterman & Reingold (1991): "Graph Drawing by Force-Directed Placement"
  * - Eades (1984): "A Heuristic for Graph Drawing"
  */
-fun forceDirected(
+public fun forceDirected(
     kuiver: Kuiver,
     layoutConfig: LayoutConfig.ForceDirected = LayoutConfig.ForceDirected()
 ): Kuiver = forceDirected(kuiver, layoutConfig, checkCancellation = {})

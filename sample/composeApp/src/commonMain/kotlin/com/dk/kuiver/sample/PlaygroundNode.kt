@@ -31,7 +31,6 @@ internal enum class PortSide { LEFT, RIGHT, TOP, BOTTOM }
 
 @Composable
 internal fun PlaygroundNode(
-    nodeId: String,
     data: NodeData,
     ports: Map<PortSide, List<String>>,
     isSelected: Boolean,
@@ -77,7 +76,6 @@ internal fun PlaygroundNode(
                 }
                 KuiverAnchor(
                     anchorId = anchorId,
-                    nodeId = nodeId,
                     modifier = Modifier
                         .align(alignment)
                         .offset(outward.x, outward.y)

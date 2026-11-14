@@ -10,7 +10,7 @@ import androidx.compose.ui.unit.DpOffset
  * How a tap on a node or edge changes [KuiverInteractionState.selectedNodeIds] and
  * [KuiverInteractionState.selectedEdgeIds].
  */
-enum class SelectionMode {
+public enum class SelectionMode {
     /** Taps don't affect selection. */
     NONE,
 
@@ -24,7 +24,7 @@ enum class SelectionMode {
 /**
  * What happens to nodes the user has moved when the graph is laid out again
  */
-enum class RelayoutPolicy {
+public enum class RelayoutPolicy {
     /** Moved nodes keep where the user left them, the rest is laid out as usual. */
     KEEP_MANUAL,
 
@@ -52,35 +52,38 @@ enum class RelayoutPolicy {
  * @property isDragging true while a node is being dragged
  */
 @Stable
-class KuiverInteractionState internal constructor() {
-    var selectedNodeIds: Set<String> by mutableStateOf(emptySet())
+public class KuiverInteractionState internal constructor() {
+    public var selectedNodeIds: Set<String> by mutableStateOf(emptySet())
         private set
 
-    var selectedEdgeIds: Set<String> by mutableStateOf(emptySet())
+    public var selectedEdgeIds: Set<String> by mutableStateOf(emptySet())
         private set
 
-    var hoveredNodeId: String? by mutableStateOf(null)
+    public var hoveredNodeId: String? by mutableStateOf(null)
         internal set
 
-    var hoveredEdgeId: String? by mutableStateOf(null)
+    public var hoveredEdgeId: String? by mutableStateOf(null)
         internal set
 
-    var draggedNodeId: String? by mutableStateOf(null)
+    public var draggedNodeId: String? by mutableStateOf(null)
         internal set
+
+    // Node under the pointer, also tracked when node hover is off
+    internal var pointerNodeId: String? = null
 
     // How far the dragged node has travelled since the drag started, in graph dp.
     // Applied during placement so the node never recomposes mid-drag.
     internal var dragOffset: DpOffset by mutableStateOf(DpOffset.Zero)
         private set
 
-    val isDragging: Boolean get() = draggedNodeId != null
+    public val isDragging: Boolean get() = draggedNodeId != null
 
     /**
      * Selects the node alone, dropping whatever was selected before
      *
      * @param nodeId the node id
      */
-    fun select(nodeId: String) {
+    public fun select(nodeId: String) {
         if (selectedNodeIds.size != 1 || nodeId !in selectedNodeIds) {
             selectedNodeIds = setOf(nodeId)
         }
@@ -92,7 +95,7 @@ class KuiverInteractionState internal constructor() {
      *
      * @param edgeId the edge id
      */
-    fun selectEdge(edgeId: String) {
+    public fun selectEdge(edgeId: String) {
         if (selectedEdgeIds.size != 1 || edgeId !in selectedEdgeIds) {
             selectedEdgeIds = setOf(edgeId)
         }
@@ -104,7 +107,7 @@ class KuiverInteractionState internal constructor() {
      *
      * @param nodeIds the node ids
      */
-    fun selectAll(nodeIds: Set<String>) {
+    public fun selectAll(nodeIds: Set<String>) {
         if (selectedNodeIds != nodeIds) selectedNodeIds = nodeIds.toSet()
         clearEdgeSelection()
     }
@@ -114,7 +117,7 @@ class KuiverInteractionState internal constructor() {
      *
      * @param edgeIds the edge ids
      */
-    fun selectAllEdges(edgeIds: Set<String>) {
+    public fun selectAllEdges(edgeIds: Set<String>) {
         if (selectedEdgeIds != edgeIds) selectedEdgeIds = edgeIds.toSet()
         clearNodeSelection()
     }
@@ -124,7 +127,7 @@ class KuiverInteractionState internal constructor() {
      *
      * @param nodeId the node id
      */
-    fun toggleSelection(nodeId: String) {
+    public fun toggleSelection(nodeId: String) {
         selectedNodeIds = if (nodeId in selectedNodeIds) {
             selectedNodeIds - nodeId
         } else {
@@ -137,7 +140,7 @@ class KuiverInteractionState internal constructor() {
      *
      * @param edgeId the edge id
      */
-    fun toggleEdgeSelection(edgeId: String) {
+    public fun toggleEdgeSelection(edgeId: String) {
         selectedEdgeIds = if (edgeId in selectedEdgeIds) {
             selectedEdgeIds - edgeId
         } else {
@@ -148,7 +151,7 @@ class KuiverInteractionState internal constructor() {
     /**
      * Deselects all nodes and edges
      */
-    fun clearSelection() {
+    public fun clearSelection() {
         clearNodeSelection()
         clearEdgeSelection()
     }
@@ -159,7 +162,7 @@ class KuiverInteractionState internal constructor() {
      * @param nodeId the node id
      * @return true if the node is part of the selection
      */
-    fun isSelected(nodeId: String): Boolean = nodeId in selectedNodeIds
+    public fun isSelected(nodeId: String): Boolean = nodeId in selectedNodeIds
 
     /**
      * Checks whether the edge is selected
@@ -167,7 +170,7 @@ class KuiverInteractionState internal constructor() {
      * @param edgeId the edge id
      * @return true if the edge is part of the selection
      */
-    fun isEdgeSelected(edgeId: String): Boolean = edgeId in selectedEdgeIds
+    public fun isEdgeSelected(edgeId: String): Boolean = edgeId in selectedEdgeIds
 
     private fun clearNodeSelection() {
         if (selectedNodeIds.isNotEmpty()) selectedNodeIds = emptySet()
@@ -223,6 +226,7 @@ class KuiverInteractionState internal constructor() {
     internal fun forget(nodeId: String) {
         if (nodeId in selectedNodeIds) selectedNodeIds = selectedNodeIds - nodeId
         if (hoveredNodeId == nodeId) hoveredNodeId = null
+        if (pointerNodeId == nodeId) pointerNodeId = null
         if (draggedNodeId == nodeId) endDrag()
     }
 

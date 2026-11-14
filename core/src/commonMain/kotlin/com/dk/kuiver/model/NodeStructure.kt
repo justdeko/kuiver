@@ -9,7 +9,7 @@ import androidx.compose.ui.unit.DpOffset
  * The library uses this for positioning only - actual rendering is handled by nodeContent.
  */
 @Immutable
-data class NodeDimensions(
+public data class NodeDimensions(
     val width: Dp,
     val height: Dp
 )
@@ -18,7 +18,7 @@ data class NodeDimensions(
  * Represents the offset of an anchor point relative to the node's top-left corner.
  */
 @Immutable
-data class AnchorOffset(
+internal data class AnchorOffset(
     val x: Dp,
     val y: Dp
 )
@@ -31,7 +31,7 @@ data class AnchorOffset(
  * @property position position in the graph coordinate space, which is dp throughout
  */
 @Immutable
-data class KuiverNode(
+public data class KuiverNode(
     val id: String,
     val dimensions: NodeDimensions? = null,
     val position: DpOffset = DpOffset.Zero
@@ -41,7 +41,7 @@ data class KuiverNode(
  * Classification of edge types in the graph.
  * Used for styling and layout decisions.
  */
-enum class EdgeType {
+public enum class EdgeType {
     /** Edge pointing to a descendant in the graph hierarchy */
     FORWARD,
 
@@ -75,7 +75,7 @@ enum class EdgeType {
  * the same default id for different pairs. Give those edges explicit ids.
  */
 @Immutable
-data class KuiverEdge(
+public data class KuiverEdge(
     val fromId: String,
     val toId: String,
     val type: EdgeType? = null,

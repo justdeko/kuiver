@@ -4,10 +4,13 @@ import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.SaverScope
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import com.dk.kuiver.KuiverViewerState
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class KuiverSaverTest {
 
@@ -20,28 +23,7 @@ class KuiverSaverTest {
             addEdge(KuiverEdge("node2", "node1"))
         }
 
-        val saved = mapOf(
-            "nodes" to original.nodes.map { (id, node) ->
-                mapOf(
-                    "id" to id,
-                    "posX" to node.position.x.value,
-                    "posY" to node.position.y.value,
-                    "dimWidth" to node.dimensions?.width?.value,
-                    "dimHeight" to node.dimensions?.height?.value
-                )
-            },
-            "edges" to original.edges.map { edge ->
-                mapOf(
-                    "fromId" to edge.fromId,
-                    "toId" to edge.toId,
-                    "type" to edge.type?.name,
-                    "fromAnchor" to edge.fromAnchor,
-                    "toAnchor" to edge.toAnchor
-                )
-            }
-        )
-
-        val restored = kuiverSaver().restore(saved)
+        val restored = kuiverSaver().roundTrip(original)
         assertNotNull(restored)
 
         // Node with dimensions: position (100,200), dimensions 80x60
@@ -73,6 +55,29 @@ class KuiverSaverTest {
     }
 
     @Test
+    fun `graph is saved as flat list of primitives`() {
+        val graph = buildKuiver {
+            addNode(KuiverNode("A", NodeDimensions(80.dp, 60.dp), DpOffset(1.dp, 2.dp)))
+            addNode(KuiverNode("B"))
+            edge("A", "B")
+            edge("A", "B", id = "second")
+        }
+
+        val saved = with(kuiverSaver()) { SaverScope { true }.save(graph) }
+
+        assertEquals(
+            listOf<Any?>(
+                2,
+                "A", 1f, 2f, 80f, 60f,
+                "B", 0f, 0f, null, null,
+                "A", "B", null, null, null, null,
+                "A", "B", null, null, null, "second"
+            ),
+            saved
+        )
+    }
+
+    @Test
     fun `manual positions survive a save and restore round trip`() {
         val positions = mapOf(
             "node1" to DpOffset(120.dp, (-40).dp),
@@ -94,6 +99,34 @@ class KuiverSaverTest {
             edge("A", "B", id = "second")
         }
         assertEquals(graph, kuiverSaver().roundTrip(graph))
+    }
+
+    @Test
+    fun `viewer state restores graph and view and moved nodes`() {
+        val graph = buildKuiver {
+            nodes("A", "B")
+            edge("A", "B")
+        }
+        val state =
+            KuiverViewerState(graph, initialScale = 2f, initialOffset = DpOffset(30.dp, (-12).dp))
+        state.moveNode("B", DpOffset(250.dp, 40.dp))
+        state.hasFittedInitially = true
+
+        val restored = assertNotNull(kuiverViewerStateSaver().roundTrip(state))
+
+        assertEquals(graph, restored.kuiver)
+        assertEquals(state.scale, restored.scale)
+        assertEquals(state.offset, restored.offset)
+        assertEquals(mapOf("B" to DpOffset(250.dp, 40.dp)), restored.manualPositions)
+        assertTrue(restored.hasRestoredTransform, "the restored view would be replaced by a fit")
+    }
+
+    @Test
+    fun `viewer state that never fitted is fitted after a restore`() {
+        val restored = assertNotNull(
+            kuiverViewerStateSaver().roundTrip(KuiverViewerState(buildKuiver { nodes("A") }))
+        )
+        assertFalse(restored.hasRestoredTransform)
     }
 
     /** Puts [value] through the saver the way `rememberSaveable` does. */

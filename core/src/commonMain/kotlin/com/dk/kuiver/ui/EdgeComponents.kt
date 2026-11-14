@@ -29,7 +29,7 @@ import com.dk.kuiver.model.KuiverEdge
  * }
  * ```
  */
-val LocalEdgeBend: ProvidableCompositionLocal<Float?> = staticCompositionLocalOf { null }
+public val LocalEdgeBend: ProvidableCompositionLocal<Float?> = staticCompositionLocalOf { null }
 
 /**
  * Draws an edge on a canvas bounded to its geometry, see [EdgeCanvas]
@@ -51,7 +51,7 @@ val LocalEdgeBend: ProvidableCompositionLocal<Float?> = staticCompositionLocalOf
  * self-loop. The regular curve and loop when `null`
  */
 @Composable
-fun EdgeContent(
+public fun EdgeContent(
     from: Offset,
     to: Offset,
     color: Color = LocalKuiverColors.current.edge,
@@ -125,37 +125,34 @@ private fun rememberEdgePath(
 }
 
 /**
- * Enhanced edge content that supports customizable labels.
+ * Straight, curved or self-loop edge with an optional label.
  *
- * Renders an edge with optional label positioned along the edge path. Supports
- * all edge types (straight, curved, self-loops) and provides full customization
- * of label position, style, and content. Labels automatically hide on edges
- * shorter than minEdgeLengthForLabel and rotate to stay readable.
+ * The label follows the edge and is hidden on edges shorter than [minEdgeLengthForLabel].
  *
- * @param from Start point of the edge
- * @param to End point of the edge
- * @param label Optional label text to display on the edge
- * @param labelOffset Position along the edge (0.0 = from, 1.0 = to). Must be in range [0, 1]
- * @param labelPlacement Preset position (START, CENTER, END). Takes precedence over labelOffset
- * @param labelStyle Styling configuration for the label
- * @param labelContent Optional custom composable for label rendering (overrides default)
- * @param color Edge line color
- * @param strokeWidth Width of the edge line. Must be positive
- * @param showArrow Whether to show an arrow at the end
- * @param dashed Whether the edge should be dashed
- * @param dashLength Length of dashes (if dashed)
- * @param gapLength Length of gaps between dashes (if dashed)
- * @param isSelfLoop Whether this is a self-loop edge
- * @param loopRadius Radius for self-loop arcs. Must be positive
- * @param enableCurve Whether to curve the edge (for back edges)
- * @param arrowSize Size of the arrow head
- * @param arrowDrawer Custom arrow drawing function
- * @param minEdgeLengthForLabel Minimum edge length to show label. Must be non-negative
- * @param bend Control point offset as a fraction of the edge length, or extra height for a
- * self-loop. The regular curve and loop when `null`
+ * @param from start point of the edge
+ * @param to end point of the edge
+ * @param label text shown on the edge, none when null
+ * @param labelOffset position along the edge from 0 (start) to 1 (end), 0.5 by default
+ * @param labelPlacement preset position, takes precedence over [labelOffset]
+ * @param labelStyle style of the label
+ * @param labelContent replaces the default label
+ * @param color edge line color
+ * @param strokeWidth width of the edge line, must be positive
+ * @param showArrow whether to draw an arrow at the end
+ * @param dashed whether the edge is dashed
+ * @param dashLength length of dashes
+ * @param gapLength length of gaps between dashes
+ * @param isSelfLoop whether the edge loops back to its own node
+ * @param loopRadius radius of the self-loop arc, must be positive
+ * @param enableCurve whether to curve the edge, as for back edges
+ * @param arrowSize size of the arrow head
+ * @param arrowDrawer draws the arrow head
+ * @param minEdgeLengthForLabel shortest edge that still shows its label
+ * @param bend control point offset as a fraction of the edge length, or extra height for a
+ * self-loop. The regular curve and loop when null
  */
 @Composable
-fun EdgeContentWithLabel(
+public fun EdgeContentWithLabel(
     from: Offset,
     to: Offset,
     label: String? = null,
@@ -288,7 +285,7 @@ internal fun LabeledEdge(
  * @param labelContent Optional custom composable for label rendering (overrides default)
  */
 @Composable
-fun StyledEdgeContent(
+public fun StyledEdgeContent(
     edge: KuiverEdge,
     from: Offset,
     to: Offset,

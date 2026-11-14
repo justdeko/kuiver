@@ -4,10 +4,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import com.dk.kuiver.KuiverViewerState
@@ -23,6 +25,7 @@ import kotlin.math.roundToInt
  * reported through [onMeasured] on every change, including sizes that settle late (web fonts).
  * Positions are read in the placement block only: a layout transition re-places without
  * recomposing or re-measuring.
+ * Nodes outside [cullWindow] stay composed and are not placed.
  *
  * @param kuiver the laid out graph to host
  * @param source the graph as the caller supplied it; a node is auto-sized exactly when it has no
@@ -35,6 +38,7 @@ import kotlin.math.roundToInt
  * @param config viewer configuration, read for which node gestures are enabled
  * @param callbacks the caller's interaction callbacks
  * @param skipAnimation places nodes at [targets] directly, as initial placement does
+ * @param cullWindow nodes outside this window are not placed, no culling when null
  * @param onMeasured receives the sizes of all auto-sized nodes, whenever they change
  * @param nodeContent composable content of a node
  */
@@ -50,11 +54,14 @@ internal fun NodeLayer(
     config: KuiverViewerConfig,
     callbacks: KuiverInteractionCallbacks,
     skipAnimation: Boolean,
+    cullWindow: CullWindow?,
     onMeasured: (Map<String, NodeDimensions>) -> Unit,
     nodeContent: @Composable KuiverNodeScope.(KuiverNode) -> Unit
 ) {
     val reported = remember { mutableMapOf<String, NodeDimensions>() }
     val interaction = state.interaction
+    // Nodes placed at least once, anchors are registered
+    val placedOnce = remember { HashSet<String>() }
 
     SubcomposeLayout(modifier = Modifier.fillMaxSize()) { constraints ->
         val placed = ArrayList<PlacedNode>(kuiver.nodes.size)
@@ -71,8 +78,15 @@ internal fun NodeLayer(
                 }
                 // Remembered: the content keeps the same receiver across measure passes
                 val scope = remember(nodeId) { NodeScope(nodeId, interaction) }
-                Box(sizeModifier.nodeInteraction(node, state, config, callbacks)) {
-                    scope.nodeContent(node)
+                val nodeCoordinates = remember(nodeId) { NodeCoordinates(nodeId) }
+                Box(
+                    sizeModifier
+                        .onPlaced { nodeCoordinates.coordinates = it }
+                        .nodeInteraction(node, state, config, callbacks)
+                ) {
+                    CompositionLocalProvider(LocalNodeCoordinates provides nodeCoordinates) {
+                        scope.nodeContent(node)
+                    }
                 }
             }
             val placeable = content.firstOrNull()?.measure(Constraints()) ?: return@forEach
@@ -99,10 +113,19 @@ internal fun NodeLayer(
 
         layout(width, height) {
             with(measureScope) {
+                val window = cullWindow?.bounds
+                placedOnce.retainAll(kuiver.nodes.keys)
                 placed.forEach { (nodeId, placeable) ->
                     // Drag offset applied in placement only, never written into the graph
                     val position = transition.positionOf(nodeId, targets, skipAnimation) +
                             interaction.dragOffsetOf(nodeId)
+                    val offscreen = window != null && !window.overlaps(
+                        center = position,
+                        width = placeable.width.toDp(),
+                        height = placeable.height.toDp()
+                    )
+                    if (offscreen && nodeId in placedOnce) return@forEach
+                    placedOnce.add(nodeId)
                     placeable.place(
                         x = (centerXPx + position.x.toPx() - placeable.width / 2f).roundToInt(),
                         y = (centerYPx + position.y.toPx() - placeable.height / 2f).roundToInt()

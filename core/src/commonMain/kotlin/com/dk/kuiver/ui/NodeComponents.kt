@@ -15,7 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun DefaultNodeContent(
+public fun DefaultNodeContent(
     label: String,
     backgroundColor: Color,
     textColor: Color,

@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.layout.layout
@@ -48,7 +49,7 @@ private const val MAX_EDGE_EXTENT_PX = 30_000
  * @param onDraw draws the edge
  */
 @Composable
-fun EdgeCanvas(bounds: Rect, hitPath: EdgePath? = null, onDraw: DrawScope.() -> Unit) {
+public fun EdgeCanvas(bounds: Rect, hitPath: EdgePath? = null, onDraw: DrawScope.() -> Unit) {
     val reporter = LocalEdgePathReporter.current
     if (reporter != null && hitPath != null) {
         SideEffect { reporter.report(hitPath) }
@@ -89,6 +90,7 @@ internal fun EdgePathCanvas(
     arrowDrawer: ArrowDrawer
 ) {
     val density = LocalDensity.current
+    val scratch = remember { Path() }
     val bounds = remember(path, density, strokeWidth, arrowSize, showArrow) {
         path.boundingRect(
             density = density,
@@ -108,7 +110,8 @@ internal fun EdgePathCanvas(
             dashLength = dashLength,
             gapLength = gapLength,
             arrowSize = arrowSize,
-            arrowDrawer = arrowDrawer
+            arrowDrawer = arrowDrawer,
+            scratch = scratch
         )
     }
 }

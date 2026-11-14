@@ -75,7 +75,6 @@ internal val ExpandedStepWidth = 288.dp
  * Card of one order step. Grows to show facts and tracking events when expanded, pops in when it
  * enters the graph and shrinks away when [leaving].
  *
- * @param nodeId the node id, for its anchors
  * @param spec the step's application data
  * @param status state of the step, shown as card color and a status icon
  * @param expanded whether the details are shown
@@ -89,7 +88,6 @@ internal val ExpandedStepWidth = 288.dp
  */
 @Composable
 internal fun StepNodeContent(
-    nodeId: String,
     spec: StepSpec,
     status: StepStatus,
     expanded: Boolean,
@@ -190,10 +188,30 @@ internal fun StepNodeContent(
         }
 
         val portColor = MaterialTheme.colorScheme.outline
-        PortDot(nodeId, "left", "left" in ports, portColor, Modifier.align(Alignment.CenterStart).offset(x = (-5).dp))
-        PortDot(nodeId, "right", "right" in ports, portColor, Modifier.align(Alignment.CenterEnd).offset(x = 5.dp))
-        PortDot(nodeId, "top", "top" in ports, portColor, Modifier.align(Alignment.TopCenter).offset(y = (-5).dp))
-        PortDot(nodeId, "bottom", "bottom" in ports, portColor, Modifier.align(Alignment.BottomCenter).offset(y = 5.dp))
+        PortDot(
+            "left",
+            "left" in ports,
+            portColor,
+            Modifier.align(Alignment.CenterStart).offset(x = (-5).dp)
+        )
+        PortDot(
+            "right",
+            "right" in ports,
+            portColor,
+            Modifier.align(Alignment.CenterEnd).offset(x = 5.dp)
+        )
+        PortDot(
+            "top",
+            "top" in ports,
+            portColor,
+            Modifier.align(Alignment.TopCenter).offset(y = (-5).dp)
+        )
+        PortDot(
+            "bottom",
+            "bottom" in ports,
+            portColor,
+            Modifier.align(Alignment.BottomCenter).offset(y = 5.dp)
+        )
     }
 }
 
@@ -383,14 +401,13 @@ private fun Fact(label: String, value: String, content: Color, modifier: Modifie
  */
 @Composable
 private fun PortDot(
-    nodeId: String,
     anchorId: String,
     visible: Boolean,
     color: Color,
     modifier: Modifier
 ) {
     val alpha by animateFloatAsState(if (visible) 1f else 0f, label = "port_alpha")
-    KuiverAnchor(modifier = modifier, anchorId = anchorId, nodeId = nodeId) {
+    KuiverAnchor(anchorId = anchorId, modifier = modifier) {
         Box(
             Modifier
                 .size(10.dp)

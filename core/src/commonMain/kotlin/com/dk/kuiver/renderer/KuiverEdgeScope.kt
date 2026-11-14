@@ -1,6 +1,8 @@
 package com.dk.kuiver.renderer
 
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import com.dk.kuiver.KuiverInteractionState
 
 /**
@@ -16,15 +18,16 @@ import com.dk.kuiver.KuiverInteractionState
  * @property isHovered whether the pointer is over this edge. Always false on touch, which has no hover.
  */
 @Stable
-interface KuiverEdgeScope {
-    val isSelected: Boolean
-    val isHovered: Boolean
+public interface KuiverEdgeScope {
+    public val isSelected: Boolean
+    public val isHovered: Boolean
 }
 
 internal class EdgeScope(
     private val edgeId: String,
     private val interaction: KuiverInteractionState
 ) : KuiverEdgeScope {
-    override val isSelected: Boolean get() = interaction.isEdgeSelected(edgeId)
-    override val isHovered: Boolean get() = interaction.hoveredEdgeId == edgeId
+    // Recompose only the edges that change
+    override val isSelected: Boolean by derivedStateOf { interaction.isEdgeSelected(edgeId) }
+    override val isHovered: Boolean by derivedStateOf { interaction.hoveredEdgeId == edgeId }
 }

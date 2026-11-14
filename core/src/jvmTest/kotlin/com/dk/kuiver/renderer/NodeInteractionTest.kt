@@ -3,16 +3,26 @@ package com.dk.kuiver.renderer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertHasNoClickAction
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performMouseInput
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
@@ -50,6 +60,35 @@ class NodeInteractionTest {
         clickAt(nodeB)
         waitForIdle()
         assertEquals(setOf("B"), state.interaction.selectedNodeIds, "single select did not replace")
+    }
+
+    @Test
+    fun selectableNodesExposeClickAndSelectedSemantics() = runComposeUiTest {
+        val state = twoNodeState()
+        setContent {
+            Scene(
+                state,
+                config(selectionMode = SelectionMode.SINGLE)
+            ) { node -> BasicText(node.id) }
+        }
+        waitForIdle()
+
+        onNodeWithText("A").assertHasClickAction().assertIsNotSelected()
+        onNodeWithText("A").performSemanticsAction(SemanticsActions.OnClick)
+        waitForIdle()
+
+        assertEquals(setOf("A"), state.interaction.selectedNodeIds)
+        onNodeWithText("A").assertIsSelected()
+        onNodeWithText("B").assertIsNotSelected()
+    }
+
+    @Test
+    fun nodesWithoutInteractionExposeNoClickAction() = runComposeUiTest {
+        val state = twoNodeState()
+        setContent { Scene(state, config()) { node -> BasicText(node.id) } }
+        waitForIdle()
+
+        onNodeWithText("A").assertHasNoClickAction()
     }
 
     @Test
@@ -309,6 +348,72 @@ class NodeInteractionTest {
         assertEquals(true, selected["A"], "the content was not told that A is selected")
         assertEquals(false, selected["B"], "the content was told that B is selected")
         assertEquals(true, hovered["A"], "the content was not told that A is hovered")
+    }
+
+    @Test
+    fun aScrollHandledByNodeContentDoesNotPanTheGraph() = runComposeUiTest {
+        val state = twoNodeState()
+        setContent {
+            Scene(
+                state = state,
+                config = config(),
+                nodeContent = {
+                    Box(
+                        Modifier.fillMaxSize().pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    if (event.type == PointerEventType.Scroll) {
+                                        event.changes.forEach { it.consume() }
+                                    }
+                                }
+                            }
+                        }
+                    )
+                }
+            )
+        }
+        waitForIdle()
+
+        onRoot().performMouseInput {
+            moveTo(center + nodeA)
+            scroll(5f)
+        }
+        waitForIdle()
+        assertEquals(DpOffset.Zero, state.offset, "a scroll the node consumed panned the graph")
+
+        onRoot().performMouseInput {
+            moveTo(center + Offset(0f, 200f))
+            scroll(5f)
+        }
+        waitForIdle()
+        assertTrue(state.offset != DpOffset.Zero, "a scroll over the canvas did not pan")
+    }
+
+    @Test
+    fun hoverAndSelectionRecomposeOnlyTheNodesTheyChange() = runComposeUiTest {
+        val state = twoNodeState()
+        val compositions = mutableMapOf<String, Int>()
+        setContent {
+            Scene(
+                state = state,
+                config = config(selectionMode = SelectionMode.SINGLE, hoverEnabled = true),
+                nodeContent = { node ->
+                    compositions[node.id] = (compositions[node.id] ?: 0) + 1
+                    val color = if (isSelected || isHovered) Color.Blue else Color.Gray
+                    Box(Modifier.fillMaxSize().background(color))
+                }
+            )
+        }
+        waitForIdle()
+        compositions.clear()
+
+        onRoot().performMouseInput { moveTo(center + nodeA) }
+        clickAt(nodeA)
+        waitForIdle()
+
+        assertTrue(compositions.containsKey("A"), "the hovered and selected node did not recompose")
+        assertNull(compositions["B"], "a node recomposed for a change to another node")
     }
 
     private fun config(

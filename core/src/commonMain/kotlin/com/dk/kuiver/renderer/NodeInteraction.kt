@@ -2,13 +2,21 @@ package com.dk.kuiver.renderer
 
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.SuspendingPointerInputModifierNode
+import androidx.compose.ui.node.DelegatingNode
+import androidx.compose.ui.node.ModifierNodeElement
+import androidx.compose.ui.node.ObserverModifierNode
+import androidx.compose.ui.node.SemanticsModifierNode
+import androidx.compose.ui.node.invalidateSemantics
+import androidx.compose.ui.node.observeReads
+import androidx.compose.ui.platform.InspectorInfo
+import androidx.compose.ui.semantics.SemanticsPropertyReceiver
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.onLongClick
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.unit.DpOffset
 import com.dk.kuiver.KuiverViewerState
 import com.dk.kuiver.SelectionMode
@@ -33,7 +41,7 @@ import com.dk.kuiver.model.KuiverNode
  * This fires for taps on nodes only when no node interaction is enabled
  */
 @Immutable
-data class KuiverInteractionCallbacks(
+public data class KuiverInteractionCallbacks(
     val onNodeClick: ((KuiverNode) -> Unit)? = null,
     val onNodeLongPress: ((KuiverNode) -> Unit)? = null,
     val onNodeDragStart: ((KuiverNode) -> Unit)? = null,
@@ -44,16 +52,16 @@ data class KuiverInteractionCallbacks(
 ) {
     internal val handlesNodeTap: Boolean get() = onNodeClick != null || onNodeLongPress != null
 
-    companion object {
+    public companion object {
         /**
          * No callbacks at all, the default of every [KuiverViewer]
          */
-        val None = KuiverInteractionCallbacks()
+        public val None: KuiverInteractionCallbacks = KuiverInteractionCallbacks()
     }
 }
 
 /**
- * Hover, tap and drag handling for a single node.
+ * Hover, tap and drag handling for a single node, with the matching semantics.
  *
  * Attached to the node's own box: hit testing uses the node's real bounds, and gestures register
  * before the viewer's pan and zoom.
@@ -63,77 +71,195 @@ data class KuiverInteractionCallbacks(
  * @param config the viewer config, read for which gestures are enabled
  * @param callbacks the caller's callbacks
  */
-@Composable
 internal fun Modifier.nodeInteraction(
     node: KuiverNode,
     state: KuiverViewerState,
     config: KuiverViewerConfig,
     callbacks: KuiverInteractionCallbacks
-): Modifier {
-    val nodeId = node.id
-    val interaction = state.interaction
-    val currentNode by rememberUpdatedState(node)
-    val currentConfig by rememberUpdatedState(config)
-    val currentCallbacks by rememberUpdatedState(callbacks)
+): Modifier = this then NodeInteractionElement(node, state, config, callbacks)
 
-    val tappable = config.selectionMode != SelectionMode.NONE || callbacks.handlesNodeTap
-    val hasLongPress = callbacks.onNodeLongPress != null
+/**
+ * Creates and updates the [NodeInteractionNode] of a node box.
+ */
+private data class NodeInteractionElement(
+    val node: KuiverNode,
+    val state: KuiverViewerState,
+    val config: KuiverViewerConfig,
+    val callbacks: KuiverInteractionCallbacks
+) : ModifierNodeElement<NodeInteractionNode>() {
+    override fun create() = NodeInteractionNode(node, state, config, callbacks)
 
-    var modifier = this
+    override fun update(node: NodeInteractionNode) {
+        node.update(this.node, state, config, callbacks)
+    }
 
-    if (config.hoverEnabled) {
-        modifier = modifier.pointerInput(nodeId) {
-            awaitPointerEventScope {
-                while (true) {
-                    when (awaitPointerEvent().type) {
-                        PointerEventType.Enter -> interaction.hoveredNodeId = nodeId
-                        PointerEventType.Exit ->
-                            if (interaction.hoveredNodeId == nodeId) interaction.hoveredNodeId =
-                                null
+    override fun InspectorInfo.inspectableProperties() {
+        name = "nodeInteraction"
+        properties["nodeId"] = node.id
+    }
+}
+
+/**
+ * Handles pointer input and semantics for a node box.
+ */
+private class NodeInteractionNode(
+    private var graphNode: KuiverNode,
+    private var state: KuiverViewerState,
+    private var config: KuiverViewerConfig,
+    private var callbacks: KuiverInteractionCallbacks
+) : DelegatingNode(), SemanticsModifierNode, ObserverModifierNode {
+    private var hoverInput: SuspendingPointerInputModifierNode? = null
+    private var tapInput: SuspendingPointerInputModifierNode? = null
+    private var dragInput: SuspendingPointerInputModifierNode? = null
+
+    // Whether the tap detector handles long presses
+    private var tapHasLongPress = false
+
+    // Whether the node is selected, exposed to semantics
+    private var selected = false
+
+    private val interaction get() = state.interaction
+    private val tracksPointer get() = config.hoverEnabled || config.edgeHoverEnabled
+    private val tappable
+        get() = config.selectionMode != SelectionMode.NONE || callbacks.handlesNodeTap
+    private val hasLongPress get() = callbacks.onNodeLongPress != null
+
+    override val shouldMergeDescendantSemantics: Boolean get() = tappable
+
+    override fun onAttach() {
+        syncInputs()
+        observeSelection()
+    }
+
+    fun update(
+        node: KuiverNode,
+        state: KuiverViewerState,
+        config: KuiverViewerConfig,
+        callbacks: KuiverInteractionCallbacks
+    ) {
+        val restart = node.id != graphNode.id || state !== this.state
+        graphNode = node
+        this.state = state
+        this.config = config
+        this.callbacks = callbacks
+
+        // Restart gesture detection when the node or state changes
+        if (restart) {
+            hoverInput?.resetPointerInputHandler()
+            tapInput?.resetPointerInputHandler()
+            dragInput?.resetPointerInputHandler()
+        }
+        syncInputs()
+        observeSelection()
+        invalidateSemantics()
+    }
+
+    override fun onObservedReadsChanged() {
+        val before = selected
+        observeSelection()
+        if (selected != before) invalidateSemantics()
+    }
+
+    override fun SemanticsPropertyReceiver.applySemantics() {
+        if (config.selectionMode != SelectionMode.NONE) {
+            selected = this@NodeInteractionNode.selected
+        }
+        if (tappable) {
+            onClick {
+                tap()
+                true
+            }
+        }
+        if (hasLongPress) {
+            onLongClick {
+                callbacks.onNodeLongPress?.invoke(graphNode)
+                true
+            }
+        }
+    }
+
+    private fun observeSelection() {
+        if (config.selectionMode == SelectionMode.NONE) {
+            selected = false
+            return
+        }
+        observeReads { selected = interaction.isSelected(graphNode.id) }
+    }
+
+    private fun tap() {
+        interaction.applySelectionTap(graphNode.id, config.selectionMode)
+        callbacks.onNodeClick?.invoke(graphNode)
+    }
+
+    // Add and remove the detectors to match the config
+    private fun syncInputs() {
+        val wantsTap = tappable
+        val wantsDrag = config.nodeDragEnabled
+        val unchanged = tracksPointer == (hoverInput != null) &&
+                wantsTap == (tapInput != null) &&
+                wantsDrag == (dragInput != null) &&
+                (!wantsTap || tapHasLongPress == hasLongPress)
+        if (unchanged) return
+
+        // Rebuild all inputs to keep their order
+        hoverInput?.let(::undelegate)
+        tapInput?.let(::undelegate)
+        dragInput?.let(::undelegate)
+        tapHasLongPress = hasLongPress
+        hoverInput = if (tracksPointer) delegate(hoverDetector()) else null
+        tapInput = if (wantsTap) delegate(tapDetector(tapHasLongPress)) else null
+        dragInput = if (wantsDrag) delegate(dragDetector()) else null
+    }
+
+    private fun hoverDetector() = SuspendingPointerInputModifierNode {
+        awaitPointerEventScope {
+            while (true) {
+                val type = awaitPointerEvent().type
+                val nodeId = graphNode.id
+                when (type) {
+                    PointerEventType.Enter -> {
+                        interaction.pointerNodeId = nodeId
+                        if (config.hoverEnabled) interaction.hoveredNodeId = nodeId
+                    }
+
+                    PointerEventType.Exit -> {
+                        if (interaction.pointerNodeId == nodeId) interaction.pointerNodeId = null
+                        if (interaction.hoveredNodeId == nodeId) interaction.hoveredNodeId = null
                     }
                 }
             }
         }
     }
 
-    if (tappable) {
-        modifier = modifier.pointerInput(nodeId, hasLongPress) {
-            detectTapGestures(
-                onLongPress = if (hasLongPress) {
-                    { currentCallbacks.onNodeLongPress?.invoke(currentNode) }
-                } else {
-                    null
-                },
-                onTap = {
-                    interaction.applySelectionTap(nodeId, currentConfig.selectionMode)
-                    currentCallbacks.onNodeClick?.invoke(currentNode)
-                }
-            )
-        }
+    private fun tapDetector(withLongPress: Boolean) = SuspendingPointerInputModifierNode {
+        detectTapGestures(
+            onLongPress = if (withLongPress) {
+                { callbacks.onNodeLongPress?.invoke(graphNode) }
+            } else {
+                null
+            },
+            onTap = { tap() }
+        )
     }
 
-    if (config.nodeDragEnabled) {
-        modifier = modifier.pointerInput(nodeId) {
-            detectDragGestures(
-                onDragStart = {
-                    interaction.startDrag(nodeId)
-                    currentCallbacks.onNodeDragStart?.invoke(currentNode)
-                },
-                onDrag = { change, dragAmount ->
-                    change.consume()
-                    interaction.dragBy(DpOffset(dragAmount.x.toDp(), dragAmount.y.toDp()))
-                    currentCallbacks.onNodeDrag?.invoke(currentNode, interaction.dragOffset)
-                },
-                onDragEnd = {
-                    val travelled = interaction.dragOffset
-                    state.moveNodeBy(nodeId, travelled)
-                    interaction.endDrag()
-                    currentCallbacks.onNodeDragEnd?.invoke(currentNode, travelled)
-                },
-                onDragCancel = { interaction.endDrag() }
-            )
-        }
+    private fun dragDetector() = SuspendingPointerInputModifierNode {
+        detectDragGestures(
+            onDragStart = {
+                interaction.startDrag(graphNode.id)
+                callbacks.onNodeDragStart?.invoke(graphNode)
+            },
+            onDrag = { change, dragAmount ->
+                change.consume()
+                interaction.dragBy(DpOffset(dragAmount.x.toDp(), dragAmount.y.toDp()))
+                callbacks.onNodeDrag?.invoke(graphNode, interaction.dragOffset)
+            },
+            onDragEnd = {
+                val travelled = interaction.dragOffset
+                state.moveNodeBy(graphNode.id, travelled)
+                interaction.endDrag()
+                callbacks.onNodeDragEnd?.invoke(graphNode, travelled)
+            },
+            onDragCancel = { interaction.endDrag() }
+        )
     }
-
-    return modifier
 }

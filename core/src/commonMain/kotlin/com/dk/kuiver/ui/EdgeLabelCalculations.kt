@@ -12,7 +12,7 @@ import kotlin.math.atan2
  * @property angle The rotation angle in radians for tangent alignment (0 = horizontal right)
  */
 @Immutable
-data class EdgeLabelPosition(
+public data class EdgeLabelPosition(
     val position: Offset,
     val angle: Float = 0f
 )
@@ -25,7 +25,7 @@ data class EdgeLabelPosition(
  * - CENTER: t = 0.5 (midpoint)
  * - END: t = 0.75 (75% toward target node)
  */
-enum class LabelPlacement(val offset: Float) {
+public enum class LabelPlacement(public val offset: Float) {
     /** Label positioned near the start of the edge (25% along) */
     START(0.25f),
 
@@ -46,7 +46,7 @@ enum class LabelPlacement(val offset: Float) {
  * @param offset Position along the edge (0.0 = from, 1.0 = to)
  * @return Position and tangent angle for the label
  */
-fun calculateStraightEdgeLabelPosition(
+internal fun calculateStraightEdgeLabelPosition(
     from: Offset,
     to: Offset,
     offset: Float = 0.5f
@@ -78,7 +78,7 @@ fun calculateStraightEdgeLabelPosition(
  * @param offset Position along the curve (0.0 = from, 1.0 = to)
  * @return Position and tangent angle for the label
  */
-fun calculateCurvedEdgeLabelPosition(
+internal fun calculateCurvedEdgeLabelPosition(
     from: Offset,
     to: Offset,
     controlPoint: Offset,
@@ -121,7 +121,7 @@ fun calculateCurvedEdgeLabelPosition(
  * @param offset Position along the curve (0.0 = start, 1.0 = end)
  * @return Position and tangent angle for the label
  */
-fun calculateCubicBezierLabelPosition(
+internal fun calculateCubicBezierLabelPosition(
     p0: Offset,
     p1: Offset,
     p2: Offset,
@@ -165,7 +165,7 @@ fun calculateCubicBezierLabelPosition(
  * @param offset Position along the path (0.0 = start, 1.0 = end)
  * @return Position and tangent angle for the label
  */
-fun calculateRightAngleLabelPosition(
+internal fun calculateRightAngleLabelPosition(
     from: Offset,
     waypoints: List<Offset>,
     to: Offset,

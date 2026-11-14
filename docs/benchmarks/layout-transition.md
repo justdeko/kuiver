@@ -117,3 +117,27 @@ Multiplatform 1.12.0, median of 5 interleaved runs.
 The edge scenarios are 2 to 7% slower in the median, with recompositions unchanged. The difference
 is within the run-to-run spread: the 300 edge median ranged from 1769 to 2136 us before and from
 1796 to 1996 us after.
+
+## 2026-11-12, renderer cleanup and viewport culling
+
+`BoxWithConstraints` dropped, node gestures as one `Modifier.Node`, one reused `Path` per edge
+canvas, and nodes and batched edges outside the viewport skipped. Before is the parent commit
+`831df3b`. The first four scenarios run with culling off and measure the cleanup alone, the last
+one is the batched scenario with culling on. Apple Silicon, macOS, JDK 25.0.4, Compose
+Multiplatform 1.12.2, median of 3 interleaved runs.
+
+| build  | scenario                   | median  | p90     | total  | node recomps | edge recomps |
+|--------|----------------------------|---------|---------|--------|--------------|--------------|
+| before | 300 nodes, 300 edges       | 1944 us | 2417 us | 83 ms  | 300          | 11400        |
+| after  | 300 nodes, 300 edges       | 1887 us | 2298 us | 82 ms  | 300          | 11400        |
+| before | 300 nodes, no edges        | 462 us  | 673 us  | 22 ms  | 300          | 0            |
+| after  | 300 nodes, no edges        | 443 us  | 586 us  | 22 ms  | 300          | 0            |
+| before | 300 nodes, built-in        | 5045 us | 5929 us | 215 ms | 300          | 11400        |
+| after  | 300 nodes, built-in        | 5148 us | 5788 us | 216 ms | 300          | 11400        |
+| before | 300 nodes, batched         | 3143 us | 3595 us | 133 ms | 300          | 0            |
+| after  | 300 nodes, batched         | 3212 us | 3709 us | 137 ms | 300          | 0            |
+| after  | 300 nodes, batched, culled | 3030 us | 3544 us | 130 ms | 300          | 0            |
+
+The cleanup is within the run-to-run spread in every scenario, recompositions unchanged. Culling
+takes about 5% off the batched frame. Most nodes of the ring are outside the viewport, most of its
+edges cross it, and a culled edge still has its endpoints resolved and its path built.

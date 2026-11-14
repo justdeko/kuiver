@@ -631,7 +631,6 @@ private fun ShowcaseScreen(
                 nodeContent = { node ->
                     val spec = AllSteps[node.id] ?: return@KuiverViewer
                     StepNodeContent(
-                        nodeId = node.id,
                         spec = spec,
                         status = showcase.statuses[node.id] ?: StepStatus.WAITING,
                         expanded = node.id in showcase.expanded,

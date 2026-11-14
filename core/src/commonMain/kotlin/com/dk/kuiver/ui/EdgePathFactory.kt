@@ -17,7 +17,7 @@ import kotlin.math.sqrt
  * Endpoints and the returned paths are in pixels, matching the draw scope. Sizes are in dp and
  * resolved through the [Density] each function takes.
  */
-object EdgePathFactory {
+public object EdgePathFactory {
 
     /**
      * Create a straight edge path.
@@ -29,7 +29,7 @@ object EdgePathFactory {
      * @param strokeWidth Width of the edge line (affects arrow gap calculation)
      * @return EdgePath.Straight with calculated endpoint and length
      */
-    fun createStraightPath(
+    public fun createStraightPath(
         from: Offset,
         to: Offset,
         density: Density,
@@ -73,7 +73,7 @@ object EdgePathFactory {
      * values curve to the other side
      * @return EdgePath.Curved with calculated control point and endpoint
      */
-    fun createCurvedPath(
+    public fun createCurvedPath(
         from: Offset,
         to: Offset,
         density: Density,
@@ -151,7 +151,7 @@ object EdgePathFactory {
      * @param bend Extra loop height as a fraction of the default, 0 by default
      * @return EdgePath.SelfLoop with calculated control point and endpoint
      */
-    fun createSelfLoopPath(
+    public fun createSelfLoopPath(
         from: Offset,
         to: Offset,
         density: Density,
@@ -209,7 +209,7 @@ object EdgePathFactory {
      * @param strokeWidth Width of the edge line
      * @return EdgePath.Orthogonal with calculated control points and endpoint
      */
-    fun createOrthogonalPath(
+    public fun createOrthogonalPath(
         from: Offset,
         to: Offset,
         density: Density,
@@ -330,7 +330,7 @@ object EdgePathFactory {
      * @param strokeWidth Width of the edge line
      * @return EdgePath.RightAngle with calculated waypoints and endpoint
      */
-    fun createRightAnglePath(
+    public fun createRightAnglePath(
         from: Offset,
         to: Offset,
         routing: RightAngleRouting,

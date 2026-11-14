@@ -29,6 +29,8 @@ internal class EdgeHitRegistry {
         var closestId: String? = null
         var closest = tolerance
         paths.forEach { (id, path) ->
+            // Skip edges that are too far away
+            if (!path.reaches(point, closest)) return@forEach
             val distance = path.distanceTo(point)
             if (distance <= closest) {
                 closest = distance
@@ -47,6 +49,42 @@ internal fun interface EdgePathReporter {
 }
 
 internal val LocalEdgePathReporter = staticCompositionLocalOf<EdgePathReporter?> { null }
+
+/**
+ * Checks whether [point] is close to the bounding box of this path. Used to skip the exact
+ * distance calculation for edges that are far away.
+ *
+ * @param point the point to check, in pixels
+ * @param tolerance how far outside the bounding box still counts, in pixels
+ * @return true if the point is inside the bounding box plus [tolerance]
+ */
+internal fun EdgePath.reaches(point: Offset, tolerance: Float): Boolean {
+    var left = minOf(from.x, to.x, pathEndpoint.x)
+    var right = maxOf(from.x, to.x, pathEndpoint.x)
+    var top = minOf(from.y, to.y, pathEndpoint.y)
+    var bottom = maxOf(from.y, to.y, pathEndpoint.y)
+
+    fun include(control: Offset) {
+        left = minOf(left, control.x)
+        right = maxOf(right, control.x)
+        top = minOf(top, control.y)
+        bottom = maxOf(bottom, control.y)
+    }
+    when (this) {
+        is EdgePath.Straight -> Unit
+        is EdgePath.Curved -> include(controlPoint)
+        is EdgePath.SelfLoop -> include(controlPoint)
+        is EdgePath.Orthogonal -> {
+            include(controlPoint1)
+            include(controlPoint2)
+        }
+
+        is EdgePath.RightAngle -> waypoints.forEach(::include)
+    }
+
+    return point.x >= left - tolerance && point.x <= right + tolerance &&
+            point.y >= top - tolerance && point.y <= bottom + tolerance
+}
 
 /**
  * Returns the shortest distance from [point] to this path in pixels, arrow head included.

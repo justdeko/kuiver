@@ -1,6 +1,8 @@
 package com.dk.kuiver.renderer
 
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import com.dk.kuiver.KuiverInteractionState
 
 /**
@@ -20,17 +22,18 @@ import com.dk.kuiver.KuiverInteractionState
  * @property isDragging whether this node is the one currently being dragged.
  */
 @Stable
-interface KuiverNodeScope {
-    val isSelected: Boolean
-    val isHovered: Boolean
-    val isDragging: Boolean
+public interface KuiverNodeScope {
+    public val isSelected: Boolean
+    public val isHovered: Boolean
+    public val isDragging: Boolean
 }
 
 internal class NodeScope(
     private val nodeId: String,
     private val interaction: KuiverInteractionState
 ) : KuiverNodeScope {
-    override val isSelected: Boolean get() = interaction.isSelected(nodeId)
-    override val isHovered: Boolean get() = interaction.hoveredNodeId == nodeId
-    override val isDragging: Boolean get() = interaction.draggedNodeId == nodeId
+    // Recompose only the nodes that change
+    override val isSelected: Boolean by derivedStateOf { interaction.isSelected(nodeId) }
+    override val isHovered: Boolean by derivedStateOf { interaction.hoveredNodeId == nodeId }
+    override val isDragging: Boolean by derivedStateOf { interaction.draggedNodeId == nodeId }
 }

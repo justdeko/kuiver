@@ -10,7 +10,7 @@ import com.dk.kuiver.model.KuiverNode
  * Represents the bounding box of a set of nodes, in the dp space the nodes are positioned in
  */
 @Immutable
-data class Bounds(
+public data class Bounds(
     val minX: Dp,
     val maxX: Dp,
     val minY: Dp,
@@ -21,8 +21,8 @@ data class Bounds(
     val width: Dp get() = maxX - minX
     val height: Dp get() = maxY - minY
 
-    companion object {
-        val EMPTY = Bounds(0.dp, 0.dp, 0.dp, 0.dp)
+    public companion object {
+        public val EMPTY: Bounds = Bounds(0.dp, 0.dp, 0.dp, 0.dp)
     }
 }
 
@@ -33,7 +33,7 @@ data class Bounds(
  *                          If false, only considers exact node positions.
  * @return Bounds encompassing all nodes
  */
-fun Collection<KuiverNode>.calculateBounds(includeDimensions: Boolean = true): Bounds {
+internal fun Collection<KuiverNode>.calculateBounds(includeDimensions: Boolean = true): Bounds {
     if (isEmpty()) return Bounds.EMPTY
 
     var minX = Dp.Infinity
@@ -70,12 +70,12 @@ fun Collection<KuiverNode>.calculateBounds(includeDimensions: Boolean = true): B
  * Calculate bounds from node positions only (ignoring dimensions).
  * Convenience method for calculateBounds(includeDimensions = false).
  */
-fun Collection<KuiverNode>.calculatePositionBounds(): Bounds =
+public fun Collection<KuiverNode>.calculatePositionBounds(): Bounds =
     calculateBounds(includeDimensions = false)
 
 /**
  * Calculate bounds including node dimensions (position ± dimensions/2).
  * Convenience method for calculateBounds(includeDimensions = true).
  */
-fun Collection<KuiverNode>.calculateNodeBounds(): Bounds =
+public fun Collection<KuiverNode>.calculateNodeBounds(): Bounds =
     calculateBounds(includeDimensions = true)
