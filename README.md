@@ -46,7 +46,7 @@ For multiplatform projects, add to your common source set:
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.justdeko:kuiver:0.5.0")
+          implementation("io.github.justdeko:kuiver:0.6.0")
         }
     }
 }
@@ -58,10 +58,10 @@ Or for a specific platform only:
 kotlin {
     sourceSets {
         androidMain.dependencies {
-            implementation("io.github.justdeko:kuiver-android:0.5.0")
+          implementation("io.github.justdeko:kuiver-android:0.6.0")
         }
         iosMain.dependencies {
-            implementation("io.github.justdeko:kuiver-iosarm64:0.5.0")
+          implementation("io.github.justdeko:kuiver-iosarm64:0.6.0")
         }
         // etc.
     }
@@ -347,7 +347,6 @@ nodeContent = { node ->
         // Define anchors with optional visual indicators
         KuiverAnchor(
             anchorId = "left",
-            nodeId = node.id,
             modifier = Modifier.align(Alignment.CenterStart)
         ) {
             Box(
@@ -359,7 +358,6 @@ nodeContent = { node ->
 
         KuiverAnchor(
             anchorId = "right",
-            nodeId = node.id,
             modifier = Modifier.align(Alignment.CenterEnd)
         )
 
